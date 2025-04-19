@@ -1,0 +1,36 @@
+version: '3.4'
+
+services:
+  grandnode:
+    image: grandnode/grandnode2:latest
+    environment:
+      - CONNECTION_STRING=mongodb://mongodb:27017/grandnode
+    ports:
+      - "81:8080"
+    depends_on:
+      - mongodb
+    volumes:
+      - grandnode_appdata:/app/App_Data
+      - grandnode_images:/app/wwwroot/assets/images
+    networks:
+      - grandnode-network
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - grandnode-network
+    restart: always
+
+networks:
+  grandnode-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  grandnode_appdata:
+  grandnode_images:

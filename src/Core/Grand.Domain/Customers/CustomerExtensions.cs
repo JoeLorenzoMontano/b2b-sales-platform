@@ -53,6 +53,17 @@ public static class CustomerExtensions
     #endregion
 
     #region Customer
+    
+    /// <summary>
+    /// Gets a value indicating whether customer is staff
+    /// </summary>
+    /// <param name="customer">Customer</param>
+    /// <returns>Result</returns>
+    public static bool IsStaff(this Customer customer)
+    {
+        ArgumentNullException.ThrowIfNull(customer);
+        return !string.IsNullOrEmpty(customer.StaffStoreId);
+    }
 
     public static string CouponSeparator => ";";
 

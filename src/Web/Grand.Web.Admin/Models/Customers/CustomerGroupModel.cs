@@ -36,4 +36,19 @@ public class CustomerGroupModel : BaseEntityModel
     [GrandResourceDisplayName("Admin.Customers.CustomerGroups.Fields.MaxOrderAmount")]
     [UIHint("DoubleNullable")]
     public double? MaxOrderAmount { get; set; }
+
+    // Store mapping
+    [GrandResourceDisplayName("Admin.Customers.CustomerGroups.Fields.LimitedToStores")]
+    public bool LimitedToStores { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Customers.CustomerGroups.Fields.AvailableStores")]
+    public List<StoreModel> AvailableStores { get; set; } = new();
+    
+    public IList<string> SelectedStoreIds { get; set; } = new List<string>();
+    
+    public partial class StoreModel
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
 }

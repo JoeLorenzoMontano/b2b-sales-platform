@@ -1,9 +1,11 @@
+using Grand.Domain.Stores;
+
 namespace Grand.Domain.Customers;
 
 /// <summary>
 ///     Represents a customer group
 /// </summary>
-public class CustomerGroup : BaseEntity
+public class CustomerGroup : BaseEntity, IStoreLinkEntity
 {
     /// <summary>
     ///     Gets or sets the customer group name
@@ -54,4 +56,14 @@ public class CustomerGroup : BaseEntity
     ///     Gets or sets a maximum order total amount
     /// </summary>
     public double? MaxOrderAmount { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets a value indicating whether the entity is limited/restricted to certain stores
+    /// </summary>
+    public bool LimitedToStores { get; set; }
+
+    /// <summary>
+    ///     Gets or sets a list of store identifiers where this entity is available
+    /// </summary>
+    public IList<string> Stores { get; set; } = new List<string>();
 }

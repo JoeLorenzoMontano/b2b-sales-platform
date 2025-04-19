@@ -4,6 +4,7 @@
 @inject IPermissionService permissionService
 @{
     var access = await permissionService.Authorize(StandardPermission.ManageAcl);
+    var storeAccess = await permissionService.Authorize(StandardPermission.ManageStores);
 }
 <div asp-validation-summary="All"></div>
 <input asp-for="Id" type="hidden"/>
@@ -34,7 +35,17 @@
                 </content>
             </tabstrip-item>
         }
-        <tabstrip-item text="@Loc["Admin.Common.UserFields.Tab"]" tab-index="3">
+        @if (storeAccess)
+        {
+            <tabstrip-item text="@Loc["Admin.Customers.CustomerGroups.Stores"]" tab-index="3">
+                <content>
+                    <div>
+                        <partial name="Partials/CreateOrUpdate.TabStores" model="Model"/>
+                    </div>
+                </content>
+            </tabstrip-item>
+        }
+        <tabstrip-item text="@Loc["Admin.Common.UserFields.Tab"]" tab-index="4">
             <content>
                 <div>
                     <partial name="Partials/UserFields" model="Model"/>

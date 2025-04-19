@@ -61,9 +61,10 @@ public class GroupService : IGroupService
     /// <param name="showHidden">A value indicating whether to show hidden records</param>
     /// <param name="name"></param>
     /// <param name="pageIndex"></param>
+    /// <param name="storeId">Store identifier to filter by</param>
     /// <returns>Customer groups</returns>
     public virtual async Task<IPagedList<CustomerGroup>> GetAllCustomerGroups(string name = "", int pageIndex = 0,
-        int pageSize = int.MaxValue, bool showHidden = false)
+        int pageSize = int.MaxValue, bool showHidden = false, string storeId = "")
     {
         var query = from m in _customerGroupRepository.Table
             select m;
@@ -73,6 +74,10 @@ public class GroupService : IGroupService
 
         if (!string.IsNullOrEmpty(name))
             query = query.Where(x => x.Name.ToLowerInvariant().Contains(name.ToLowerInvariant()));
+
+        // Filter by store if specified
+        if (!string.IsNullOrEmpty(storeId))
+            query = query.Where(x => !x.LimitedToStores || x.Stores.Contains(storeId));
 
         query = query.OrderBy(m => m.DisplayOrder).ThenBy(m => m.Name);
 
@@ -138,11 +143,13 @@ public class GroupService : IGroupService
     /// <param name="customerGroupSystemName">Customer group system name</param>
     /// <param name="onlyActiveCustomerGroups">A value indicating whether we should look only in active customer groups</param>
     /// <param name="isSystem">A value indicating whether we should look only in system groups</param>
+    /// <param name="storeId">Store identifier to check; null or empty to ignore store mapping</param>
     /// <returns>Result</returns>
     public virtual async Task<bool> IsInCustomerGroup(Customer customer,
         string customerGroupSystemName,
         bool onlyActiveCustomerGroups = true,
-        bool? isSystem = null)
+        bool? isSystem = null,
+        string storeId = "")
     {
         ArgumentNullException.ThrowIfNull(customer);
         ArgumentNullException.ThrowIfNullOrEmpty(customerGroupSystemName);
@@ -155,28 +162,34 @@ public class GroupService : IGroupService
             customer.Groups.Contains(customerGroup.Id)
             && (!onlyActiveCustomerGroups || customerGroup.Active)
             && customerGroup.SystemName == customerGroupSystemName
-            && (!isSystem.HasValue || customerGroup.IsSystem == isSystem);
+            && (!isSystem.HasValue || customerGroup.IsSystem == isSystem)
+            // Check store mapping if storeId is provided
+            && (string.IsNullOrEmpty(storeId) || !customerGroup.LimitedToStores || customerGroup.Stores.Contains(storeId));
 
         return result;
     }
 
     public Task<bool> IsStaff(Customer customer)
     {
+        // System groups are never store-specific
         return IsInCustomerGroup(customer, SystemCustomerGroupNames.Staff, true, true);
     }
 
     public Task<bool> IsAdmin(Customer customer)
     {
+        // System groups are never store-specific
         return IsInCustomerGroup(customer, SystemCustomerGroupNames.Administrators, true, true);
     }
 
     public Task<bool> IsSalesManager(Customer customer)
     {
+        // System groups are never store-specific
         return IsInCustomerGroup(customer, SystemCustomerGroupNames.SalesManager, true, true);
     }
 
     public Task<bool> IsVendor(Customer customer)
     {
+        // System groups are never store-specific
         return IsInCustomerGroup(customer, SystemCustomerGroupNames.Vendors, true, true);
     }
 
@@ -187,11 +200,13 @@ public class GroupService : IGroupService
 
     public Task<bool> IsGuest(Customer customer)
     {
+        // System groups are never store-specific
         return IsInCustomerGroup(customer, SystemCustomerGroupNames.Guests, true, true);
     }
 
     public Task<bool> IsRegistered(Customer customer)
     {
+        // System groups are never store-specific
         return IsInCustomerGroup(customer, SystemCustomerGroupNames.Registered, true, true);
     }
 

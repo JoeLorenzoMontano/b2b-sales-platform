@@ -50,6 +50,14 @@ public class CustomerGroupViewModelService : ICustomerGroupViewModelService
     public virtual CustomerGroupModel PrepareCustomerGroupModel(CustomerGroup customerGroup)
     {
         var model = customerGroup.ToModel();
+        
+        // Store mapping
+        model.LimitedToStores = customerGroup.LimitedToStores;
+        model.SelectedStoreIds = customerGroup.Stores.ToList();
+        
+        // Prepare available stores
+        PrepareStoresMappingModel(model);
+        
         return model;
     }
 
@@ -59,12 +67,21 @@ public class CustomerGroupViewModelService : ICustomerGroupViewModelService
             //default values
             Active = true
         };
+        
+        // Prepare available stores
+        PrepareStoresMappingModel(model);
+        
         return model;
     }
 
     public virtual async Task<CustomerGroup> InsertCustomerGroupModel(CustomerGroupModel model)
     {
         var customerGroup = model.ToEntity();
+        
+        // Set store mapping
+        customerGroup.LimitedToStores = model.LimitedToStores;
+        customerGroup.Stores = model.SelectedStoreIds?.ToList() ?? new List<string>();
+        
         await _groupService.InsertCustomerGroup(customerGroup);
         return customerGroup;
     }
@@ -73,8 +90,28 @@ public class CustomerGroupViewModelService : ICustomerGroupViewModelService
         CustomerGroupModel model)
     {
         customerGroup = model.ToEntity(customerGroup);
+        
+        // Update store mapping
+        customerGroup.LimitedToStores = model.LimitedToStores;
+        customerGroup.Stores = model.SelectedStoreIds?.ToList() ?? new List<string>();
+        
         await _groupService.UpdateCustomerGroup(customerGroup);
         return customerGroup;
+    }
+    
+    protected virtual void PrepareStoresMappingModel(CustomerGroupModel model)
+    {
+        model.AvailableStores.Clear();
+        
+        var stores = _storeService.GetAllStores().Result;
+        foreach (var store in stores)
+        {
+            model.AvailableStores.Add(new CustomerGroupModel.StoreModel
+            {
+                Id = store.Id,
+                Name = store.Name
+            });
+        }
     }
 
     public virtual async Task DeleteCustomerGroup(CustomerGroup customerGroup)

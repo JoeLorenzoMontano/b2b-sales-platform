@@ -31,6 +31,12 @@ public class CustomerGroupValidator : BaseGrandValidator<CustomerGroupModel>
                     context.AddFailure(
                         translationService.GetResource(
                             "Admin.Customers.CustomerGroups.Fields.SystemName.CantEditSystem"));
+                            
+                // System groups cannot be limited to specific stores
+                if (customerGroup.IsSystem && x.LimitedToStores)
+                    context.AddFailure(
+                        translationService.GetResource(
+                            "Admin.Customers.CustomerGroups.Fields.LimitedToStores.CantEditSystem"));
             }
         });
     }

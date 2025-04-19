@@ -12,11 +12,13 @@ public interface IGroupService
     /// <param name="customerGroupSystemName">Customer group system name</param>
     /// <param name="onlyActiveCustomerGroups">A value indicating whether we should look only in active customer groups</param>
     /// <param name="isSystem">A value indicating whether we should look only in system groups</param>
+    /// <param name="storeId">Store identifier to check; null or empty to ignore store mapping</param>
     /// <returns>Result</returns>
     Task<bool> IsInCustomerGroup(Customer customer,
         string customerGroupSystemName,
         bool onlyActiveCustomerGroups = true,
-        bool? isSystem = null);
+        bool? isSystem = null,
+        string storeId = "");
 
     /// <summary>
     ///     Gets a value indicating whether customer is staff
@@ -112,5 +114,5 @@ public interface IGroupService
     /// </summary>
     /// <returns>Customer groups</returns>
     Task<IPagedList<CustomerGroup>> GetAllCustomerGroups(string name = "", int pageIndex = 0,
-        int pageSize = int.MaxValue, bool showHidden = false);
+        int pageSize = int.MaxValue, bool showHidden = false, string storeId = "");
 }

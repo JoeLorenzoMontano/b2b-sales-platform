@@ -65,8 +65,17 @@ public class CustomerGroupController : BaseAdminController
     [HttpPost]
     public async Task<IActionResult> List(DataSourceRequest command)
     {
-        var customerGroups = await _groupService.GetAllCustomerGroups(pageIndex: command.Page - 1,
-            pageSize: command.PageSize, showHidden: true);
+        // Get store ID for filtering (if user is staff member)
+        string storeId = "";
+        if (_contextAccessor.WorkContext.CurrentCustomer.IsStaff())
+            storeId = _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+        
+        var customerGroups = await _groupService.GetAllCustomerGroups(
+            pageIndex: command.Page - 1,
+            pageSize: command.PageSize, 
+            showHidden: true,
+            storeId: storeId);
+            
         var gridModel = new DataSourceResult {
             Data = customerGroups.Select(x =>
             {

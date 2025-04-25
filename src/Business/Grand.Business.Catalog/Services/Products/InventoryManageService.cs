@@ -773,5 +773,32 @@ public class InventoryManageService : IInventoryManageService
         await _mediator.EntityUpdated(product);
     }
 
+    /// <summary>
+    /// Gets inventory journal entries for a product
+    /// </summary>
+    /// <param name="productId">Product ID (optional)</param>
+    /// <param name="warehouseId">Warehouse ID (optional)</param>
+    /// <param name="pageIndex">Page index</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>Inventory journal entries</returns>
+    public virtual async Task<IPagedList<InventoryJournal>> GetInventoryJournal(string productId = "", string warehouseId = "", 
+        int pageIndex = 0, int pageSize = int.MaxValue)
+    {
+        var query = _inventoryJournalRepository.Table;
+        
+        // Filter by product
+        if (!string.IsNullOrEmpty(productId))
+            query = query.Where(x => x.ProductId == productId);
+            
+        // Filter by warehouse
+        if (!string.IsNullOrEmpty(warehouseId))
+            query = query.Where(x => x.WarehouseId == warehouseId);
+            
+        // Order by create date descending
+        query = query.OrderByDescending(x => x.CreateDateUtc);
+        
+        return await Task.FromResult(new PagedList<InventoryJournal>(query, pageIndex, pageSize));
+    }
+
     #endregion
 }

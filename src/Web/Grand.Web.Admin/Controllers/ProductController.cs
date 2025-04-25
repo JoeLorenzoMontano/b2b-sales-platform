@@ -2702,5 +2702,49 @@ public class ProductController : BaseAdminController
 
     #endregion
 
+    #region Inventory Journal
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    public async Task<IActionResult> InventoryJournalTab(string productId)
+    {
+        var product = await _productService.GetProductById(productId);
+        if (product == null)
+            return RedirectToAction("List");
+            
+        var model = product.ToModel(_dateTimeService);
+        return View("Partials/_InventoryJournalTab", model);
+    }
+
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> InventoryJournalList(DataSourceRequest command, string productId, string warehouseId)
+    {
+        if (!await _permissionService.Authorize(PermissionSystemName.Products))
+            return Content("Access denied");
+
+        var journals = await _inventoryManageService.GetInventoryJournal(productId, warehouseId, command.Page - 1, command.PageSize);
+        
+        var gridModel = new DataSourceResult
+        {
+            Data = journals.Select(x => new InventoryJournalModel
+            {
+                Id = x.Id,
+                ObjectId = x.ObjectId,
+                ObjectType = x.ObjectType,
+                PositionId = x.PositionId,
+                CreateDateUtc = x.CreateDateUtc,
+                ProductId = x.ProductId,
+                WarehouseId = x.WarehouseId,
+                InQty = x.InQty,
+                OutQty = x.OutQty,
+                Comments = x.Comments,
+                Reference = x.Reference
+            }),
+            Total = journals.TotalCount
+        };
+
+        return Json(gridModel);
+    }
+
     #endregion
 }

@@ -45,6 +45,16 @@ public interface IInventoryManageService
     /// <param name="shipmentItem">Shipment item</param>
     /// <returns>Quantity reversed</returns>
     Task ReverseBookedInventory(Shipment shipment, ShipmentItem shipmentItem);
+    
+    /// <summary>
+    /// Gets inventory journal entries for a product
+    /// </summary>
+    /// <param name="productId">Product ID (optional)</param>
+    /// <param name="warehouseId">Warehouse ID (optional)</param>
+    /// <param name="pageIndex">Page index</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>Inventory journal entries</returns>
+    Task<IPagedList<InventoryJournal>> GetInventoryJournal(string productId = "", string warehouseId = "", int pageIndex = 0, int pageSize = int.MaxValue);
 
     #endregion
 }

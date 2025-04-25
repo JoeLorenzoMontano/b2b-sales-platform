@@ -2148,7 +2148,7 @@ public class ProductController : BaseVendorController
             var prevStockQuantity = pr.StockQuantity;
             pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            var userId = _workContext.CurrentCustomer?.Email;
+            var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
             await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId);
         }
 
@@ -2220,7 +2220,7 @@ public class ProductController : BaseVendorController
                 var prevStockQuantity = product.StockQuantity;
                 product.StockQuantity = 0;
                 product.ReservedQuantity = 0;
-                var userId = _workContext.CurrentCustomer?.Email;
+                var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
                 await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
             }
 

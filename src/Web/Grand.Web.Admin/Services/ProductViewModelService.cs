@@ -480,7 +480,7 @@ public class ProductViewModelService(
 
         product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
         product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-        var userId = await _workContext.GetCurrentUserIdAsync();
+        var userId = contextAccessor.WorkContext.CurrentCustomer?.Email;
         await inventoryManageService.UpdateStockProduct(product, false, true, previousStockQuantity, null, userId);
     }
 

@@ -501,7 +501,7 @@ public class ProductViewModelService : IProductViewModelService
         var prevStockQuantity = product.StockQuantity;
         product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
         product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-        var userId = await _workContext.GetCurrentUserIdAsync();
+        var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
         await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
     }
 
@@ -2011,7 +2011,7 @@ public class ProductViewModelService : IProductViewModelService
                     var prevStockQuantity = product.StockQuantity;
                     product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                    var userId = await _workContext.GetCurrentUserIdAsync();
+                    var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
                     await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
                 }
             }
@@ -2050,7 +2050,7 @@ public class ProductViewModelService : IProductViewModelService
                 var prevStockQuantity = pr.StockQuantity;
                 pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                 pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                var userId = await _workContext.GetCurrentUserIdAsync();
+                var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
                 await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId);
             }
         }
@@ -2095,7 +2095,7 @@ public class ProductViewModelService : IProductViewModelService
             var prevStockQuantity = product.StockQuantity;
             product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            var userId = await _workContext.GetCurrentUserIdAsync();
+            var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
             await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
         }
     }

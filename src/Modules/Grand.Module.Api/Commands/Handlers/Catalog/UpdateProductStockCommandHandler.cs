@@ -29,7 +29,7 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
         var product = await _productService.GetProductById(request.Product.Id);
         if (product != null)
         {
-            var prevStockQuantity = _stockQuantityService.GetTotalStockQuantity(product);
+            var totalPrevStockQuantity = _stockQuantityService.GetTotalStockQuantity(product);
             var prevMultiWarehouseStock = product.ProductWarehouseInventory.Select(i => new ProductWarehouseInventory {
                 WarehouseId = i.WarehouseId,
                 StockQuantity = i.StockQuantity,
@@ -64,10 +64,10 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
                         await _productService.InsertProductWarehouseInventory(newPwI, product.Id);
                     }
 
-                    var prevStockQuantity = product.StockQuantity;
+                    var prevWarehouseStockQuantity = product.StockQuantity;
                     product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, request.WarehouseId, request.ApiUser);
+                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevWarehouseStockQuantity, request.WarehouseId, request.ApiUser);
                 }
                 else
                 {
@@ -76,7 +76,7 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
                 }
             }
 
-            await OutOfStockNotifications(product, prevStockQuantity, prevMultiWarehouseStock);
+            await OutOfStockNotifications(product, totalPrevStockQuantity, prevMultiWarehouseStock);
         }
 
         return true;

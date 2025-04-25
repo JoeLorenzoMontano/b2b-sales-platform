@@ -722,7 +722,20 @@ public class ProductViewModelService : IProductViewModelService
         product.Locales = await _seNameService.TranslationSeNameProperties(model.Locales, product, x => x.Name);
         product.SeName = await _seNameService.ValidateSeName(product, model.SeName, product.Name, true);
 
-        await _productService.UpdateProduct(product);
+        // Get current user ID for tracking
+        var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+        
+        // Track stock changes if inventory is managed
+        if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock && 
+            !product.UseMultipleWarehouses && 
+            prevStockQuantity != product.StockQuantity)
+        {
+            await _inventoryManageService.UpdateStockProduct(product, true, true, prevStockQuantity, null, userId);
+        }
+        else
+        {
+            await _productService.UpdateProduct(product);
+        }
 
         //search engine name
         await _seNameService.SaveSeName(product);

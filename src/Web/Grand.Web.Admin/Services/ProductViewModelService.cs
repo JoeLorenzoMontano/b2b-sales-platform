@@ -774,7 +774,20 @@ public class ProductViewModelService(
                 }
             }
                
-        await productService.UpdateProduct(product);
+        // Get current user ID for tracking
+        var userId = contextAccessor.WorkContext.CurrentCustomer?.Email;
+        
+        // Track stock changes if inventory is managed
+        if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock && 
+            !product.UseMultipleWarehouses && 
+            prevStockQuantity != product.StockQuantity)
+        {
+            await inventoryManageService.UpdateStockProduct(product, true, true, prevStockQuantity, null, userId);
+        }
+        else
+        {
+            await productService.UpdateProduct(product);
+        }
 
         //search engine name
         await seNameService.SaveSeName(product);

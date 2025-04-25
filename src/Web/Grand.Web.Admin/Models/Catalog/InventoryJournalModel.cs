@@ -1,5 +1,5 @@
 using Grand.Domain.Common;
-using Grand.Web.Common.Models;
+using Grand.Infrastructure.Models;
 using System;
 using System.Collections.Generic;
 

@@ -39,8 +39,9 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
 
             if (string.IsNullOrEmpty(request.WarehouseId))
             {
+                var prevStockQuantity = product.StockQuantity;
                 product.StockQuantity = request.Stock;
-                await _inventoryManageService.UpdateStockProduct(product, false);
+                await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, request.ApiUser);
             }
             else
             {
@@ -63,9 +64,10 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
                         await _productService.InsertProductWarehouseInventory(newPwI, product.Id);
                     }
 
+                    var prevStockQuantity = product.StockQuantity;
                     product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-                    await _inventoryManageService.UpdateStockProduct(product, false);
+                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, request.WarehouseId, request.ApiUser);
                 }
                 else
                 {

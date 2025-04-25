@@ -8,4 +8,5 @@ public class UpdateProductStockCommand : IRequest<bool>
     public ProductDto Product { get; set; }
     public string WarehouseId { get; set; }
     public int Stock { get; set; }
+    public string ApiUser { get; set; }
 }

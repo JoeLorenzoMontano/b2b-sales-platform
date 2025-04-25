@@ -13,7 +13,11 @@ public interface IInventoryManageService
     /// </summary>
     /// <param name="product">Product</param>
     /// <param name="mediator">Notification</param>
-    Task UpdateStockProduct(Product product, bool mediator = true);
+    /// <param name="trackInventory">Whether to track the inventory change in journal</param>
+    /// <param name="previousStockQuantity">Previous stock quantity (required when trackInventory is true)</param>
+    /// <param name="warehouseId">Warehouse ID (for multi-warehouse scenarios)</param>
+    /// <param name="userId">User ID who made the change</param>
+    Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, int? previousStockQuantity = null, string warehouseId = null, string userId = null);
 
     /// <summary>
     ///     Adjust reserved inventory

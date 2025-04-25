@@ -271,6 +271,38 @@ public class InventoryManageService : IInventoryManageService
 
     #endregion
 
+    /// <summary>
+    /// Inserts an inventory journal entry for manual stock quantity changes
+    /// </summary>
+    /// <param name="product">Product</param>
+    /// <param name="warehouseId">Warehouse ID (if applicable)</param>
+    /// <param name="previousStockQty">Previous stock quantity</param>
+    /// <param name="newStockQty">New stock quantity</param>
+    /// <param name="userId">User ID who made the change (optional)</param>
+    /// <returns>Task</returns>
+    private async Task InsertManualInventoryJournal(Product product, string warehouseId, int previousStockQty, int newStockQty, string userId = null)
+    {
+        var qtyChange = newStockQty - previousStockQty;
+        if (qtyChange == 0)
+            return;
+
+        var ij = new InventoryJournal {
+            CreateDateUtc = DateTime.UtcNow,
+            ObjectType = "Admin",
+            ObjectId = product.Id,
+            PositionId = Guid.NewGuid().ToString(),
+            Attributes = new List<CustomAttribute>(),
+            ProductId = product.Id,
+            WarehouseId = warehouseId,
+            Reference = "Manual Update",
+            Comments = $"Manual stock update by {(string.IsNullOrEmpty(userId) ? "administrator" : userId)}",
+            InQty = qtyChange > 0 ? Math.Abs(qtyChange) : 0,
+            OutQty = qtyChange < 0 ? Math.Abs(qtyChange) : 0
+        };
+        
+        await _inventoryJournalRepository.InsertAsync(ij);
+    }
+
     #region Inventory management methods
 
     /// <summary>
@@ -706,12 +738,19 @@ public class InventoryManageService : IInventoryManageService
     }
 
 
-    public virtual async Task UpdateStockProduct(Product product, bool mediator = true)
+    public virtual async Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, int? previousStockQuantity = null, string warehouseId = null, string userId = null)
     {
         ArgumentNullException.ThrowIfNull(product);
 
         if (product.ReservedQuantity < 0)
             product.ReservedQuantity = 0;
+            
+        // Track inventory changes in the journal if requested (for manual admin updates)
+        if (trackInventory && previousStockQuantity.HasValue && 
+            product.ManageInventoryMethodId is ManageInventoryMethod.ManageStock or ManageInventoryMethod.ManageStockByAttributes)
+        {
+            await InsertManualInventoryJournal(product, warehouseId, previousStockQuantity.Value, product.StockQuantity, userId);
+        }
 
         //update
         await _productRepository.UpdateField(product.Id, x => x.StockQuantity, product.StockQuantity);

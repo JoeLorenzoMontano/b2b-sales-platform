@@ -2145,9 +2145,11 @@ public class ProductController : BaseVendorController
         if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
         {
             var pr = await _productService.GetProductById(productId);
+            var prevStockQuantity = pr.StockQuantity;
             pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            await _inventoryManageService.UpdateStockProduct(pr, false);
+            var userId = _workContext.CurrentCustomer?.Email;
+            await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId);
         }
 
         return new JsonResult("");
@@ -2215,9 +2217,11 @@ public class ProductController : BaseVendorController
 
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
+                var prevStockQuantity = product.StockQuantity;
                 product.StockQuantity = 0;
                 product.ReservedQuantity = 0;
-                await _inventoryManageService.UpdateStockProduct(product, false);
+                var userId = _workContext.CurrentCustomer?.Email;
+                await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
             }
 
             return Json(new { Success = true });

@@ -441,6 +441,7 @@ public class ProductViewModelService(
             return;
 
         var warehouses = await warehouseService.GetAllWarehouses();
+        var previousStockQuantity = product.StockQuantity;
 
         foreach (var warehouse in warehouses)
         {
@@ -479,7 +480,8 @@ public class ProductViewModelService(
 
         product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
         product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-        await inventoryManageService.UpdateStockProduct(product, false);
+        var userId = await _workContext.GetCurrentUserIdAsync();
+        await inventoryManageService.UpdateStockProduct(product, false, true, previousStockQuantity, null, userId);
     }
 
     public virtual async Task PrepareProductReviewModel(ProductReviewModel model,
@@ -2159,9 +2161,11 @@ public class ProductViewModelService(
 
                 if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
                 {
+                    var previousStockQuantity = product.StockQuantity;
                     product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                    await inventoryManageService.UpdateStockProduct(product, false);
+                    var userId = contextAccessor.WorkContext.CurrentCustomer?.Id;
+                    await inventoryManageService.UpdateStockProduct(product, false, true, previousStockQuantity, null, userId);
                 }
             }
         }
@@ -2196,9 +2200,11 @@ public class ProductViewModelService(
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
                 var pr = await productService.GetProductById(model.ProductId);
+                var previousStockQuantity = pr.StockQuantity;
                 pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                 pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                await inventoryManageService.UpdateStockProduct(pr, false);
+                var userId = contextAccessor.WorkContext.CurrentCustomer?.Id;
+                await inventoryManageService.UpdateStockProduct(pr, false, true, previousStockQuantity, null, userId);
             }
         }
 
@@ -2239,9 +2245,11 @@ public class ProductViewModelService(
 
         if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
         {
+            var previousStockQuantity = product.StockQuantity;
             product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            await inventoryManageService.UpdateStockProduct(product, false);
+            var userId = contextAccessor.WorkContext.CurrentCustomer?.Id;
+            await inventoryManageService.UpdateStockProduct(product, false, true, previousStockQuantity, null, userId);
         }
     }
 

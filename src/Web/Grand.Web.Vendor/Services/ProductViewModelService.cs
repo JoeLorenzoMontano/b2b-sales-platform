@@ -498,9 +498,11 @@ public class ProductViewModelService : IProductViewModelService
             }
         }
 
+        var prevStockQuantity = product.StockQuantity;
         product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
         product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-        await _inventoryManageService.UpdateStockProduct(product, false);
+        var userId = await _workContext.GetCurrentUserIdAsync();
+        await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
     }
 
     public virtual async Task PrepareProductReviewModel(ProductReviewModel model,
@@ -2006,9 +2008,11 @@ public class ProductViewModelService : IProductViewModelService
 
                 if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
                 {
+                    var prevStockQuantity = product.StockQuantity;
                     product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                    await _inventoryManageService.UpdateStockProduct(product, false);
+                    var userId = await _workContext.GetCurrentUserIdAsync();
+                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
                 }
             }
         }
@@ -2043,9 +2047,11 @@ public class ProductViewModelService : IProductViewModelService
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
                 var pr = await _productService.GetProductById(model.ProductId);
+                var prevStockQuantity = pr.StockQuantity;
                 pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                 pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                await _inventoryManageService.UpdateStockProduct(pr, false);
+                var userId = await _workContext.GetCurrentUserIdAsync();
+                await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId);
             }
         }
 
@@ -2086,9 +2092,11 @@ public class ProductViewModelService : IProductViewModelService
 
         if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
         {
+            var prevStockQuantity = product.StockQuantity;
             product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            await _inventoryManageService.UpdateStockProduct(product, false);
+            var userId = await _workContext.GetCurrentUserIdAsync();
+            await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
         }
     }
 

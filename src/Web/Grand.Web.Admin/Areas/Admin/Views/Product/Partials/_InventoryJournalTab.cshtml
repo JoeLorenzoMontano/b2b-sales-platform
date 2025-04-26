@@ -1,0 +1,84 @@
+@model ProductModel
+
+<div class="panel panel-default">
+    <div class="form-horizontal">
+        <div class="form-body">
+            <div class="panel-body">
+                <div id="inventoryjournalgrid"></div>
+            </div>
+            <script>
+                $(document).ready(function() {
+                    $("#inventoryjournalgrid").kendoGrid({
+                        dataSource: {
+                            transport: {
+                                read: {
+                                    url: "@(Url.Action("InventoryJournalList", "Product"))",
+                                    type: "POST",
+                                    dataType: "json",
+                                    data: function() {
+                                        return {
+                                            productId: '@Model.Id'
+                                        };
+                                    }
+                                }
+                            },
+                            schema: {
+                                data: "Data",
+                                total: "Total",
+                                errors: "Errors"
+                            },
+                            error: function(e) {
+                                display_kendoui_grid_error(e);
+                                // Cancel the changes
+                                this.cancelChanges();
+                            },
+                            serverPaging: true,
+                            serverFiltering: true,
+                            serverSorting: true
+                        },
+                        pageable: {
+                            refresh: true,
+                            numeric: false,
+                            previousNext: false,
+                            info: false
+                        },
+                        editable: false,
+                        columns: [
+                            {
+                                field: "CreateDateUtc",
+                                title: "@Loc["Admin.Catalog.Products.Fields.InventoryJournal.Date"]",
+                                width: 100,
+                                template: '#= kendo.toString(kendo.parseDate(CreateDateUtc), "G") #'
+                            },
+                            {
+                                field: "ObjectType",
+                                title: "@Loc["Admin.Catalog.Products.Fields.InventoryJournal.ObjectType"]",
+                                width: 100
+                            },
+                            {
+                                field: "InQty",
+                                title: "@Loc["Admin.Catalog.Products.Fields.InventoryJournal.InQty"]",
+                                width: 80
+                            },
+                            {
+                                field: "OutQty",
+                                title: "@Loc["Admin.Catalog.Products.Fields.InventoryJournal.OutQty"]",
+                                width: 80
+                            },
+                            {
+                                field: "Comments",
+                                title: "@Loc["Admin.Catalog.Products.Fields.InventoryJournal.Comments"]",
+                                width: 200
+                            },
+                            {
+                                field: "Reference",
+                                title: "@Loc["Admin.Catalog.Products.Fields.InventoryJournal.Reference"]",
+                                width: 100
+                            }
+                        ]
+                    });
+                });
+            </script>
+        </div>
+    </div>
+</div>

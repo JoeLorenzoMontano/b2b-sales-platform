@@ -281,7 +281,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="newStockQty">New stock quantity</param>
     /// <param name="userId">User ID who made the change (optional)</param>
     /// <returns>Task</returns>
-    private async Task InsertManualInventoryJournal(Product product, string warehouseId, int previousStockQty, int newStockQty, string userId = null)
+    private async Task InsertManualInventoryJournal(Product product, string warehouseId, int previousStockQty, int newStockQty, string userId = null, IList<CustomAttribute> attributes = null)
     {
         var qtyChange = newStockQty - previousStockQty;
         if (qtyChange == 0)
@@ -292,7 +292,7 @@ public class InventoryManageService : IInventoryManageService
             ObjectType = "Admin",
             ObjectId = product.Id,
             PositionId = Guid.NewGuid().ToString(),
-            Attributes = new List<CustomAttribute>(),
+            Attributes = attributes ?? new List<CustomAttribute>(),
             ProductId = product.Id,
             WarehouseId = warehouseId,
             Reference = "Manual Update",
@@ -739,7 +739,7 @@ public class InventoryManageService : IInventoryManageService
     }
 
 
-    public virtual async Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, int? previousStockQuantity = null, string warehouseId = null, string userId = null)
+    public virtual async Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, int? previousStockQuantity = null, string warehouseId = null, string userId = null, IList<CustomAttribute> attributes = null)
     {
         ArgumentNullException.ThrowIfNull(product);
 
@@ -747,11 +747,32 @@ public class InventoryManageService : IInventoryManageService
             product.ReservedQuantity = 0;
             
         // Track inventory changes in the journal if requested (for manual admin updates)
-        if (trackInventory && previousStockQuantity.HasValue && 
-            (product.ManageInventoryMethodId is ManageInventoryMethod.ManageStock or ManageInventoryMethod.ManageStockByAttributes) &&
-            previousStockQuantity.Value != product.StockQuantity) // Only log if stock quantity actually changed
+        if (trackInventory && previousStockQuantity.HasValue) 
         {
-            await InsertManualInventoryJournal(product, warehouseId, previousStockQuantity.Value, product.StockQuantity, userId);
+            // For attribute-based inventory - must track per combination
+            if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes && attributes != null)
+            {
+                var combination = product.FindProductAttributeCombination(attributes);
+                if (combination != null)
+                {
+                    // Get previous attribute combination stock quantity - this is the specific value we need
+                    // Don't use the passed-in previousStockQuantity (which is for the whole product)
+                    // This way we track only the changes to this specific attribute combination
+                    
+                    // Note: we rely on the caller to pass us the right previousStockQuantity for THIS combination
+                    // The UI service is responsible for tracking the pre-change state correctly
+                    if (previousStockQuantity.Value != combination.StockQuantity)
+                    {
+                        await InsertManualInventoryJournal(product, warehouseId, previousStockQuantity.Value, combination.StockQuantity, userId, attributes);
+                    }
+                }
+            }
+            // For regular inventory
+            else if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock && 
+                     previousStockQuantity.Value != product.StockQuantity)
+            {
+                await InsertManualInventoryJournal(product, warehouseId, previousStockQuantity.Value, product.StockQuantity, userId);
+            }
         }
 
         //update

@@ -502,7 +502,7 @@ public class ProductViewModelService : IProductViewModelService
         product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
         product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
         var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
-        await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
+        await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId, null);
     }
 
     public virtual async Task PrepareProductReviewModel(ProductReviewModel model,
@@ -730,7 +730,7 @@ public class ProductViewModelService : IProductViewModelService
             !product.UseMultipleWarehouses && 
             prevStockQuantity != product.StockQuantity)
         {
-            await _inventoryManageService.UpdateStockProduct(product, true, true, prevStockQuantity, null, userId);
+            await _inventoryManageService.UpdateStockProduct(product, true, true, prevStockQuantity, null, userId, null);
         }
         else
         {
@@ -2025,7 +2025,7 @@ public class ProductViewModelService : IProductViewModelService
                     product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
                     var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
-                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
+                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId, customAttributes);
                 }
             }
         }
@@ -2033,7 +2033,10 @@ public class ProductViewModelService : IProductViewModelService
         {
             var combination = product.ProductAttributeCombinations.FirstOrDefault(x => x.Id == model.Id);
             var prevCombination = (ProductAttributeCombination)combination!.Clone();
-
+            
+            // Store previous stock quantity for this specific combination before changing it
+            var prevStockQuantity = combination.StockQuantity;
+            
             combination.StockQuantity = model.StockQuantity;
             combination.ReservedQuantity = model.ReservedQuantity;
             combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
@@ -2060,11 +2063,14 @@ public class ProductViewModelService : IProductViewModelService
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
                 var pr = await _productService.GetProductById(model.ProductId);
-                var prevStockQuantity = pr.StockQuantity;
+                
+                // Update the product's overall stock quantity (sum of all combinations)
                 pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                 pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
+                
+                // For journal entry, use the specific combination's previous value
                 var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
-                await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId);
+                await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId, combination.Attributes);
             }
         }
 
@@ -2109,7 +2115,10 @@ public class ProductViewModelService : IProductViewModelService
             product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
             var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
-            await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId);
+            
+            // Just update the product's stock totals without creating a journal entry
+            // We don't want to log when generating combinations since no actual inventory change occurred
+            await _inventoryManageService.UpdateStockProduct(product, false, false, null, null, userId, null);
         }
     }
 

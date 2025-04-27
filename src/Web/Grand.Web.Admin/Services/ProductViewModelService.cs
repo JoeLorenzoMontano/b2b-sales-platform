@@ -2189,7 +2189,7 @@ public class ProductViewModelService(
                     product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
                     var userId = contextAccessor.WorkContext.CurrentCustomer?.Id;
-                    await inventoryManageService.UpdateStockProduct(product, false, true, previousStockQuantity, null, userId);
+                    await inventoryManageService.UpdateStockProduct(product, false, true, previousStockQuantity, null, userId, customAttributes);
                 }
             }
         }
@@ -2197,7 +2197,10 @@ public class ProductViewModelService(
         {
             var combination = product.ProductAttributeCombinations.FirstOrDefault(x => x.Id == model.Id);
             var prevCombination = (ProductAttributeCombination)combination!.Clone();
-
+            
+            // Store previous stock quantity for this specific combination before changing it
+            var prevStockQuantity = combination.StockQuantity;
+            
             combination.StockQuantity = model.StockQuantity;
             combination.ReservedQuantity = model.ReservedQuantity;
             combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
@@ -2224,11 +2227,14 @@ public class ProductViewModelService(
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
                 var pr = await productService.GetProductById(model.ProductId);
-                var previousStockQuantity = pr.StockQuantity;
+                
+                // Update the product's overall stock quantity (sum of all combinations)
                 pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                 pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
+                
+                // For journal entry, use the specific combination's previous value
                 var userId = contextAccessor.WorkContext.CurrentCustomer?.Id;
-                await inventoryManageService.UpdateStockProduct(pr, false, true, previousStockQuantity, null, userId);
+                await inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId, combination.Attributes);
             }
         }
 
@@ -2273,7 +2279,10 @@ public class ProductViewModelService(
             product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
             var userId = contextAccessor.WorkContext.CurrentCustomer?.Id;
-            await inventoryManageService.UpdateStockProduct(product, false, true, previousStockQuantity, null, userId);
+            
+            // Just update the product's stock totals without creating a journal entry
+            // We don't want to log when generating combinations since no actual inventory change occurred
+            await inventoryManageService.UpdateStockProduct(product, false, false, null, null, userId, null);
         }
     }
 

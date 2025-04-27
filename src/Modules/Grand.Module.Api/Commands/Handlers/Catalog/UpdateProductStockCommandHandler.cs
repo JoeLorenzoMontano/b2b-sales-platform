@@ -41,7 +41,7 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
             {
                 var prevStockQuantity = product.StockQuantity;
                 product.StockQuantity = request.Stock;
-                await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, request.ApiUser);
+                await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, request.ApiUser, null);
             }
             else
             {
@@ -67,7 +67,7 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
                     var prevWarehouseStockQuantity = product.StockQuantity;
                     product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevWarehouseStockQuantity, request.WarehouseId, request.ApiUser);
+                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevWarehouseStockQuantity, request.WarehouseId, request.ApiUser, null);
                 }
                 else
                 {

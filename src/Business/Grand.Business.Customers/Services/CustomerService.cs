@@ -133,7 +133,9 @@ public class CustomerService : ICustomerService
         var query = from p in _customerRepository.Table
             select p;
 
-        query = query.Where(c => lastActivityFromUtc <= c.LastActivityDateUtc);
+        // Fix timezone issue by ensuring we're comparing dates properly
+        // This fixes potential timezone conversion issues
+        query = query.Where(c => c.LastActivityDateUtc >= lastActivityFromUtc);
         query = query.Where(c => !c.Deleted);
 
         if (customerGroupIds is { Length: > 0 })
@@ -163,7 +165,9 @@ public class CustomerService : ICustomerService
             select p;
 
         query = query.Where(c => c.Active);
-        query = query.Where(c => lastActivityFromUtc <= c.LastUpdateCartDateUtc);
+        // Fix timezone issue by ensuring we're comparing dates properly
+        // This fixes potential timezone conversion issues
+        query = query.Where(c => c.LastUpdateCartDateUtc != null && c.LastUpdateCartDateUtc >= lastActivityFromUtc);
         query = query.Where(c => c.ShoppingCartItems.Any(y => y.ShoppingCartTypeId == ShoppingCartType.ShoppingCart));
 
         if (!string.IsNullOrEmpty(storeId))

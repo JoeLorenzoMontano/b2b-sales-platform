@@ -641,9 +641,19 @@ public class ProductViewModelService(
             productModel.ProductTypeName = enumTranslationService.GetTranslationEnum(x.ProductTypeId);
             //friendly stock quantity
             //if a simple product AND "manage inventory" is "Track inventory", then display
-            if (x.ProductTypeId == ProductType.SimpleProduct &&
-                x.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
-                productModel.StockQuantityStr = stockQuantityService.GetTotalStockQuantity(x, total: true).ToString();
+            if (x.ProductTypeId == ProductType.SimpleProduct)
+            {
+                if (x.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+                {
+                    productModel.StockQuantityStr = stockQuantityService.GetTotalStockQuantity(x, total: true).ToString();
+                }
+                else if (x.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
+                {
+                    // Calculate sum of all attribute combinations stock
+                    var totalAttributesStock = x.ProductAttributeCombinations.Sum(c => c.StockQuantity);
+                    productModel.StockQuantityStr = totalAttributesStock.ToString();
+                }
+            }
             items.Add(productModel);
         }
 
@@ -1315,7 +1325,9 @@ public class ProductViewModelService(
                 Price = x.Price,
                 ManageInventoryMethodId = (int)x.ManageInventoryMethodId,
                 ManageInventoryMethod = enumTranslationService.GetTranslationEnum(x.ManageInventoryMethodId),
-                StockQuantity = x.StockQuantity,
+                StockQuantity = x.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes 
+                    ? x.ProductAttributeCombinations.Sum(c => c.StockQuantity) 
+                    : x.StockQuantity,
                 Published = x.Published
             };
             return productModel;
@@ -1340,7 +1352,18 @@ public class ProductViewModelService(
                 product.Sku = pModel.Sku;
                 product.Price = pModel.Price;
                 product.OldPrice = pModel.OldPrice;
-                product.StockQuantity = pModel.StockQuantity;
+                
+                // Handle stock quantity according to inventory management method
+                if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
+                {
+                    // For attribute-based inventory, we don't update the main product's stock quantity
+                    // as it's derived from combinations - we only store the old value for notifications
+                }
+                else
+                {
+                    product.StockQuantity = pModel.StockQuantity;
+                }
+                
                 product.Published = pModel.Published;
                 product.Name = pModel.Name;
                 product.ManageInventoryMethodId = (ManageInventoryMethod)pModel.ManageInventoryMethodId;

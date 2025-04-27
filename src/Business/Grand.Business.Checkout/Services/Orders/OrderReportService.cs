@@ -476,23 +476,32 @@ public class OrderReportService : IOrderReportService
     public virtual async Task<ReportPeriodOrder> GetOrderPeriodReport(int days, string storeId = "",
         string salesEmployeeId = "")
     {
-        // Use DateTime.UtcNow.Date directly to get today's date in UTC
-        // This avoids timezone conversion issues that were causing today's orders to be excluded
-        var currentdate = DateTime.UtcNow.Date; // Midnight in UTC for today
-        var date = days != 0
-            ? currentdate.AddDays(-days) // For previous days
-            : currentdate; // For today (starts at midnight UTC)
+        // Get the current UTC date
+        var currentUtcDate = DateTime.UtcNow.Date;
+        
+        // Calculate start date based on the requested period
+        var startDate = days != 0
+            ? currentUtcDate.AddDays(-days) // For previous days
+            : currentUtcDate; // For today (starts at midnight UTC)
+
+        // Calculate end date - for "today" queries, we need to use tomorrow's date at midnight
+        // to include all of today's orders
+        var endDate = days == 0
+            ? currentUtcDate.AddDays(1) // End at midnight of the next day to include all of today's orders
+            : DateTime.UtcNow; // For historical periods, use current time
 
         var query = from o in _orderRepository.Table
-            where !o.Deleted && o.CreatedOnUtc >= date
-                             && (string.IsNullOrEmpty(storeId) || o.StoreId == storeId)
-                             && (string.IsNullOrEmpty(salesEmployeeId) || o.SeId == salesEmployeeId)
+            where !o.Deleted 
+                  && o.CreatedOnUtc >= startDate
+                  && o.CreatedOnUtc < endDate // Use < to exclude the start of the next day
+                  && (string.IsNullOrEmpty(storeId) || o.StoreId == storeId)
+                  && (string.IsNullOrEmpty(salesEmployeeId) || o.SeId == salesEmployeeId)
             group o by 1
             into g
             select new ReportPeriodOrder { Amount = g.Sum(x => x.OrderTotal / x.CurrencyRate), Count = g.Count() };
 
         var report = query.FirstOrDefault() ?? new ReportPeriodOrder();
-        report.Date = date;
+        report.Date = startDate;
         return await Task.FromResult(report);
     }
 

@@ -476,10 +476,12 @@ public class OrderReportService : IOrderReportService
     public virtual async Task<ReportPeriodOrder> GetOrderPeriodReport(int days, string storeId = "",
         string salesEmployeeId = "")
     {
-        var currentdate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day);
+        // Use DateTime.UtcNow.Date directly to get today's date in UTC
+        // This avoids timezone conversion issues that were causing today's orders to be excluded
+        var currentdate = DateTime.UtcNow.Date; // Midnight in UTC for today
         var date = days != 0
-            ? _dateTimeService.ConvertToUtcTime(currentdate, _dateTimeService.CurrentTimeZone).AddDays(-days)
-            : _dateTimeService.ConvertToUtcTime(currentdate, _dateTimeService.CurrentTimeZone);
+            ? currentdate.AddDays(-days) // For previous days
+            : currentdate; // For today (starts at midnight UTC)
 
         var query = from o in _orderRepository.Table
             where !o.Deleted && o.CreatedOnUtc >= date

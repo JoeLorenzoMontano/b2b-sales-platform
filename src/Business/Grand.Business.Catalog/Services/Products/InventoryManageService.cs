@@ -281,12 +281,43 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="newStockQty">New stock quantity</param>
     /// <param name="userId">User ID who made the change (optional)</param>
     /// <returns>Task</returns>
+    /// <summary>
+    /// Generates a descriptive comment for inventory journal entries
+    /// </summary>
+    private string GenerateInventoryJournalComment(int previousStockQty, int newStockQty, string userId, IList<CustomAttribute> attributes)
+    {
+        // Format user who made the change
+        string userInfo = string.IsNullOrEmpty(userId) ? "administrator" : userId;
+        
+        // Format attribute information
+        string attributeInfo = "";
+        
+        if (attributes != null && attributes.Any())
+        {
+            attributeInfo = " for attribute combination";
+        }
+        
+        // Create the complete comment
+        return $"Stock changed from {previousStockQty} to {newStockQty}{attributeInfo} by {userInfo}";
+    }
+    
     private async Task InsertManualInventoryJournal(Product product, string warehouseId, int previousStockQty, int newStockQty, string userId = null, IList<CustomAttribute> attributes = null)
     {
         var qtyChange = newStockQty - previousStockQty;
         if (qtyChange == 0)
             return;
 
+        // Get combination text if available
+        string combinationText = "";
+        if (attributes != null && attributes.Any() && product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
+        {
+            var combination = product.FindProductAttributeCombination(attributes);
+            if (combination != null && !string.IsNullOrEmpty(combination.Text))
+            {
+                combinationText = combination.Text;
+            }
+        }
+            
         var ij = new InventoryJournal {
             CreateDateUtc = DateTime.UtcNow,
             ObjectType = "Admin",
@@ -296,7 +327,9 @@ public class InventoryManageService : IInventoryManageService
             ProductId = product.Id,
             WarehouseId = warehouseId,
             Reference = "Manual Update",
-            Comments = $"Stock changed from {previousStockQty} to {newStockQty} by {(string.IsNullOrEmpty(userId) ? "administrator" : userId)}",
+            Comments = string.IsNullOrEmpty(combinationText) 
+                ? GenerateInventoryJournalComment(previousStockQty, newStockQty, userId, attributes)
+                : $"Stock changed from {previousStockQty} to {newStockQty} for variant [{combinationText}] by {(string.IsNullOrEmpty(userId) ? "administrator" : userId)}",
             InQty = qtyChange > 0 ? Math.Abs(qtyChange) : 0,
             OutQty = qtyChange < 0 ? Math.Abs(qtyChange) : 0
         };

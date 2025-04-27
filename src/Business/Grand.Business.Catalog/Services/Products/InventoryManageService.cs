@@ -296,7 +296,7 @@ public class InventoryManageService : IInventoryManageService
             ProductId = product.Id,
             WarehouseId = warehouseId,
             Reference = "Manual Update",
-            Comments = $"Manual stock update by {(string.IsNullOrEmpty(userId) ? "administrator" : userId)}",
+            Comments = $"Stock changed from {previousStockQty} to {newStockQty} by {(string.IsNullOrEmpty(userId) ? "administrator" : userId)}",
             InQty = qtyChange > 0 ? Math.Abs(qtyChange) : 0,
             OutQty = qtyChange < 0 ? Math.Abs(qtyChange) : 0
         };
@@ -748,7 +748,8 @@ public class InventoryManageService : IInventoryManageService
             
         // Track inventory changes in the journal if requested (for manual admin updates)
         if (trackInventory && previousStockQuantity.HasValue && 
-            product.ManageInventoryMethodId is ManageInventoryMethod.ManageStock or ManageInventoryMethod.ManageStockByAttributes)
+            (product.ManageInventoryMethodId is ManageInventoryMethod.ManageStock or ManageInventoryMethod.ManageStockByAttributes) &&
+            previousStockQuantity.Value != product.StockQuantity) // Only log if stock quantity actually changed
         {
             await InsertManualInventoryJournal(product, warehouseId, previousStockQuantity.Value, product.StockQuantity, userId);
         }

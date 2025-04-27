@@ -739,7 +739,8 @@ public class ProductViewModelService(
         if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
             model.Stores = [contextAccessor.WorkContext.CurrentCustomer.StaffStoreId];
 
-        var prevStockQuantity = stockQuantityService.GetTotalStockQuantity(product, total: true);
+        // Store the original stock quantity (not the calculated total)
+        var prevStockQuantity = product.StockQuantity;
         var prevMultiWarehouseStock = product.ProductWarehouseInventory.Select(i => new ProductWarehouseInventory
                 { WarehouseId = i.WarehouseId, StockQuantity = i.StockQuantity, ReservedQuantity = i.ReservedQuantity })
             .ToList();
@@ -777,24 +778,34 @@ public class ProductViewModelService(
         // Get current user ID for tracking
         var userId = contextAccessor.WorkContext.CurrentCustomer?.Email;
         
-        // Track stock changes if inventory is managed
-        if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock && 
-            !product.UseMultipleWarehouses && 
-            prevStockQuantity != product.StockQuantity)
-        {
-            await inventoryManageService.UpdateStockProduct(product, true, true, prevStockQuantity, null, userId);
-        }
-        else
-        {
-            await productService.UpdateProduct(product);
-        }
+        // Save the product first
+        await productService.UpdateProduct(product);
 
         //search engine name
         await seNameService.SaveSeName(product);
         //tags
         await SaveProductTags(product, ParseProductTags(model.ProductTags));
-        //warehouses
-        await SaveProductWarehouseInventory(product, model.ProductWarehouseInventoryModels);
+
+        // Stock changes tracking must be handled differently for multiple warehouses
+        if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+        {
+            if (!product.UseMultipleWarehouses && prevStockQuantity != product.StockQuantity)
+            {
+                // For single warehouse products, track the stock change immediately
+                await inventoryManageService.UpdateStockProduct(product, true, true, prevStockQuantity, null, userId);
+            }
+            else
+            {
+                // For multiple warehouse products, call SaveProductWarehouseInventory
+                // which will handle the stock tracking internally
+                await SaveProductWarehouseInventory(product, model.ProductWarehouseInventoryModels);
+            }
+        }
+        else
+        {
+            // Not tracking inventory, but still need to save warehouse data
+            await SaveProductWarehouseInventory(product, model.ProductWarehouseInventoryModels);
+        }
         //picture seo names
         await UpdatePictureSeoNames(product);
 

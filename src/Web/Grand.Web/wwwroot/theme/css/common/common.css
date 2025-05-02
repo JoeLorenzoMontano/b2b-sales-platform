@@ -230,6 +230,7 @@ ul.Menu.-vertical {
     width: 100%;
     overflow-x: hidden;
     overflow-y: auto;
+    height: -webkit-fill-available;
 }
  ul.Menu.-floating {
      display: block;

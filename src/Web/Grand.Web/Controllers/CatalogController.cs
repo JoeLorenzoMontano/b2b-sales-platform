@@ -454,6 +454,23 @@ public class CatalogController : BasePublicController
     }
 
     #endregion
+    
+    #region All Products
+
+    [HttpGet]
+    public virtual async Task<IActionResult> AllProducts(CatalogPagingFilteringModel command)
+    {
+        var model = await _mediator.Send(new GetAllProducts {
+            Command = command,
+            Currency = _contextAccessor.WorkContext.WorkingCurrency,
+            Customer = _contextAccessor.WorkContext.CurrentCustomer,
+            Language = _contextAccessor.WorkContext.WorkingLanguage,
+            Store = _contextAccessor.StoreContext.CurrentStore
+        });
+        return View(model);
+    }
+
+    #endregion
 
     #region Searching
 

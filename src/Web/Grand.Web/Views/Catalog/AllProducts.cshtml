@@ -1,0 +1,63 @@
+@model CatalogProductsModel
+@inject IPageHeadBuilder pagebuilder
+@{
+    Layout = "_TwoColumns";
+    
+    //title
+    pagebuilder.AddTitleParts(Loc["Catalog.AllProducts"]);
+}
+
+<div class="page all-products-page">
+    <h1 class="h2 generalTitle">@Loc["Catalog.AllProducts"]</h1>
+    
+    @await Component.InvokeAsync("Widget", new { widgetZone = "all_products_top" })
+
+    <div id="catalog-products">
+        @await Component.InvokeAsync("Widget", new { widgetZone = "allproducts_before_filters" })
+        <partial name="Partials/Selectors"/>
+        <template v-if="catalog.Model.Products.length > 0">
+            <template v-if="catalog.Model.PagingFilteringContext.ViewMode == 'grid'">
+                <div class="col-12 product-grid px-0">
+                    <div class="form-row">
+                        <template v-for="Model in catalog.Model.Products">
+                            <div class="col-lg-4 col-sm-6 col-6 product-container mb-2">
+                                <partial name="Partials/CatalogProductGridView"/>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <template v-else>
+                <div class="product-list">
+                    <div class="col-12">
+                        <div class="row">
+                            <template v-for="Model in catalog.Model.Products">
+                                <partial name="Partials/CatalogProductListView"/>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <partial name="Partials/Pagination"/>
+        </template>
+        <template v-else>
+            <div class="alert alert-info my-3">
+                @Loc["Catalog.Products.NoData"]
+            </div>
+        </template>
+        @await Component.InvokeAsync("Widget", new { widgetZone = "allproducts_after_filters" })
+    </div>
+    
+    @await Component.InvokeAsync("Widget", new { widgetZone = "all_products_bottom" })
+</div>
+
+@section filters
+{
+    @*Rendering filtering section*@
+    @if (Model.PagingFilteringContext.SpecificationFilter.Enabled)
+    {
+        <partial name="Partials/Filtering"/>
+    }
+}
+
+<partial name="Partials/ModelScript" model="@Json.Serialize(Model)"/>

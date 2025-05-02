@@ -139,11 +139,29 @@
                 }
                 @if (!string.IsNullOrEmpty(Model.BillingAddress.FormattedCustomAddressAttributes))
                 {
-                    <tr class="custom-attributes-view">
-                        <td colspan="2">
-                            @Html.Raw(Model.BillingAddress.FormattedCustomAddressAttributes)
-                        </td>
-                    </tr>
+                    @foreach (var item in Model.BillingAddress.FormattedCustomAddressAttributes.Split(new[] { "<br />" }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var parts = item.Split(new[] { ": " }, 2, StringSplitOptions.None);
+                        if (parts.Length == 2)
+                        {
+                            <tr>
+                                <td style="width:25%">
+                                    @Html.Raw(parts[0]):
+                                </td>
+                                <td>
+                                    @Html.Raw(parts[1])
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="2">
+                                    @Html.Raw(item)
+                                </td>
+                            </tr>
+                        }
+                    }
                 }
 
                 <tr>
@@ -290,11 +308,29 @@
                         }
                         @if (!string.IsNullOrEmpty(Model.ShippingAddress.FormattedCustomAddressAttributes))
                         {
-                            <tr class="custom-attributes-view">
-                                <td colspan="2">
-                                    @Html.Raw(Model.ShippingAddress.FormattedCustomAddressAttributes)
-                                </td>
-                            </tr>
+                            @foreach (var item in Model.ShippingAddress.FormattedCustomAddressAttributes.Split(new[] { "<br />" }, StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                var parts = item.Split(new[] { ": " }, 2, StringSplitOptions.None);
+                                if (parts.Length == 2)
+                                {
+                                    <tr>
+                                        <td>
+                                            @Html.Raw(parts[0]):
+                                        </td>
+                                        <td>
+                                            @Html.Raw(parts[1])
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="2">
+                                            @Html.Raw(item)
+                                        </td>
+                                    </tr>
+                                }
+                            }
                         }
 
                         <tr>

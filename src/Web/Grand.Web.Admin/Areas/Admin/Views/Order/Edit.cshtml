@@ -83,7 +83,17 @@
                                     </div>
                                 </content>
                             </tabstrip-item>
-                            <tabstrip-item text="@Loc["Admin.Orders.OrderNotes"]" tab-index="4">
+                            @if (Model.IsShippable)
+                            {
+                                <tabstrip-item text="@Loc["Admin.Orders.Fulfillment"]" tab-index="4">
+                                    <content>
+                                        <div>
+                                            <partial name="Partials/OrderDetails.Fulfillment" model="Model"/>
+                                        </div>
+                                    </content>
+                                </tabstrip-item>
+                            }
+                            <tabstrip-item text="@Loc["Admin.Orders.OrderNotes"]" tab-index="5">
                                 <content>
                                     <div>
                                         <partial name="Partials/OrderDetails.Notes" model="Model"/>
@@ -92,7 +102,7 @@
                             </tabstrip-item>
                             @if (canManageDocuments)
                             {
-                                <tabstrip-item text="@Loc["Admin.Orders.Documents"]" tab-index="5">
+                                <tabstrip-item text="@Loc["Admin.Orders.Documents"]" tab-index="6">
                                     <content>
                                         <div>
                                             <partial name="Partials/OrderDetails.Documents" model="Model"/>
@@ -100,7 +110,7 @@
                                     </content>
                                 </tabstrip-item>
                             }
-                            <tabstrip-item text="@Loc["Admin.Common.UserFields.Tab"]" tab-index="6">
+                            <tabstrip-item text="@Loc["Admin.Common.UserFields.Tab"]" tab-index="7">
                                 <content>
                                     <div>
                                         <div class="form-actions">
@@ -114,7 +124,7 @@
                             </tabstrip-item>
                             @if (canManageMessageQueue)
                             {
-                                <tabstrip-item text="@Loc["Admin.Orders.Notifications"]" tab-index="7">
+                                <tabstrip-item text="@Loc["Admin.Orders.Notifications"]" tab-index="8">
                                     <content>
                                         <div>
                                             <partial name="Partials/OrderDetails.Notifications" model="Model"/>

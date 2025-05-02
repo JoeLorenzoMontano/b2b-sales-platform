@@ -2,4 +2,39 @@
 <vc:admin-widget widget-zone="order_address_details_top" additional-data="Model"/>
 <div asp-validation-summary="All"></div>
 <admin-input asp-for="Address" asp-template="Address"/>
+
+<!-- Debug information to help diagnose the issue -->
+@if (Model.Address.CustomAddressAttributes.Any())
+{
+    <div class="card">
+        <div class="card-header">
+            <h5>Custom Address Attributes</h5>
+        </div>
+        <div class="card-body">
+            <input type="hidden" id="debug-custom-attributes" name="debug-custom-attributes" value="@Model.Address.CustomAddressAttributes.Count attributes found" />
+            @foreach (var attr in Model.Address.CustomAddressAttributes)
+            {
+                <div>
+                    <strong>@attr.Name:</strong>
+                    @switch (attr.AttributeControlType)
+                    {
+                        case Grand.Domain.Catalog.AttributeControlType.TextBox:
+                            <input type="text" name="attributes[@attr.Id]" value="@attr.DefaultValue" class="form-control" />
+                            break;
+                        case Grand.Domain.Catalog.AttributeControlType.DropdownList:
+                            <select name="attributes[@attr.Id]" class="form-control">
+                                @foreach (var val in attr.Values)
+                                {
+                                    <option value="@val.Id" selected="@val.IsPreSelected">@val.Name</option>
+                                }
+                            </select>
+                            break;
+                        // Add other types as needed
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
 <vc:admin-widget widget-zone="order_address_details_bottom" additional-data="Model"/>

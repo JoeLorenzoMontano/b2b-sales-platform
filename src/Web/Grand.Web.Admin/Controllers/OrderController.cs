@@ -937,8 +937,31 @@ public class OrderController(
 
         if (ModelState.IsValid)
         {
-            var customAttributes =
-                await model.Address.ParseCustomAddressAttributes(addressAttributeParser, addressAttributeService);
+            var customAttributes = new List<CustomAttribute>();
+            
+            // Get form values for custom attributes
+            foreach (var attribute in await addressAttributeService.GetAllAddressAttributes())
+            {
+                string controlId = $"attributes[{attribute.Id}]";
+                var attributeValue = Request.Form[controlId].ToString();
+                
+                if (!string.IsNullOrEmpty(attributeValue))
+                {
+                    if (attribute.AttributeControlTypeId == (int)AttributeControlType.Checkboxes)
+                    {
+                        foreach (var item in attributeValue.Split(','))
+                        {
+                            if (!string.IsNullOrEmpty(item))
+                                customAttributes = addressAttributeParser.AddAddressAttribute(customAttributes, attribute, item).ToList();
+                        }
+                    }
+                    else
+                    {
+                        customAttributes = addressAttributeParser.AddAddressAttribute(customAttributes, attribute, attributeValue).ToList();
+                    }
+                }
+            }
+            
             await orderViewModelService.UpdateOrderAddress(order, address, model, customAttributes);
             return RedirectToAction("AddressEdit",
                 new { addressId = model.Address.Id, orderId = model.OrderId, model.BillingAddress });

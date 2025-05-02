@@ -671,6 +671,7 @@ public class OrderViewModelService : IOrderViewModelService
             }
 
             model.ShippingMethod = order.ShippingMethod;
+            model.TargetDeliveryDate = order.TargetDeliveryDate;
             model.ShippingAdditionDescription = order.ShippingOptionAttributeDescription;
             model.CanAddNewShipments = false;
 

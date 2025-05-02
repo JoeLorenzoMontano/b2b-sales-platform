@@ -293,6 +293,11 @@ public class Order : BaseEntity
     /// </summary>
     public string ShippingOptionAttribute { get; set; }
 
+    /// <summary>
+    ///     Gets or sets the target delivery date
+    /// </summary>
+    public DateTime? TargetDeliveryDate { get; set; }
+
     #endregion
 
     #region Navigation properties

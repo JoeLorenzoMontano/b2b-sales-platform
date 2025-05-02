@@ -197,6 +197,9 @@ public class OrderModel : BaseEntityModel
     [GrandResourceDisplayName("Admin.Orders.Fields.ShippingMethod")]
     public string ShippingMethod { get; set; }
 
+    [GrandResourceDisplayName("Admin.Orders.Fulfillment.TargetDeliveryDate")]
+    public DateTime? TargetDeliveryDate { get; set; }
+
     public string ShippingAdditionDescription { get; set; }
     public string ShippingAddressGoogleMapsUrl { get; set; }
     public bool CanAddNewShipments { get; set; }

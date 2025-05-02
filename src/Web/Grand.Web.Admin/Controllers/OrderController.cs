@@ -952,6 +952,61 @@ public class OrderController(
     #endregion
 
     #region Fulfillment
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpGet]
+    public async Task<IActionResult> GetTargetDeliveryDate(string orderId)
+    {
+        if (string.IsNullOrEmpty(orderId))
+            return Json(new { success = false });
+            
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+            
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false });
+            
+        if (order.TargetDeliveryDate.HasValue)
+        {
+            // Format date consistently
+            string formattedDate = order.TargetDeliveryDate.Value.ToString("yyyy-MM-dd");
+            return Json(new { success = true, value = formattedDate });
+        }
+        
+        return Json(new { success = false });
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SaveTargetDeliveryDate(string orderId, string date)
+    {
+        if (string.IsNullOrEmpty(orderId))
+            return Json(new { success = false, error = "Missing required parameters" });
+            
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, error = "Order not found" });
+            
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, error = "Access denied" });
+        
+        // Update target delivery date
+        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+        {
+            order.TargetDeliveryDate = parsedDate;
+        }
+        else
+        {
+            order.TargetDeliveryDate = null;
+        }
+        
+        await orderService.UpdateOrder(order);
+        
+        return Json(new { success = true });
+    }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
@@ -969,24 +1024,10 @@ public class OrderController(
             order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
             return Json(new { success = false, error = "Access denied" });
         
-        // Store target delivery date as a UserField in the order
-        if (!string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out _))
+        // Store target delivery date in the order
+        if (!string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var parsedDate))
         {
-            var userField = order.UserFields.FirstOrDefault(x => x.Key == "TargetDeliveryDate");
-            if (userField != null)
-            {
-                userField.Value = targetDeliveryDate;
-            }
-            else
-            {
-                order.UserFields.Add(new Grand.Domain.Common.UserField
-                {
-                    Key = "TargetDeliveryDate",
-                    Value = targetDeliveryDate,
-                    StoreId = order.StoreId
-                });
-            }
-            
+            order.TargetDeliveryDate = parsedDate;
             await orderService.UpdateOrder(order);
         }
 
@@ -1002,8 +1043,8 @@ public class OrderController(
             TrackingNumber = "",
             TotalWeight = null,
             ShippedDateUtc = null,
-            DeliveryDateUtc = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var parsedDate) ? 
-                DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc) : null,
+            DeliveryDateUtc = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var shipmentDate) ? 
+                DateTime.SpecifyKind(shipmentDate, DateTimeKind.Utc) : null,
             AdminComment = "Created from Order Fulfillment tab",
             CreatedOnUtc = DateTime.UtcNow
         };
@@ -1045,6 +1086,28 @@ public class OrderController(
         });
 
         return Json(new { success = true });
+    }
+
+    #endregion
+
+    #region User Fields
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpGet]
+    public async Task<IActionResult> UserFieldsTab(string id)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            return Content("Order not found");
+            
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Content("Access denied");
+            
+        var model = new OrderModel();
+        await orderViewModelService.PrepareOrderDetailsModel(model, order);
+        
+        return View("Partials/_UserFieldsTab", model);
     }
 
     #endregion

@@ -428,16 +428,20 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
 
     private IQueryable<Product> OrderByNameAsc(IQueryable<Product> query)
     {
+        // NameAsc (value 5) means "Name: A to Z" (ascending alphabetical order)
+        // This sorts products alphabetically from A to Z
         return _catalogSettings.SortingByAvailability
-            ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name != null ? x.Name.ToLower() : "")
-            : query.OrderBy(x => x.Name != null ? x.Name.ToLower() : "");
+            ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name != null ? x.Name.ToLower().Trim() : "")
+            : query.OrderBy(x => x.Name != null ? x.Name.ToLower().Trim() : "");
     }
 
     private IQueryable<Product> OrderByNameDesc(IQueryable<Product> query)
     {
+        // NameDesc (value 6) means "Name: Z to A" (descending alphabetical order)
+        // This sorts products alphabetically from Z to A
         return _catalogSettings.SortingByAvailability
-            ? query.OrderBy(x => x.LowStock).ThenByDescending(x => x.Name != null ? x.Name.ToLower() : "")
-            : query.OrderByDescending(x => x.Name != null ? x.Name.ToLower() : "");
+            ? query.OrderBy(x => x.LowStock).ThenByDescending(x => x.Name != null ? x.Name.ToLower().Trim() : "")
+            : query.OrderByDescending(x => x.Name != null ? x.Name.ToLower().Trim() : "");
     }
 
     private IQueryable<Product> OrderByPriceAsc(IQueryable<Product> query)

@@ -92,28 +92,8 @@
                     <div class="clearfix"></div>
                 </div>
                 <div class="x_content">
-                    <div class="col-12">
-                        <div id="store_news" class="store-news"></div>
-                        <script>
-                            $.getJSON("https://grandnode.com/news.json", function (data) {
-                                var newsitems = [];
-                                $.each(data, function (key, value) {
-                                    newsitems.push("<li id='news-" + key + "' class='media'><div class='media-body note note-info'><h5><a href='" + value.Url + "' target='_blank' >" + value.Name + "</a></h5>" + value.Message + "</div></li>");
-                                });
-
-                                $("<ul/>", {
-                                    "class": "store-news",
-                                    html: newsitems.join("")
-                                }).appendTo("#store_news");
-                            });
-                        </script>
-                    </div>
-                    @if (canAccessReports)
-                    {
-                        <div class="col-12 col-sm-12 col-lg-8 col-md-12 whiteBg">
-                            @await Component.InvokeAsync("CustomerReportTimeChart")
-                        </div>
-                    }
+                    <!-- External promotions removed -->
+                    <!-- Customer Report Time Chart removed -->
                     @if (isAdminAccess)
                     {
                         <div class="col-cs-12 col-sm-12 col-lg-4 col-md-12">
@@ -137,16 +117,7 @@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            @if (canAccessReports)
-            {
-                <div class="col-sm-12 col-lg-12 col-md-12">
-                    @await Component.InvokeAsync("OrderTimeChart")
-                </div>
-            }
-        </div>
-    </div>
+    <!-- Order Time Chart removed -->
 
     <div class="row">
         <div class="col-md-12">

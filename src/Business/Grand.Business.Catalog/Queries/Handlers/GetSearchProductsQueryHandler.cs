@@ -296,10 +296,21 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
     {
         if (!string.IsNullOrWhiteSpace(request.Keywords))
         {
+            // Convert keywords to lowercase for case-insensitive search
+            var keywordsLower = request.Keywords.ToLower();
+            
             if (!request.SearchDescriptions)
-                query = query.Where(p => p.Name.ToLower().Contains(request.Keywords.ToLower()) || p.Locales.Any(x => x.LocaleKey == "Name" && x.LocaleValue != null && x.LocaleValue.ToLower().Contains(request.Keywords.ToLower())) || (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(request.Keywords.ToLower())));
+                query = query.Where(p => 
+                    (p.Name != null && p.Name.ToLower().Contains(keywordsLower)) || 
+                    p.Locales.Any(x => x.LocaleKey == "Name" && x.LocaleValue != null && x.LocaleValue.ToLower().Contains(keywordsLower)) || 
+                    (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(keywordsLower)));
             else
-                query = query.Where(p => (p.Name != null && p.Name.ToLower().Contains(request.Keywords.ToLower())) || (p.ShortDescription != null && p.ShortDescription.ToLower().Contains(request.Keywords.ToLower())) || (p.FullDescription != null && p.FullDescription.ToLower().Contains(request.Keywords.ToLower())) || p.Locales.Any(x => x.LocaleValue != null && x.LocaleValue.ToLower().Contains(request.Keywords.ToLower())) || (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(request.Keywords.ToLower())));
+                query = query.Where(p => 
+                    (p.Name != null && p.Name.ToLower().Contains(keywordsLower)) || 
+                    (p.ShortDescription != null && p.ShortDescription.ToLower().Contains(keywordsLower)) || 
+                    (p.FullDescription != null && p.FullDescription.ToLower().Contains(keywordsLower)) || 
+                    p.Locales.Any(x => x.LocaleValue != null && x.LocaleValue.ToLower().Contains(keywordsLower)) || 
+                    (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(keywordsLower)));
         }
         return query;
     }
@@ -408,8 +419,8 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
         else
         {
             query = _catalogSettings.SortingByAvailability
-                ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name)
-                : query.OrderBy(x => x.Name);
+                ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name != null ? x.Name.ToLower() : "")
+                : query.OrderBy(x => x.Name != null ? x.Name.ToLower() : "");
         }
 
         return query;
@@ -418,15 +429,15 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
     private IQueryable<Product> OrderByNameAsc(IQueryable<Product> query)
     {
         return _catalogSettings.SortingByAvailability
-            ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name)
-            : query.OrderBy(x => x.Name);
+            ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name != null ? x.Name.ToLower() : "")
+            : query.OrderBy(x => x.Name != null ? x.Name.ToLower() : "");
     }
 
     private IQueryable<Product> OrderByNameDesc(IQueryable<Product> query)
     {
         return _catalogSettings.SortingByAvailability
-            ? query.OrderBy(x => x.LowStock).ThenByDescending(x => x.Name)
-            : query.OrderByDescending(x => x.Name);
+            ? query.OrderBy(x => x.LowStock).ThenByDescending(x => x.Name != null ? x.Name.ToLower() : "")
+            : query.OrderByDescending(x => x.Name != null ? x.Name.ToLower() : "");
     }
 
     private IQueryable<Product> OrderByPriceAsc(IQueryable<Product> query)

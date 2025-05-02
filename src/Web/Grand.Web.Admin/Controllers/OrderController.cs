@@ -11,6 +11,7 @@ using Grand.Domain.Permissions;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Orders;
+using Grand.Domain.Shipping;
 using Grand.Infrastructure;
 using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Interfaces;
@@ -946,6 +947,104 @@ public class OrderController(
         //If we got this far, something failed, redisplay form
         model = await orderViewModelService.PrepareOrderAddressModel(order, address);
         return View(model);
+    }
+
+    #endregion
+
+    #region Fulfillment
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> CreateFulfillmentShipment(string orderId, string orderItemIds, string targetDeliveryDate,
+        [FromServices] IShipmentService shipmentService)
+    {
+        if (string.IsNullOrEmpty(orderItemIds))
+            return Json(new { success = false, error = "No items selected" });
+
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, error = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, error = "Access denied" });
+        
+        // Store target delivery date as a UserField in the order
+        if (!string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out _))
+        {
+            var userField = order.UserFields.FirstOrDefault(x => x.Key == "TargetDeliveryDate");
+            if (userField != null)
+            {
+                userField.Value = targetDeliveryDate;
+            }
+            else
+            {
+                order.UserFields.Add(new Grand.Domain.Common.UserField
+                {
+                    Key = "TargetDeliveryDate",
+                    Value = targetDeliveryDate,
+                    StoreId = order.StoreId
+                });
+            }
+            
+            await orderService.UpdateOrder(order);
+        }
+
+        var selectedOrderItemIds = orderItemIds.Split(',');
+        
+        // Create a new shipment
+        var shipment = new Shipment
+        {
+            OrderId = orderId,
+            StoreId = order.StoreId,
+            VendorId = contextAccessor.WorkContext.CurrentVendor?.Id,
+            SeId = contextAccessor.WorkContext.CurrentCustomer.SeId,
+            TrackingNumber = "",
+            TotalWeight = null,
+            ShippedDateUtc = null,
+            DeliveryDateUtc = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var parsedDate) ? 
+                DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc) : null,
+            AdminComment = "Created from Order Fulfillment tab",
+            CreatedOnUtc = DateTime.UtcNow
+        };
+
+        // Add items to shipment
+        foreach (var orderItemId in selectedOrderItemIds)
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null || orderItem.OpenQty <= 0)
+                continue;
+
+            var shipmentItem = new ShipmentItem
+            {
+                OrderItemId = orderItemId,
+                ProductId = orderItem.ProductId,
+                Quantity = orderItem.OpenQty,
+                WarehouseId = orderItem.WarehouseId,
+                Attributes = orderItem.Attributes
+            };
+
+            shipment.ShipmentItems.Add(shipmentItem);
+        }
+
+        if (!shipment.ShipmentItems.Any())
+            return Json(new { success = false, error = "No valid items to ship" });
+
+        // Insert shipment
+        await shipmentService.InsertShipment(shipment);
+
+        // Add a note
+        await orderService.InsertOrderNote(new OrderNote
+        {
+            Note = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var noteDate) ? 
+                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment tab with target delivery date: {noteDate:yyyy-MM-dd}" :
+                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment tab",
+            DisplayToCustomer = false,
+            OrderId = order.Id,
+            CreatedOnUtc = DateTime.UtcNow
+        });
+
+        return Json(new { success = true });
     }
 
     #endregion

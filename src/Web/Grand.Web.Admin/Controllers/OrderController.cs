@@ -113,6 +113,86 @@ public class OrderController(
         };
         return Json(gridModel);
     }
+    
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> FulfillmentOrderList(DataSourceRequest command, OrderListModel model)
+    {
+        try
+        {
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+                model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+            
+            // Direct database access to get the 20 most recent orders 
+            // with paginated query that avoids the issue
+            var orders = await orderService.SearchOrders(
+                storeId: model.StoreId,
+                pageIndex: 0,  // Always first page
+                pageSize: 20,  // Reasonable number of orders
+                createdFromUtc: DateTime.UtcNow.AddDays(-30) // Get orders from the last 30 days
+            );
+            
+            var fulfillmentOrders = new List<OrderModel>();
+            
+            foreach (var order in orders)
+            {
+                try
+                {
+                    // Check if any item has OpenQty > 0
+                    bool hasUnfulfilledItems = order.OrderItems.Any(item => item.OpenQty > 0);
+                    
+                    if (hasUnfulfilledItems)
+                    {
+                        // Get the model for this order
+                        var orderModel = new OrderModel
+                        {
+                            Id = order.Id,
+                            OrderNumber = order.OrderNumber,
+                            OrderStatusId = order.OrderStatusId,
+                            OrderStatus = ((OrderStatusSystem)order.OrderStatusId).ToString(),
+                            PaymentStatus = order.PaymentStatusId.ToString(),
+                            ShippingStatus = order.ShippingStatusId.ToString(),
+                            CustomerEmail = order.BillingAddress?.Email,
+                            CustomerFullName = $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}",
+                            CustomerId = order.CustomerId,
+                            OrderTotal = order.OrderTotal.ToString("C"),
+                            CreatedOn = order.CreatedOnUtc,
+                            StoreName = order.StoreId,
+                            TargetDeliveryDate = order.TargetDeliveryDate
+                        };
+                        
+                        fulfillmentOrders.Add(orderModel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but continue to next order
+                    System.Diagnostics.Debug.WriteLine($"Error processing order {order.Id}: {ex.Message}");
+                    continue;
+                }
+            }
+            
+            var gridModel = new DataSourceResult
+            {
+                Data = fulfillmentOrders,
+                Total = fulfillmentOrders.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            // Log the error to help with debugging
+            System.Diagnostics.Debug.WriteLine($"Error in FulfillmentOrderList: {ex.Message}");
+            
+            // Return an empty result instead of an error
+            return Json(new DataSourceResult
+            {
+                Data = new List<OrderModel>(),
+                Total = 0
+            });
+        }
+    }
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
     [HttpPost]

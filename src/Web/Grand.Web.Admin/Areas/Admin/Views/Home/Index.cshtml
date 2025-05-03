@@ -123,6 +123,20 @@
         <div class="col-md-12">
             <div class="x_panel light bordered">
                 <div class="x_title">
+                    <h2 class="caption-subject font-blue bold uppercase">Fulfillment Queue</h2>
+                    <div class="clear"></div>
+                </div>
+                <div class="x_content">
+                    @await Component.InvokeAsync("FulfillmentQueue")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="x_panel light bordered">
+                <div class="x_title">
                     <h2 class="caption-subject font-blue bold uppercase">@Loc["Admin.Dashboard.ReportLatestOrder"]</h2>
                     <div class="clear"></div>
                 </div>

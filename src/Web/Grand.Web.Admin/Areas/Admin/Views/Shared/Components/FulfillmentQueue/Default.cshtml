@@ -8,7 +8,7 @@
                 dataSource: {
                     transport: {
                         read: {
-                            url: "@Html.Raw(Url.Action("OrderList", "Order", new { area = Constants.AreaAdmin }))",
+                            url: "@Html.Raw(Url.Action("FulfillmentOrderList", "Order", new { area = Constants.AreaAdmin }))",
                             type: "POST",
                             dataType: "json",
                             data: additionalData
@@ -24,14 +24,14 @@
                         // Cancel the changes
                         this.cancelChanges();
                     },
-                    pageSize: 5,
-                    serverPaging: true,
-                    serverFiltering: true,
-                    serverSorting: true
+                    pageSize: 10,
+                    serverPaging: false, // Use client paging since we're filtering server-side
+                    serverFiltering: false,
+                    serverSorting: false
                 },
                 pageable: {
                     refresh: true,
-                    pageSizes: [5,10,15]
+                    pageSizes: [10,20,50]
                 },
                 editable: {
                     confirmation: false,
@@ -51,21 +51,16 @@
                         width: 200,
                         template: '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/#=CustomerId#">#=CustomerFullName# (#=CustomerEmail#)</a>'                        
                     },
-                    @if (!adminAreaSettings.HideStoreColumn)
                     {
-                        <text>
-                        {
-                            field: "StoreName",
-                            title: "@Loc["Admin.Orders.Fields.Store"]",
-                            width: 120,
-                            headerAttributes: { style: "text-align:center" },
-                            attributes: { style: "text-align:center" },
-                        },
-                        </text>
-                    }
+                        field: "OrderStatus",
+                        title: "@Loc["Admin.Orders.Fields.OrderStatus"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
                     {
-                        field: "ShippingStatus",
-                        title: "@Loc["Admin.Orders.Fields.ShippingStatus"]",
+                        field: "OrderTotal",
+                        title: "@Loc["Admin.Orders.Fields.OrderTotal"]",
                         width: 120,
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
@@ -74,6 +69,15 @@
                         field: "TargetDeliveryDate",
                         title: "@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]",
                         width: 150,
+                        type: "date",
+                        format: "{0:G}",
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "UpdatedOn",
+                        title: "@Loc["Admin.Orders.Fields.UpdatedOn"]",
+                        width: 120,
                         type: "date",
                         format: "{0:G}",
                         headerAttributes: { style: "text-align:center" },
@@ -94,10 +98,7 @@
 
         function additionalData() {
             var data = {
-                startdate: $('#dashboard-report-range').data('daterangepicker').startDate.format('YYYY-MM-DD'),
-                endDate: $('#dashboard-report-range').data('daterangepicker').endDate.format('YYYY-MM-DD'),
-                ShippingStatusId: 10, // Filter for orders with pending shipments (shipping status = 10)
-                OrderStatusId: 20 // Filter for processing orders
+                // No date range or other filters - let the server filter by OpenQty
             };
             addAntiForgeryToken(data);
             return data;
@@ -105,6 +106,6 @@
         
         // Add a link to Order List with filter for pending fulfillment
         var titleBar = $(".x_title").last();
-        titleBar.append('<div class="pull-right"><a href="@Url.Action("List", "Order", new { ShippingStatusId = 10, OrderStatusId = 20, area = Constants.AreaAdmin })" class="btn btn-info">@Loc["Admin.Orders.BtnAllFulfillmentQueue"]</a></div>');
+        titleBar.append('<div class="pull-right"><a href="@Url.Action("List", "Order", new { OrderStatusId = 20, NeedsFulfillment = true, area = Constants.AreaAdmin })" class="btn btn-info">View All Orders Needing Fulfillment</a></div>');
     });
 </script>

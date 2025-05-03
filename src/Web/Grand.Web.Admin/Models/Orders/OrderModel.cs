@@ -221,6 +221,10 @@ public class OrderModel : BaseEntityModel
     //creation date
     [GrandResourceDisplayName("Admin.Orders.Fields.CreatedOn")]
     public DateTime CreatedOn { get; set; }
+    
+    //update date
+    [GrandResourceDisplayName("Admin.Orders.Fields.UpdatedOn")]
+    public DateTime? UpdatedOn { get; set; }
 
     //checkout attributes
     public string CheckoutAttributeInfo { get; set; }

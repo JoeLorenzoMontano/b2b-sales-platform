@@ -157,6 +157,7 @@ public class OrderController(
                             CustomerId = order.CustomerId,
                             OrderTotal = order.OrderTotal.ToString("C"),
                             CreatedOn = order.CreatedOnUtc,
+                            UpdatedOn = order.UpdatedOnUtc,
                             StoreName = order.StoreId,
                             TargetDeliveryDate = order.TargetDeliveryDate
                         };

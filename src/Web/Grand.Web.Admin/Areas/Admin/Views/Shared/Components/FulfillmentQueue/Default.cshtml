@@ -79,6 +79,7 @@
                         format: "{0:yyyy-MM-dd}", // Use consistent date format
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
+                        template: '#= TargetDeliveryDate ? kendo.toString(new Date(TargetDeliveryDate), "yyyy-MM-dd") : "" #',
                     },
                     {
                         field: "UpdatedOn",

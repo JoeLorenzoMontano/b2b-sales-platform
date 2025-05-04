@@ -1130,12 +1130,14 @@ public class OrderController(
             
         if (order.TargetDeliveryDate.HasValue)
         {
-            // Use UTC date for consistent display across UI
-            DateTime localDate = DateTime.SpecifyKind(order.TargetDeliveryDate.Value, DateTimeKind.Utc);
-            string formattedDate = localDate.ToString("yyyy-MM-dd");
+            // Adjust for browser's local time zone to prevent date shift
+            // Add one day to compensate for time zone conversion done by browser
+            DateTime adjustedDate = order.TargetDeliveryDate.Value.AddDays(1);
+            string formattedDate = adjustedDate.ToString("yyyy-MM-dd");
             
             // Debug info
             System.Diagnostics.Debug.WriteLine($"Target delivery date from DB: {order.TargetDeliveryDate.Value}");
+            System.Diagnostics.Debug.WriteLine($"Adjusted date (+1 day): {adjustedDate}");
             System.Diagnostics.Debug.WriteLine($"Formatted date for display: {formattedDate}");
             
             return Json(new { success = true, value = formattedDate });
@@ -1162,12 +1164,15 @@ public class OrderController(
         // Update target delivery date
         if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
         {
-            // Ensure consistent UTC storage
-            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            // Adjust for time zone by subtracting a day when saving
+            // This compensates for the +1 day we add when displaying 
+            DateTime adjustedDate = parsedDate.AddDays(-1);
+            order.TargetDeliveryDate = DateTime.SpecifyKind(adjustedDate, DateTimeKind.Utc);
             
             // Debug info
             System.Diagnostics.Debug.WriteLine($"Saving date from input: {date}");
             System.Diagnostics.Debug.WriteLine($"Parsed date: {parsedDate}");
+            System.Diagnostics.Debug.WriteLine($"Adjusted date (-1 day): {adjustedDate}");
             System.Diagnostics.Debug.WriteLine($"Saved date to DB: {order.TargetDeliveryDate}");
         }
         else
@@ -1199,13 +1204,15 @@ public class OrderController(
         // Store target delivery date in the order
         if (!string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var parsedDate))
         {
-            // Ensure consistent UTC storage
-            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            // Adjust for time zone by subtracting a day when saving to keep consistency
+            DateTime adjustedDate = parsedDate.AddDays(-1);
+            order.TargetDeliveryDate = DateTime.SpecifyKind(adjustedDate, DateTimeKind.Utc);
             await orderService.UpdateOrder(order);
             
             // Debug info
             System.Diagnostics.Debug.WriteLine($"Create Shipment - Date from input: {targetDeliveryDate}");
             System.Diagnostics.Debug.WriteLine($"Create Shipment - Parsed date: {parsedDate}");
+            System.Diagnostics.Debug.WriteLine($"Create Shipment - Adjusted date (-1 day): {adjustedDate}");
             System.Diagnostics.Debug.WriteLine($"Create Shipment - Saved to DB: {order.TargetDeliveryDate}");
         }
 

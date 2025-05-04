@@ -1130,8 +1130,14 @@ public class OrderController(
             
         if (order.TargetDeliveryDate.HasValue)
         {
-            // Format date consistently
-            string formattedDate = order.TargetDeliveryDate.Value.ToString("yyyy-MM-dd");
+            // Use UTC date for consistent display across UI
+            DateTime localDate = DateTime.SpecifyKind(order.TargetDeliveryDate.Value, DateTimeKind.Utc);
+            string formattedDate = localDate.ToString("yyyy-MM-dd");
+            
+            // Debug info
+            System.Diagnostics.Debug.WriteLine($"Target delivery date from DB: {order.TargetDeliveryDate.Value}");
+            System.Diagnostics.Debug.WriteLine($"Formatted date for display: {formattedDate}");
+            
             return Json(new { success = true, value = formattedDate });
         }
         
@@ -1156,7 +1162,13 @@ public class OrderController(
         // Update target delivery date
         if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
         {
-            order.TargetDeliveryDate = parsedDate;
+            // Ensure consistent UTC storage
+            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            
+            // Debug info
+            System.Diagnostics.Debug.WriteLine($"Saving date from input: {date}");
+            System.Diagnostics.Debug.WriteLine($"Parsed date: {parsedDate}");
+            System.Diagnostics.Debug.WriteLine($"Saved date to DB: {order.TargetDeliveryDate}");
         }
         else
         {
@@ -1187,8 +1199,14 @@ public class OrderController(
         // Store target delivery date in the order
         if (!string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var parsedDate))
         {
-            order.TargetDeliveryDate = parsedDate;
+            // Ensure consistent UTC storage
+            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
             await orderService.UpdateOrder(order);
+            
+            // Debug info
+            System.Diagnostics.Debug.WriteLine($"Create Shipment - Date from input: {targetDeliveryDate}");
+            System.Diagnostics.Debug.WriteLine($"Create Shipment - Parsed date: {parsedDate}");
+            System.Diagnostics.Debug.WriteLine($"Create Shipment - Saved to DB: {order.TargetDeliveryDate}");
         }
 
         var selectedOrderItemIds = orderItemIds.Split(',');
@@ -1208,20 +1226,22 @@ public class OrderController(
         }
         
         // Create a new shipment
-        var shipment = new Shipment
+        try
         {
-            OrderId = orderId,
-            StoreId = order.StoreId,
-            VendorId = contextAccessor.WorkContext.CurrentVendor?.Id,
-            SeId = contextAccessor.WorkContext.CurrentCustomer.SeId,
-            TrackingNumber = "",
-            TotalWeight = null,
-            ShippedDateUtc = null,
-            DeliveryDateUtc = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var shipmentDate) ? 
-                DateTime.SpecifyKind(shipmentDate, DateTimeKind.Utc) : null,
-            AdminComment = "Created from Fulfillment Queue",
-            CreatedOnUtc = DateTime.UtcNow
-        };
+            var shipment = new Shipment
+            {
+                OrderId = orderId,
+                StoreId = order.StoreId,
+                VendorId = contextAccessor.WorkContext.CurrentVendor?.Id,
+                SeId = contextAccessor.WorkContext.CurrentCustomer.SeId,
+                TrackingNumber = "",
+                TotalWeight = null,
+                ShippedDateUtc = null,
+                // Use the saved target delivery date directly from order to ensure consistency
+                DeliveryDateUtc = order.TargetDeliveryDate,
+                AdminComment = "Created from Fulfillment Queue",
+                CreatedOnUtc = DateTime.UtcNow
+            };
 
         // Add items to shipment
         foreach (var orderItemId in selectedOrderItemIds)
@@ -1261,14 +1281,23 @@ public class OrderController(
         await orderService.InsertOrderNote(new OrderNote
         {
             Note = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var noteDate) ? 
-                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment tab with target delivery date: {noteDate:yyyy-MM-dd}" :
-                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment tab",
+                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment Queue with target delivery date: {noteDate:yyyy-MM-dd}" :
+                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment Queue",
             DisplayToCustomer = false,
             OrderId = order.Id,
             CreatedOnUtc = DateTime.UtcNow
         });
-
+        
         return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            // Log the exception
+            System.Diagnostics.Debug.WriteLine($"Error creating fulfillment shipment: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            
+            return Json(new { success = false, error = $"Error creating shipment: {ex.Message}" });
+        }
     }
 
     #endregion

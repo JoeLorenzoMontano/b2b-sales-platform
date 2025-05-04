@@ -76,7 +76,7 @@
                         title: "@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]",
                         width: 150,
                         type: "date",
-                        format: "{0:G}",
+                        format: "{0:yyyy-MM-dd}", // Use consistent date format
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
                     },
@@ -197,7 +197,7 @@
                         // Create the target delivery date picker
                         var dateSection = $('<div class="col-md-6 form-group row"></div>');
                         dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]:</label>');
-                        dateSection.append('<div class="col-sm-8"><input type="date" id="targetDate_' + orderId + '" class="form-control" /></div>');
+                        dateSection.append('<div class="col-sm-8"><input type="date" id="targetDate_' + orderId + '" class="form-control" data-date-format="yyyy-mm-dd" /></div>');
                         panel.append(dateSection);
                         
                         // Create the action buttons
@@ -215,10 +215,39 @@
                             type: "GET",
                             data: { orderId: orderId },
                             success: function(response) {
-                                if (response && response.targetDate) {
-                                    $("#targetDate_" + orderId).val(response.targetDate.split('T')[0]);
+                                if (response && response.success && response.value) {
+                                    $("#targetDate_" + orderId).val(response.value);
                                 }
                             }
+                        });
+                        
+                        // Wire up the date picker to save date changes immediately
+                        $("#targetDate_" + orderId).off("change").on("change", function() {
+                            var newDate = $(this).val();
+                            // Add anti-forgery token
+                            var data = {
+                                orderId: orderId,
+                                date: newDate
+                            };
+                            addAntiForgeryToken(data);
+                            
+                            $.ajax({
+                                url: "@Html.Raw(Url.Action("SaveTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin }))",
+                                type: "POST",
+                                data: data,
+                                success: function(response) {
+                                    if (response && response.success) {
+                                        success_notify("Delivery date saved");
+                                    } else {
+                                        error_notify("Failed to save delivery date");
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    console.error("Save date error:", error);
+                                    console.error("Response:", xhr.responseText);
+                                    error_notify("Error saving date: " + error);
+                                }
+                            });
                         });
                         
                         // Wire up the select all checkbox
@@ -250,15 +279,18 @@
                             var targetDate = $("#targetDate_" + orderId).val();
                             
                             // Call API to create shipment
+                            var shipmentData = {
+                                orderId: orderId,
+                                orderItemIds: selectedItems.join(','),
+                                quantities: JSON.stringify(shipQtyMap),
+                                targetDeliveryDate: targetDate
+                            };
+                            addAntiForgeryToken(shipmentData);
+                            
                             $.ajax({
-                                url: "@Url.Action("CreateFulfillmentShipment", "Order", new { area = Constants.AreaAdmin })",
+                                url: "@Html.Raw(Url.Action("CreateFulfillmentShipment", "Order", new { area = Constants.AreaAdmin }))",
                                 type: "POST",
-                                data: {
-                                    orderId: orderId,
-                                    orderItemIds: selectedItems.join(','),
-                                    quantities: JSON.stringify(shipQtyMap),
-                                    targetDeliveryDate: targetDate
-                                },
+                                data: shipmentData,
                                 success: function(response) {
                                     if (response.success) {
                                         // Use a better notification
@@ -266,8 +298,13 @@
                                         // Refresh the grid
                                         $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
                                     } else {
-                                        error_notify("Error: " + response.error);
+                                        error_notify("Error: " + (response.error || "Unknown error"));
                                     }
+                                },
+                                error: function(xhr, status, error) {
+                                    console.error("Shipment creation failed:", error);
+                                    console.error("Response:", xhr.responseText);
+                                    error_notify("Error creating shipment: " + error);
                                 }
                             });
                         });

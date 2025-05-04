@@ -38,6 +38,7 @@
                     mode: "inline"
                 },
                 scrollable: false,
+                detailInit: orderItemDetailInit,
                 columns: [
                     {
                         field: "OrderNumber",
@@ -107,6 +108,172 @@
             };
             addAntiForgeryToken(data);
             return data;
+        }
+        
+        // Function to initialize the detail row with order items and fulfillment controls
+        function orderItemDetailInit(e) {
+            var orderId = e.data.Id;
+            
+            // Create a detail grid with order items
+            $("<div/>").appendTo(e.detailCell).kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Html.Raw(Url.Action("GetOrderItemsForFulfillment", "Order", new { area = Constants.AreaAdmin }))?orderId=" + orderId,
+                            type: "POST",
+                            dataType: "json",
+                            data: function() {
+                                var data = {};
+                                addAntiForgeryToken(data);
+                                return data;
+                            }
+                        }
+                    },
+                    schema: {
+                        data: "Data",
+                        total: "Total",
+                        errors: "Errors"
+                    },
+                    error: function(e) {
+                        display_kendoui_grid_error(e);
+                        this.cancelChanges();
+                    },
+                    serverPaging: false,
+                    serverFiltering: false,
+                    serverSorting: false
+                },
+                scrollable: false,
+                sortable: true,
+                pageable: false,
+                columns: [
+                    {
+                        template: '<input type="checkbox" class="fulfillment-item-check" value="#=Id#" />',
+                        width: 30,
+                        headerTemplate: '<input type="checkbox" id="select-all-items-#=Id#" class="select-all-items" data-order-id="#=Id#" />'
+                    },
+                    {
+                        field: "ProductName",
+                        title: "@Loc["Admin.Orders.Products.ProductName"]",
+                        template: '<div><img src="#=PictureThumbnailUrl#" alt="" style="width:50px;" /><a href="@Url.Action("Edit", "Product", new { area = Constants.AreaAdmin })/#=ProductId#">#:ProductName#</a>' +
+                            '# if(AttributeInfo && AttributeInfo.length > 0) {# <br /><small>#=AttributeInfo#</small> #} #</div>',
+                        width: 350
+                    },
+                    {
+                        field: "Sku",
+                        title: "@Loc["Admin.Orders.Products.SKU"]",
+                        width: 100
+                    },
+                    {
+                        field: "Quantity",
+                        title: "@Loc["Admin.Orders.Products.Quantity"]",
+                        width: 75
+                    },
+                    {
+                        field: "OpenQty",
+                        title: "@Loc["Admin.Orders.Products.OpenQty"]",
+                        width: 75
+                    },
+                    {
+                        field: "ShipQty",
+                        title: "@Loc["Admin.Orders.Products.ShipQty"]",
+                        width: 75,
+                        template: '<input type="number" class="form-control ship-qty" data-item-id="#=Id#" min="0" max="#=OpenQty#" value="#=OpenQty#" style="width:60px;" />'
+                    },
+                    {
+                        field: "UnitPriceInclTax",
+                        title: "@Loc["Admin.Orders.Products.UnitPriceInclTax"]",
+                        width: 120
+                    }
+                ],
+                dataBound: function() {
+                    // After the grid is loaded, add the fulfillment control panel
+                    var grid = this;
+                    var gridElement = $(grid.element);
+                    
+                    // Only add the control panel once
+                    if (gridElement.find(".fulfillment-control-panel").length === 0) {
+                        var panel = $('<div class="fulfillment-control-panel row mt-3 mb-3"></div>');
+                        
+                        // Create the target delivery date picker
+                        var dateSection = $('<div class="col-md-6 form-group row"></div>');
+                        dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]:</label>');
+                        dateSection.append('<div class="col-sm-8"><input type="date" id="targetDate_' + orderId + '" class="form-control" /></div>');
+                        panel.append(dateSection);
+                        
+                        // Create the action buttons
+                        var buttonSection = $('<div class="col-md-6 text-right"></div>');
+                        buttonSection.append('<button type="button" class="btn btn-success create-shipment-btn" ' +
+                            'data-order-id="' + orderId + '"><i class="fa fa-truck"></i> Create Shipment</button>');
+                        panel.append(buttonSection);
+                        
+                        // Add the panel after the grid
+                        gridElement.after(panel);
+                        
+                        // Load existing target date if available
+                        $.ajax({
+                            url: "@Url.Action("GetTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin })",
+                            type: "GET",
+                            data: { orderId: orderId },
+                            success: function(response) {
+                                if (response && response.targetDate) {
+                                    $("#targetDate_" + orderId).val(response.targetDate.split('T')[0]);
+                                }
+                            }
+                        });
+                        
+                        // Wire up the select all checkbox
+                        gridElement.find(".select-all-items").off("change").on("change", function() {
+                            var checked = $(this).is(":checked");
+                            gridElement.find(".fulfillment-item-check").prop("checked", checked);
+                        });
+                        
+                        // Wire up the create shipment button
+                        $(".create-shipment-btn[data-order-id='" + orderId + "']").off("click").on("click", function() {
+                            var selectedItems = [];
+                            var shipQtyMap = {};
+                            
+                            // Get all selected items and their ship quantities
+                            gridElement.find(".fulfillment-item-check:checked").each(function() {
+                                var itemId = $(this).val();
+                                selectedItems.push(itemId);
+                                
+                                // Get the ship qty for this item
+                                var shipQty = gridElement.find(".ship-qty[data-item-id='" + itemId + "']").val();
+                                shipQtyMap[itemId] = shipQty;
+                            });
+                            
+                            if (selectedItems.length === 0) {
+                                alert("Please select at least one item to create a shipment");
+                                return;
+                            }
+                            
+                            var targetDate = $("#targetDate_" + orderId).val();
+                            
+                            // Call API to create shipment
+                            $.ajax({
+                                url: "@Url.Action("CreateFulfillmentShipment", "Order", new { area = Constants.AreaAdmin })",
+                                type: "POST",
+                                data: {
+                                    orderId: orderId,
+                                    orderItemIds: selectedItems.join(','),
+                                    quantities: JSON.stringify(shipQtyMap),
+                                    targetDeliveryDate: targetDate
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        // Use a better notification
+                                        success_notify("Shipment created successfully");
+                                        // Refresh the grid
+                                        $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                    } else {
+                                        error_notify("Error: " + response.error);
+                                    }
+                                }
+                            });
+                        });
+                    }
+                }
+            });
         }
         
         // Add a link to Order List with filter for pending fulfillment

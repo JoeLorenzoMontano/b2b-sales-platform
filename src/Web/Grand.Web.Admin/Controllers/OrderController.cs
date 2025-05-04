@@ -54,6 +54,61 @@ public class OrderController(
 
     #endregion
 
+    #region Fulfillment helpers
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetOrderItemsForFulfillment(string orderId)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new DataSourceResult { Data = new List<object>(), Total = 0 });
+                
+            // Restrict access to own orders for sales staff
+            if (await CheckSalesManager(order))
+                return Json(new { success = false, error = "Access denied" });
+                
+            // Only include items with open quantities
+            var items = new List<object>();
+            
+            foreach (var item in order.OrderItems.Where(item => item.OpenQty > 0))
+            {
+                // Create a simple anonymous object with only the necessary properties
+                items.Add(new {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    ProductName = "Product #" + item.ProductId,  // We don't have product name directly
+                    Sku = item.Sku,
+                    Quantity = item.Quantity,
+                    OpenQty = item.OpenQty,
+                    UnitPriceInclTax = item.UnitPriceInclTax.ToString("C"),
+                    AttributeInfo = item.AttributeDescription,
+                    PictureThumbnailUrl = ""  // Empty for now, could be populated with product service later
+                });
+            }
+                
+            var gridModel = new DataSourceResult
+            {
+                Data = items,
+                Total = items.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            return Json(new DataSourceResult { 
+                Data = new List<object>(), 
+                Total = 0, 
+                Errors = $"Error loading order items: {ex.Message}" 
+            });
+        }
+    }
+    
+    #endregion
+
     #region Order list
 
     public IActionResult Index()
@@ -1115,7 +1170,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> CreateFulfillmentShipment(string orderId, string orderItemIds, string targetDeliveryDate,
+    public async Task<IActionResult> CreateFulfillmentShipment(string orderId, string orderItemIds, string quantities, string targetDeliveryDate,
         [FromServices] IShipmentService shipmentService)
     {
         if (string.IsNullOrEmpty(orderItemIds))
@@ -1138,6 +1193,20 @@ public class OrderController(
 
         var selectedOrderItemIds = orderItemIds.Split(',');
         
+        // Parse quantities from JSON
+        Dictionary<string, string> quantityMap = new Dictionary<string, string>();
+        if (!string.IsNullOrEmpty(quantities))
+        {
+            try
+            {
+                quantityMap = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(quantities);
+            }
+            catch
+            {
+                // If parsing fails, we'll use default quantities
+            }
+        }
+        
         // Create a new shipment
         var shipment = new Shipment
         {
@@ -1150,7 +1219,7 @@ public class OrderController(
             ShippedDateUtc = null,
             DeliveryDateUtc = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var shipmentDate) ? 
                 DateTime.SpecifyKind(shipmentDate, DateTimeKind.Utc) : null,
-            AdminComment = "Created from Order Fulfillment tab",
+            AdminComment = "Created from Fulfillment Queue",
             CreatedOnUtc = DateTime.UtcNow
         };
 
@@ -1161,11 +1230,20 @@ public class OrderController(
             if (orderItem == null || orderItem.OpenQty <= 0)
                 continue;
 
+            // Get the quantity to ship from the provided quantities JSON
+            int shipQty = orderItem.OpenQty;
+            if (quantityMap.TryGetValue(orderItemId, out var qtyStr) &&
+                int.TryParse(qtyStr, out var parsedQty) &&
+                parsedQty > 0 && parsedQty <= orderItem.OpenQty)
+            {
+                shipQty = parsedQty;
+            }
+
             var shipmentItem = new ShipmentItem
             {
                 OrderItemId = orderItemId,
                 ProductId = orderItem.ProductId,
-                Quantity = orderItem.OpenQty,
+                Quantity = shipQty,
                 WarehouseId = orderItem.WarehouseId,
                 Attributes = orderItem.Attributes
             };

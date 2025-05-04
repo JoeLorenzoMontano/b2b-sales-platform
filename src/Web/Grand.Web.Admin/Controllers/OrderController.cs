@@ -159,6 +159,7 @@ public class OrderController(
                             CreatedOn = order.CreatedOnUtc,
                             UpdatedOn = order.UpdatedOnUtc,
                             StoreName = order.StoreId,
+                            ShippingAddressString = order.ShippingAddress?.Address1,
                             TargetDeliveryDate = order.TargetDeliveryDate
                         };
                         

@@ -193,6 +193,9 @@ public class OrderModel : BaseEntityModel
 
     [GrandResourceDisplayName("Admin.Orders.Fields.ShippingAddress")]
     public AddressModel ShippingAddress { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.ShippingAddress.Address1")]
+    public string ShippingAddressString { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.Fields.ShippingMethod")]
     public string ShippingMethod { get; set; }

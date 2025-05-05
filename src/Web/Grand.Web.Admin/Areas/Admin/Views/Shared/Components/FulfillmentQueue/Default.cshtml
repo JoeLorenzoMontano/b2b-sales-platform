@@ -2,6 +2,20 @@
 
 <div id="fulfillment-queue-grid"></div>
 
+<style>
+    .fulfillment-details-grid .k-grid-header .k-header {
+        background-color: #3f51b5; /* Match the theme's primary color */
+        color: white !important;
+    }
+    .fulfillment-details-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .select-all-items {
+        accent-color: white; /* Customize the checkbox color */
+        transform: scale(1.3); /* Make it larger */
+    }
+</style>
+
 <script>
     $(document).ready(function () {
         $("#fulfillment-queue-grid").kendoGrid({
@@ -136,7 +150,7 @@
             var orderId = e.data.Id;
             
             // Create a detail grid with order items
-            $("<div/>").appendTo(e.detailCell).kendoGrid({
+            $("<div class='fulfillment-details-grid'/>").appendTo(e.detailCell).kendoGrid({
                 dataSource: {
                     transport: {
                         read: {
@@ -170,40 +184,47 @@
                     {
                         template: '<input type="checkbox" class="fulfillment-item-check" value="#=Id#" />',
                         width: 30,
-                        headerTemplate: '<input type="checkbox" id="select-all-items-#=Id#" class="select-all-items" data-order-id="#=Id#" />'
+                        headerTemplate: '<input type="checkbox" id="select-all-items-#=Id#" class="select-all-items" data-order-id="#=Id#" />',
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
                     },
                     {
                         field: "ProductName",
                         title: "@Loc["Admin.Orders.Products.ProductName"]",
                         template: '<div><img src="#=PictureThumbnailUrl#" alt="" style="width:50px;" /><a href="@Url.Action("Edit", "Product", new { area = Constants.AreaAdmin })/#=ProductId#">#:ProductName#</a>' +
                             '# if(AttributeInfo && AttributeInfo.length > 0) {# <br /><small>#=AttributeInfo#</small> #} #</div>',
-                        width: 350
+                        width: 350,
+                        headerAttributes: { style: "background-color: #3f51b5; color: white;" }
                     },
                     {
                         field: "Sku",
                         title: "@Loc["Admin.Orders.Products.SKU"]",
-                        width: 100
+                        width: 100,
+                        headerAttributes: { style: "background-color: #3f51b5; color: white;" }
                     },
                     {
                         field: "Quantity",
                         title: "@Loc["Admin.Orders.Products.Quantity"]",
-                        width: 75
+                        width: 75,
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
                     },
                     {
                         field: "OpenQty",
                         title: "@Loc["Admin.Orders.Products.OpenQty"]",
-                        width: 75
+                        width: 75,
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
                     },
                     {
                         field: "ShipQty",
                         title: "@Loc["Admin.Orders.Products.ShipQty"]",
                         width: 75,
-                        template: '<input type="number" class="form-control ship-qty" data-item-id="#=Id#" min="0" max="#=OpenQty#" value="#=OpenQty#" style="width:60px;" />'
+                        template: '<input type="number" class="form-control ship-qty" data-item-id="#=Id#" min="0" max="#=OpenQty#" value="#=OpenQty#" style="width:60px;" />',
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
                     },
                     {
                         field: "UnitPriceInclTax",
                         title: "@Loc["Admin.Orders.Products.UnitPriceInclTax"]",
-                        width: 120
+                        width: 120,
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
                     }
                 ],
                 dataBound: function() {

@@ -1130,9 +1130,8 @@ public class OrderController(
             
         if (order.TargetDeliveryDate.HasValue)
         {
-            // Add one day to align with the grid display
-            DateTime displayDate = order.TargetDeliveryDate.Value.AddDays(1);
-            string formattedDate = displayDate.ToString("yyyy-MM-dd");
+            // Return the date directly without any adjustments
+            string formattedDate = order.TargetDeliveryDate.Value.ToString("yyyy-MM-dd");
             
             // Debug info
             System.Diagnostics.Debug.WriteLine($"Target delivery date from DB: {order.TargetDeliveryDate.Value}");
@@ -1162,8 +1161,8 @@ public class OrderController(
         // Update target delivery date
         if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
         {
-            // No adjustments, just store the parsed date directly 
-            order.TargetDeliveryDate = parsedDate;
+            // Store the date as is without adjustments
+            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
             
             // Debug info
             System.Diagnostics.Debug.WriteLine($"Saving date from input: {date}");
@@ -1199,7 +1198,7 @@ public class OrderController(
         // Store target delivery date in the order
         if (!string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var parsedDate))
         {
-            // No adjustments, just save the date as is
+            // Store the date as is without adjustments
             order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
             await orderService.UpdateOrder(order);
             

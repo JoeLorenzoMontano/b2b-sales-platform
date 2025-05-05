@@ -213,176 +213,163 @@
                     var grid = this;
                     var gridElement = $(grid.element);
                     
-                    // Only add the control panel once
-                    if (gridElement.find(".fulfillment-control-panel").length === 0) {
-                        var panel = $('<div class="fulfillment-control-panel row mt-3 mb-3"></div>');
+                    // First, remove any existing control panel to prevent duplication
+                    var existingPanel = gridElement.parent().find(".fulfillment-control-panel[data-order-id='" + orderId + "']");
+                    if (existingPanel.length > 0) {
+                        existingPanel.remove();
+                    }
+                    
+                    // Create a new control panel each time
+                    var panel = $('<div class="fulfillment-control-panel row mt-3 mb-3" data-order-id="' + orderId + '"></div>');
                         
-                        // Create the target delivery date picker
-                        var dateSection = $('<div class="col-md-6 form-group row"></div>');
-                        dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]:</label>');
-                        dateSection.append('<div class="col-sm-8"><input type="date" id="targetDate_' + orderId + '" class="form-control" data-date-format="yyyy-mm-dd" /></div>');
-                        panel.append(dateSection);
+                    // Create the target delivery date picker
+                    var dateSection = $('<div class="col-md-6 form-group row"></div>');
+                    dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]:</label>');
+                    dateSection.append('<div class="col-sm-8"><input type="date" id="targetDate_' + orderId + '" class="form-control target-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
+                    panel.append(dateSection);
+                    
+                    // Create the action buttons
+                    var buttonSection = $('<div class="col-md-6 text-right"></div>');
+                    buttonSection.append('<button type="button" class="btn btn-success create-shipment-btn" ' +
+                        'data-order-id="' + orderId + '" disabled><i class="fa fa-truck"></i> Create Shipment</button>');
+                    panel.append(buttonSection);
+                    
+                    // Add the panel after the grid
+                    gridElement.after(panel);
                         
-                        // Create the action buttons
-                        var buttonSection = $('<div class="col-md-6 text-right"></div>');
-                        buttonSection.append('<button type="button" class="btn btn-success create-shipment-btn" ' +
-                            'data-order-id="' + orderId + '" disabled><i class="fa fa-truck"></i> Create Shipment</button>');
-                        panel.append(buttonSection);
+                    // Load existing target date if available
+                    $.ajax({
+                        url: "@Url.Action("GetTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin })",
+                        type: "GET",
+                        data: { orderId: orderId },
+                        success: function(response) {
+                            if (response && response.success && response.value) {
+                                $("#targetDate_" + orderId).val(response.value);
+                            }
+                        }
+                    });
                         
-                        // Add the panel after the grid
-                        gridElement.after(panel);
+                    // Wire up the date picker to save date changes immediately
+                    $("#targetDate_" + orderId).off("change").on("change", function() {
+                        var newDate = $(this).val();
+                        // Add anti-forgery token
+                        var data = {
+                            orderId: orderId,
+                            date: newDate
+                        };
+                        addAntiForgeryToken(data);
                         
-                        // Load existing target date if available
                         $.ajax({
-                            url: "@Url.Action("GetTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin })",
-                            type: "GET",
-                            data: { orderId: orderId },
+                            url: "@Html.Raw(Url.Action("SaveTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            data: data,
                             success: function(response) {
-                                if (response && response.success && response.value) {
-                                    $("#targetDate_" + orderId).val(response.value);
+                                if (response && response.success) {
+                                    // Silent success - no notification needed
+                                    
+                                    // Reload main grid to reflect changes
+                                    setTimeout(function() {
+                                        $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                    }, 500);
+                                } else {
+                                    alert("Failed to save delivery date");
                                 }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Save date error:", error);
+                                console.error("Response:", xhr.responseText);
+                                alert("Error saving date: " + error);
                             }
                         });
+                    });
+                    
+                    // Function to check if all items are selected and update button state
+                    function updateShipmentButtonState() {
+                        var totalItems = gridElement.find(".fulfillment-item-check").length;
+                        var checkedItems = gridElement.find(".fulfillment-item-check:checked").length;
                         
-                        // Wire up the date picker to save date changes immediately
-                        $("#targetDate_" + orderId).off("change").on("change", function() {
-                            var newDate = $(this).val();
-                            // Add anti-forgery token
-                            var data = {
-                                orderId: orderId,
-                                date: newDate
-                            };
-                            addAntiForgeryToken(data);
-                            
-                            $.ajax({
-                                url: "@Html.Raw(Url.Action("SaveTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin }))",
-                                type: "POST",
-                                data: data,
-                                success: function(response) {
-                                    if (response && response.success) {
-                                        // Silent success - no notification needed
-                                        
-                                        // Update the delivery date in the parent row
-                                        var mainGrid = $("#fulfillment-queue-grid").data("kendoGrid");
-                                        var dataItem = mainGrid.dataSource.get(orderId);
-                                        
-                                        if (dataItem) {
-                                            // Update the data item
-                                            dataItem.set("TargetDeliveryDate", newDate);
-                                            
-                                            // Find the parent row and update visual display
-                                            var parentRow = mainGrid.tbody.find("tr[data-uid='" + dataItem.uid + "']");
-                                            var dateCell = parentRow.find("td:eq(7)"); // 8th column (0-based index)
-                                            
-                                            if (newDate) {
-                                                // Format the date for display
-                                                var date = new Date(newDate);
-                                                date.setDate(date.getDate() + 1); // Add one day to fix display as in the template
-                                                dateCell.text(kendo.toString(date, "yyyy-MM-dd"));
-                                            } else {
-                                                dateCell.text("");
-                                            }
-                                        }
-                                    } else {
-                                        alert("Failed to save delivery date");
-                                    }
-                                },
-                                error: function(xhr, status, error) {
-                                    console.error("Save date error:", error);
-                                    console.error("Response:", xhr.responseText);
-                                    alert("Error saving date: " + error);
-                                }
-                            });
-                        });
-                        
-                        // Function to check if all items are selected and update button state
-                        function updateShipmentButtonState() {
-                            var totalItems = gridElement.find(".fulfillment-item-check").length;
-                            var checkedItems = gridElement.find(".fulfillment-item-check:checked").length;
-                            
-                            // Enable button only if all items are checked
-                            $(".create-shipment-btn[data-order-id='" + orderId + "']").prop("disabled", checkedItems < totalItems);
+                        // Enable button only if all items are checked
+                        $(".create-shipment-btn[data-order-id='" + orderId + "']").prop("disabled", checkedItems < totalItems);
+                    }
+                    
+                    // Wire up the select all checkbox
+                    gridElement.find(".select-all-items").off("change").on("change", function() {
+                        var checked = $(this).is(":checked");
+                        gridElement.find(".fulfillment-item-check").prop("checked", checked);
+                        updateShipmentButtonState();
+                    });
+                    
+                    // Wire up individual checkboxes
+                    gridElement.find(".fulfillment-item-check").off("change").on("change", function() {
+                        // If unchecking an item, also uncheck the "select all" checkbox
+                        if (!$(this).is(":checked")) {
+                            gridElement.find(".select-all-items").prop("checked", false);
+                        } else {
+                            // Check if all individual items are now checked
+                            var allChecked = gridElement.find(".fulfillment-item-check:not(:checked)").length === 0;
+                            if (allChecked) {
+                                gridElement.find(".select-all-items").prop("checked", true);
+                            }
                         }
                         
-                        // Wire up the select all checkbox
-                        gridElement.find(".select-all-items").off("change").on("change", function() {
-                            var checked = $(this).is(":checked");
-                            gridElement.find(".fulfillment-item-check").prop("checked", checked);
-                            updateShipmentButtonState();
+                        updateShipmentButtonState();
+                    });
+                        
+                    // Wire up the create shipment button
+                    $(".create-shipment-btn[data-order-id='" + orderId + "']").off("click").on("click", function() {
+                        var selectedItems = [];
+                        var shipQtyMap = {};
+                        
+                        // Get all selected items
+                        gridElement.find(".fulfillment-item-check:checked").each(function() {
+                            var itemId = $(this).val();
+                            selectedItems.push(itemId);
+                            
+                            // Since we're shipping all items, use OpenQty as the ship quantity
+                            var row = $(this).closest("tr");
+                            var dataItem = grid.dataItem(row);
+                            shipQtyMap[itemId] = dataItem.OpenQty.toString();
                         });
                         
-                        // Wire up individual checkboxes
-                        gridElement.find(".fulfillment-item-check").off("change").on("change", function() {
-                            // If unchecking an item, also uncheck the "select all" checkbox
-                            if (!$(this).is(":checked")) {
-                                gridElement.find(".select-all-items").prop("checked", false);
-                            } else {
-                                // Check if all individual items are now checked
-                                var allChecked = gridElement.find(".fulfillment-item-check:not(:checked)").length === 0;
-                                if (allChecked) {
-                                    gridElement.find(".select-all-items").prop("checked", true);
-                                }
-                            }
-                            
-                            updateShipmentButtonState();
-                        });
+                        // This validation should never trigger since the button is disabled unless all items are selected,
+                        // but keeping it as a fallback
+                        if (selectedItems.length === 0) {
+                            alert("Please select all items to create a shipment");
+                            return;
+                        }
                         
-                        // Wire up the create shipment button
-                        $(".create-shipment-btn[data-order-id='" + orderId + "']").off("click").on("click", function() {
-                            var selectedItems = [];
-                            var shipQtyMap = {};
-                            
-                            // Get all selected items
-                            gridElement.find(".fulfillment-item-check:checked").each(function() {
-                                var itemId = $(this).val();
-                                selectedItems.push(itemId);
-                                
-                                // Since we're shipping all items, use OpenQty as the ship quantity
-                                var row = $(this).closest("tr");
-                                var dataItem = grid.dataItem(row);
-                                shipQtyMap[itemId] = dataItem.OpenQty.toString();
-                            });
-                            
-                            // This validation should never trigger since the button is disabled unless all items are selected,
-                            // but keeping it as a fallback
-                            if (selectedItems.length === 0) {
-                                alert("Please select all items to create a shipment");
-                                return;
-                            }
-                            
-                            var targetDate = $("#targetDate_" + orderId).val();
-                            
-                            // Call API to create shipment
-                            var shipmentData = {
-                                orderId: orderId,
-                                orderItemIds: selectedItems.join(','),
-                                quantities: JSON.stringify(shipQtyMap),
-                                targetDeliveryDate: targetDate
-                            };
-                            addAntiForgeryToken(shipmentData);
-                            
-                            $.ajax({
-                                url: "@Html.Raw(Url.Action("CreateFulfillmentShipment", "Order", new { area = Constants.AreaAdmin }))",
-                                type: "POST",
-                                data: shipmentData,
-                                success: function(response) {
-                                    if (response.success) {
-                                        // Use standard notification
-                                        alert("Full shipment created successfully for all order items");
-                                        // Refresh the grid
-                                        $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
-                                    } else {
-                                        alert("Error: " + (response.error || "Unknown error"));
-                                    }
-                                },
-                                error: function(xhr, status, error) {
-                                    console.error("Shipment creation failed:", error);
-                                    console.error("Response:", xhr.responseText);
-                                    alert("Error creating shipment: " + error);
+                        var targetDate = $("#targetDate_" + orderId).val();
+                        
+                        // Call API to create shipment
+                        var shipmentData = {
+                            orderId: orderId,
+                            orderItemIds: selectedItems.join(','),
+                            quantities: JSON.stringify(shipQtyMap),
+                            targetDeliveryDate: targetDate
+                        };
+                        addAntiForgeryToken(shipmentData);
+                        
+                        $.ajax({
+                            url: "@Html.Raw(Url.Action("CreateFulfillmentShipment", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            data: shipmentData,
+                            success: function(response) {
+                                if (response.success) {
+                                    // Use standard notification
+                                    alert("Full shipment created successfully for all order items");
+                                    // Refresh the grid
+                                    $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                } else {
+                                    alert("Error: " + (response.error || "Unknown error"));
                                 }
-                            });
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Shipment creation failed:", error);
+                                console.error("Response:", xhr.responseText);
+                                alert("Error creating shipment: " + error);
+                            }
                         });
-                    }
+                    });
                 }
             });
         }

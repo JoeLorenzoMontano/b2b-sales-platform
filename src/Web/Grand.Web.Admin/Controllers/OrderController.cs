@@ -6,6 +6,7 @@ using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Pdf;
+using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Domain.Permissions;
 using Grand.Domain.Catalog;
@@ -33,7 +34,8 @@ public class OrderController(
     IPdfService pdfService,
     IGroupService groupService,
     IExportManager<Order> exportManager,
-    IMediator mediator)
+    IMediator mediator,
+    ISalesEmployeeService _salesEmployeeService)
     : BaseAdminController
 {
     #region Utilities
@@ -217,6 +219,17 @@ public class OrderController(
                             ShippingAddressString = order.ShippingAddress?.Address1,
                             TargetDeliveryDate = order.TargetDeliveryDate
                         };
+
+                        // Add sales employee name if available
+                        if (!string.IsNullOrEmpty(order.SeId))
+                        {
+                            var salesEmployee = await _salesEmployeeService.GetSalesEmployeeById(order.SeId);
+                            if (salesEmployee != null)
+                            {
+                                orderModel.SalesEmployeeId = salesEmployee.Id;
+                                orderModel.SalesEmployeeName = salesEmployee.Name;
+                            }
+                        }
                         
                         fulfillmentOrders.Add(orderModel);
                     }
@@ -645,6 +658,39 @@ public class OrderController(
 
         await orderService.UpdateOrder(order);
 
+        await orderViewModelService.PrepareOrderDetailsModel(model, order);
+
+        //selected tab
+        await SaveSelectedTabIndex(persistForTheNextRequest: true);
+
+        return RedirectToAction("Edit", "Order", new { id });
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SaveSalesEmployee(string id, string salesEmployeeId)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            //No order found with the specified id
+            return RedirectToAction("List");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return RedirectToAction("Edit", "Order", new { id });
+
+        // Update sales employee
+        order.SeId = salesEmployeeId;
+        await orderService.UpdateOrder(order);
+
+        // Add a note
+        await orderService.InsertOrderNote(new OrderNote {
+            Note = "Sales representative has been assigned to this order",
+            DisplayToCustomer = false,
+            OrderId = order.Id
+        });
+
+        var model = new OrderModel();
         await orderViewModelService.PrepareOrderDetailsModel(model, order);
 
         //selected tab

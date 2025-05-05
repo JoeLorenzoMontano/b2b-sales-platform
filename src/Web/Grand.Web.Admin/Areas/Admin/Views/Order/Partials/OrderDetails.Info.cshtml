@@ -1,10 +1,12 @@
 ﻿@using System.Text.Encodings.Web
 @using Grand.Business.Core.Interfaces.Checkout.Orders
+@using Grand.Business.Core.Interfaces.Customers
 @using Grand.Domain.Payments
 @using Grand.Domain.Tax
 @using Constants = Grand.SharedUIResources.Constants
 @model OrderModel
 @inject IOrderTagService orderTagService
+@inject ISalesEmployeeService _salesEmployeeService
 
 
 <link rel="stylesheet" type="text/css" asp-src="@(Constants.WwwRoot)/administration/tagEditor/jquery.tag-editor.css"/>
@@ -237,15 +239,58 @@
         </div>
     </div>
 }
-@if (!string.IsNullOrEmpty(Model.SalesEmployeeId))
-{
-    <div class="form-group">
-        <admin-label asp-for="SalesEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.SalesEmployeeName</label>
+<div class="form-group">
+    <admin-label asp-for="SalesEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
+    <div class="col-9 col-md-9 col-sm-9">
+        @if (!string.IsNullOrEmpty(Model.SalesEmployeeId))
+        {
+            <div class="input-group">
+                <span class="form-control"><label class="control-label">@Model.SalesEmployeeName</label></span>
+                <button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-edit"></i> @Loc["Admin.Common.Edit"]</button>
+            </div>
+        }
+        else
+        {
+            <button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-plus"></i> @Loc["Admin.Common.Add"]</button>
+        }
+        <div id="pnlEditSalesEmployee" style="display: none; margin-top: 10px;">
+            <form asp-controller="Order" asp-action="SaveSalesEmployee" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="form-horizontal">
+                    <div class="form-body">
+                        <div class="form-group">
+                            <div class="col-md-9 col-sm-9">
+                                <select name="salesEmployeeId" class="form-control">
+                                    <option value="">@Loc["Admin.Common.Select"]</option>
+                                    @foreach (var salesEmployee in await _salesEmployeeService.GetAll())
+                                    {
+                                        <option value="@salesEmployee.Id" selected="@(Model.SalesEmployeeId == salesEmployee.Id)">@salesEmployee.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <div class="offset-md-3 col-md-9 offset-sm-3 col-sm-9">
+                                <button type="submit" class="btn btn-success">@Loc["Admin.Common.Save"]</button>
+                                <button type="button" class="btn btn-secondary" onclick="toggleSalesEmployeeEdit(false); return false;">@Loc["Admin.Common.Cancel"]</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
-}
+</div>
+
+<script>
+    function toggleSalesEmployeeEdit(show) {
+        if (show) {
+            $('#pnlEditSalesEmployee').show();
+        } else {
+            $('#pnlEditSalesEmployee').hide();
+        }
+    }
+</script>
 @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
 {
     <div class="form-group">

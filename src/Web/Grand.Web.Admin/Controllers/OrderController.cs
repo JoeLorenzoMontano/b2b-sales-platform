@@ -1162,7 +1162,7 @@ public class OrderController(
         if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
         {
             // No adjustments, just store the parsed date directly 
-            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            order.TargetDeliveryDate = parsedDate;
             
             // Debug info
             System.Diagnostics.Debug.WriteLine($"Saving date from input: {date}");

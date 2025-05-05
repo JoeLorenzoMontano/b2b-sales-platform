@@ -182,9 +182,9 @@
                 pageable: false,
                 columns: [
                     {
-                        template: '<input type="checkbox" class="fulfillment-item-check" value="#=Id#" />',
+                        template: '<input type="checkbox" class="fulfillment-item-check" value="#=Id#" title="Select item for shipment" />',
                         width: 30,
-                        headerTemplate: '<input type="checkbox" id="select-all-items-#=Id#" class="select-all-items" data-order-id="#=Id#" />',
+                        headerTemplate: '<input type="checkbox" id="select-all-items-#=Id#" class="select-all-items" data-order-id="#=Id#" title="Select all items (required for shipment)" />',
                         headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
                     },
                     {
@@ -197,21 +197,8 @@
                     },
                     {
                         field: "Quantity",
-                        title: "@Loc["Admin.Orders.Products.Quantity"]",
-                        width: 75,
-                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
-                    },
-                    {
-                        field: "OpenQty",
-                        title: "@Loc["Admin.Orders.Products.OpenQty"]",
-                        width: 75,
-                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
-                    },
-                    {
-                        field: "ShipQty",
-                        title: "@Loc["Admin.Orders.Products.ShipQty"]",
-                        width: 75,
-                        template: '<input type="number" class="form-control ship-qty" data-item-id="#=Id#" min="0" max="#=OpenQty#" value="#=OpenQty#" style="width:60px;" />',
+                        title: "Total Ordered",
+                        width: 100,
                         headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
                     },
                     {
@@ -239,7 +226,7 @@
                         // Create the action buttons
                         var buttonSection = $('<div class="col-md-6 text-right"></div>');
                         buttonSection.append('<button type="button" class="btn btn-success create-shipment-btn" ' +
-                            'data-order-id="' + orderId + '"><i class="fa fa-truck"></i> Create Shipment</button>');
+                            'data-order-id="' + orderId + '" disabled><i class="fa fa-truck"></i> Create Shipment</button>');
                         panel.append(buttonSection);
                         
                         // Add the panel after the grid
@@ -286,10 +273,36 @@
                             });
                         });
                         
+                        // Function to check if all items are selected and update button state
+                        function updateShipmentButtonState() {
+                            var totalItems = gridElement.find(".fulfillment-item-check").length;
+                            var checkedItems = gridElement.find(".fulfillment-item-check:checked").length;
+                            
+                            // Enable button only if all items are checked
+                            $(".create-shipment-btn[data-order-id='" + orderId + "']").prop("disabled", checkedItems < totalItems);
+                        }
+                        
                         // Wire up the select all checkbox
                         gridElement.find(".select-all-items").off("change").on("change", function() {
                             var checked = $(this).is(":checked");
                             gridElement.find(".fulfillment-item-check").prop("checked", checked);
+                            updateShipmentButtonState();
+                        });
+                        
+                        // Wire up individual checkboxes
+                        gridElement.find(".fulfillment-item-check").off("change").on("change", function() {
+                            // If unchecking an item, also uncheck the "select all" checkbox
+                            if (!$(this).is(":checked")) {
+                                gridElement.find(".select-all-items").prop("checked", false);
+                            } else {
+                                // Check if all individual items are now checked
+                                var allChecked = gridElement.find(".fulfillment-item-check:not(:checked)").length === 0;
+                                if (allChecked) {
+                                    gridElement.find(".select-all-items").prop("checked", true);
+                                }
+                            }
+                            
+                            updateShipmentButtonState();
                         });
                         
                         // Wire up the create shipment button
@@ -297,18 +310,21 @@
                             var selectedItems = [];
                             var shipQtyMap = {};
                             
-                            // Get all selected items and their ship quantities
+                            // Get all selected items
                             gridElement.find(".fulfillment-item-check:checked").each(function() {
                                 var itemId = $(this).val();
                                 selectedItems.push(itemId);
                                 
-                                // Get the ship qty for this item
-                                var shipQty = gridElement.find(".ship-qty[data-item-id='" + itemId + "']").val();
-                                shipQtyMap[itemId] = shipQty;
+                                // Since we're shipping all items, use OpenQty as the ship quantity
+                                var row = $(this).closest("tr");
+                                var dataItem = grid.dataItem(row);
+                                shipQtyMap[itemId] = dataItem.OpenQty.toString();
                             });
                             
+                            // This validation should never trigger since the button is disabled unless all items are selected,
+                            // but keeping it as a fallback
                             if (selectedItems.length === 0) {
-                                alert("Please select at least one item to create a shipment");
+                                alert("Please select all items to create a shipment");
                                 return;
                             }
                             
@@ -330,7 +346,7 @@
                                 success: function(response) {
                                     if (response.success) {
                                         // Use standard notification
-                                        alert("Shipment created successfully");
+                                        alert("Full shipment created successfully for all order items");
                                         // Refresh the grid
                                         $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
                                     } else {

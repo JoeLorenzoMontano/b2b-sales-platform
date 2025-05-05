@@ -646,12 +646,27 @@ public class ProductViewModelService(
                 if (x.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
                 {
                     productModel.StockQuantityStr = stockQuantityService.GetTotalStockQuantity(x, total: true).ToString();
+                    // Get reserved quantity by calculating difference between total stock with and without reservation
+                    var stockWithReservation = stockQuantityService.GetTotalStockQuantity(x, useReservedQuantity: true, total: true);
+                    var stockWithoutReservation = stockQuantityService.GetTotalStockQuantity(x, useReservedQuantity: false, total: true);
+                    productModel.ReservedQuantity = stockWithoutReservation - stockWithReservation;
                 }
                 else if (x.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
                 {
                     // Calculate sum of all attribute combinations stock
                     var totalAttributesStock = x.ProductAttributeCombinations.Sum(c => c.StockQuantity);
                     productModel.StockQuantityStr = totalAttributesStock.ToString();
+                    // For attribute managed products, we need to calculate the total reserved quantity
+                    if (x.ProductAttributeCombinations.Any())
+                    {
+                        // Sum of reserved quantities across all combinations
+                        var totalReserved = x.ProductAttributeCombinations.Sum(combination => 
+                            combination.WarehouseInventory.Any() 
+                                ? combination.WarehouseInventory.Sum(wi => wi.ReservedQuantity) 
+                                : combination.ReservedQuantity);
+                        
+                        productModel.ReservedQuantity = totalReserved;
+                    }
                 }
             }
             items.Add(productModel);

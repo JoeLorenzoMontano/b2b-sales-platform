@@ -242,59 +242,43 @@
 <div class="form-group">
     <admin-label asp-for="SalesEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
     <div class="col-9 col-md-9 col-sm-9 salesEmployeeDisplay">
-        @if (!string.IsNullOrEmpty(Model.SalesEmployeeId))
-        {
-            <div class="input-group">
-                <span class="form-control"><label class="control-label">@Model.SalesEmployeeName</label></span>
-                <button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-edit"></i> @Loc["Admin.Common.Edit"]</button>
-            </div>
-        }
-        else
-        {
-            <button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-plus"></i> @Loc["Admin.Common.Add"]</button>
-        }
         @Html.AntiForgeryToken()
-        <div id="pnlEditSalesEmployee" style="display: none; margin-top: 10px;">
-            <div class="form-horizontal">
-                <div class="form-body">
-                    <div class="form-group">
-                        <div class="col-md-9 col-sm-9">
-                            @{
-                                var salesEmployees = await _salesEmployeeService.GetAll();
-                                if (salesEmployees.Any())
-                                {
-                                    <select name="salesEmployeeId" class="form-control" id="salesEmployeeIdSelect">
-                                        <option value="">@Loc["Admin.Common.Select"]</option>
-                                        @foreach (var salesEmployee in salesEmployees)
+        <div class="form-horizontal">
+            <div class="form-body">
+                <div class="form-group">
+                    <div class="col-md-9 col-sm-9">
+                        @{
+                            var salesEmployees = await _salesEmployeeService.GetAll();
+                            if (salesEmployees.Any())
+                            {
+                                <select name="salesEmployeeId" class="form-control" id="salesEmployeeIdSelect">
+                                    <option value="">@Loc["Admin.Common.Select"]</option>
+                                    @foreach (var salesEmployee in salesEmployees)
+                                    {
+                                        if (Model.SalesEmployeeId == salesEmployee.Id)
                                         {
-                                            if (Model.SalesEmployeeId == salesEmployee.Id)
-                                            {
-                                                <option value="@salesEmployee.Id" selected="selected">@salesEmployee.Name</option>
-                                            }
-                                            else
-                                            {
-                                                <option value="@salesEmployee.Id">@salesEmployee.Name</option>
-                                            }
+                                            <option value="@salesEmployee.Id" selected="selected">@salesEmployee.Name</option>
                                         }
-                                    </select>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-warning">
-                                        No sales employees found. Please add sales employees in the Sales Employees section.
-                                        <a href="@Url.Action("Index", "SalesEmployee", new { area = "Admin" })" class="btn btn-sm btn-info">
-                                            Go to Sales Employees
-                                        </a>
-                                    </div>
-                                }
+                                        else
+                                        {
+                                            <option value="@salesEmployee.Id">@salesEmployee.Name</option>
+                                        }
+                                    }
+                                </select>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-success" id="submitSalesEmployee">@Loc["Admin.Common.Save"]</button>
+                                </div>
                             }
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <div class="offset-md-3 col-md-9 offset-sm-3 col-sm-9">
-                            <button type="button" class="btn btn-success" id="submitSalesEmployee">@Loc["Admin.Common.Save"]</button>
-                            <button type="button" class="btn btn-secondary" onclick="toggleSalesEmployeeEdit(false); return false;">@Loc["Admin.Common.Cancel"]</button>
-                        </div>
+                            else
+                            {
+                                <div class="alert alert-warning">
+                                    No sales employees found. Please add sales employees in the Sales Employees section.
+                                    <a href="@Url.Action("Index", "SalesEmployee", new { area = "Admin" })" class="btn btn-sm btn-info">
+                                        Go to Sales Employees
+                                    </a>
+                                </div>
+                            }
+                        }
                     </div>
                 </div>
             </div>
@@ -302,6 +286,13 @@
         
 <script>
     $(document).ready(function() {
+        // Save on dropdown change
+        $("#salesEmployeeIdSelect").change(function() {
+            // Highlight the save button when a different value is selected
+            $("#submitSalesEmployee").addClass("btn-primary").removeClass("btn-success");
+        });
+        
+        // Submit handler
         $("#submitSalesEmployee").click(function(e) {
             e.preventDefault();
             
@@ -309,13 +300,7 @@
             var orderId = '@Model.Id';
             var salesEmployeeId = $("#salesEmployeeIdSelect").val();
             
-            // Log what we're submitting
-            console.log("Submitting sales employee form:", {
-                orderId: orderId,
-                salesEmployeeId: salesEmployeeId
-            });
-            
-            // Use AJAX instead of direct form submission to preserve tab state
+            // Use AJAX to save without page reload
             $.ajax({
                 url: '@Url.Action("SaveSalesEmployee", "Order", new { area = "Admin" })',
                 type: 'POST',
@@ -325,43 +310,50 @@
                     __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                 },
                 success: function(result) {
-                    // Successful update
-                    // Just update the display instead of full page reload to maintain tab selection
-                    if (!salesEmployeeId || salesEmployeeId === "") {
-                        // Handle empty selection
-                        $(".salesEmployeeDisplay").html('<button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-plus"></i> @Loc["Admin.Common.Add"]</button>');
+                    if (result.success) {
+                        // Change button back to success state
+                        $("#submitSalesEmployee").addClass("btn-success").removeClass("btn-primary");
+                        
+                        // Show success message (subtle notification)
+                        displaySuccessMessage("Sales representative updated successfully");
                     } else {
-                        // Find the selected employee name from dropdown
-                        var selectedName = $("#salesEmployeeIdSelect option:selected").text();
-                        $(".salesEmployeeDisplay").html('<div class="input-group"><span class="form-control"><label class="control-label">' + selectedName + '</label></span><button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-edit"></i> @Loc["Admin.Common.Edit"]</button></div>');
+                        // Show error message
+                        displayErrorMessage(result.message || "Error saving sales employee");
                     }
-                    
-                    // Hide the edit form
-                    toggleSalesEmployeeEdit(false);
-                    
-                    // Show success message
-                    alert("Sales representative has been updated successfully.");
                 },
                 error: function(xhr, status, error) {
                     console.error("Error saving sales employee:", error);
-                    alert("Error saving sales employee. Please try again.");
+                    displayErrorMessage("Error saving sales employee. Please try again.");
                 }
             });
         });
     });
+    
+    // Helper functions for notifications
+    function displaySuccessMessage(message) {
+        // Create a temporary success message that fades out
+        var alert = $('<div class="alert alert-success fade show mt-2" role="alert">' + message + '</div>');
+        $("#salesEmployeeIdSelect").after(alert);
+        setTimeout(function() {
+            alert.fadeOut('slow', function() {
+                $(this).remove();
+            });
+        }, 3000);
+    }
+    
+    function displayErrorMessage(message) {
+        // Create a temporary error message that fades out
+        var alert = $('<div class="alert alert-danger fade show mt-2" role="alert">' + message + '</div>');
+        $("#salesEmployeeIdSelect").after(alert);
+        setTimeout(function() {
+            alert.fadeOut('slow', function() {
+                $(this).remove();
+            });
+        }, 5000);
+    }
 </script>
     </div>
 </div>
-
-<script>
-    function toggleSalesEmployeeEdit(show) {
-        if (show) {
-            $('#pnlEditSalesEmployee').show();
-        } else {
-            $('#pnlEditSalesEmployee').hide();
-        }
-    }
-</script>
 @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
 {
     <div class="form-group">

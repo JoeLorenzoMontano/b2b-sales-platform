@@ -79,7 +79,14 @@
                         format: "{0:yyyy-MM-dd}", // Use consistent date format
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
-                        template: '#= TargetDeliveryDate ? kendo.toString(new Date(TargetDeliveryDate), "yyyy-MM-dd") : "" #',
+                        // Use the date directly without adjustment
+                        template: function(dataItem) {
+                            if (dataItem.TargetDeliveryDate) {
+                                var date = new Date(dataItem.TargetDeliveryDate);
+                                return kendo.toString(date, "yyyy-MM-dd");
+                            }
+                            return "";
+                        },
                     },
                     {
                         field: "UpdatedOn",
@@ -238,15 +245,15 @@
                                 data: data,
                                 success: function(response) {
                                     if (response && response.success) {
-                                        success_notify("Delivery date saved");
+                                        // Silent success - no notification needed
                                     } else {
-                                        error_notify("Failed to save delivery date");
+                                        alert("Failed to save delivery date");
                                     }
                                 },
                                 error: function(xhr, status, error) {
                                     console.error("Save date error:", error);
                                     console.error("Response:", xhr.responseText);
-                                    error_notify("Error saving date: " + error);
+                                    alert("Error saving date: " + error);
                                 }
                             });
                         });
@@ -294,18 +301,18 @@
                                 data: shipmentData,
                                 success: function(response) {
                                     if (response.success) {
-                                        // Use a better notification
-                                        success_notify("Shipment created successfully");
+                                        // Use standard notification
+                                        alert("Shipment created successfully");
                                         // Refresh the grid
                                         $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
                                     } else {
-                                        error_notify("Error: " + (response.error || "Unknown error"));
+                                        alert("Error: " + (response.error || "Unknown error"));
                                     }
                                 },
                                 error: function(xhr, status, error) {
                                     console.error("Shipment creation failed:", error);
                                     console.error("Response:", xhr.responseText);
-                                    error_notify("Error creating shipment: " + error);
+                                    alert("Error creating shipment: " + error);
                                 }
                             });
                         });

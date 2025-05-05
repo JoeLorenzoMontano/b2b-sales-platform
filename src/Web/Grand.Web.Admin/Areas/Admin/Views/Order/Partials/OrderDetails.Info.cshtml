@@ -260,13 +260,28 @@
                     <div class="form-body">
                         <div class="form-group">
                             <div class="col-md-9 col-sm-9">
-                                <select name="salesEmployeeId" class="form-control">
-                                    <option value="">@Loc["Admin.Common.Select"]</option>
-                                    @foreach (var salesEmployee in await _salesEmployeeService.GetAll())
+                                @{
+                                    var salesEmployees = await _salesEmployeeService.GetAll();
+                                    if (salesEmployees.Any())
                                     {
-                                        <option value="@salesEmployee.Id" selected="@(Model.SalesEmployeeId == salesEmployee.Id)">@salesEmployee.Name</option>
+                                        <select name="salesEmployeeId" class="form-control">
+                                            <option value="">@Loc["Admin.Common.Select"]</option>
+                                            @foreach (var salesEmployee in salesEmployees)
+                                            {
+                                                <option value="@salesEmployee.Id" selected="@(Model.SalesEmployeeId == salesEmployee.Id)">@salesEmployee.Name</option>
+                                            }
+                                        </select>
                                     }
-                                </select>
+                                    else
+                                    {
+                                        <div class="alert alert-warning">
+                                            No sales employees found. Please add sales employees in the Sales Employees section.
+                                            <a href="@Url.Action("Index", "SalesEmployee", new { area = Constants.AreaAdmin })" class="btn btn-sm btn-info">
+                                                Go to Sales Employees
+                                            </a>
+                                        </div>
+                                    }
+                                }
                             </div>
                         </div>
                         <div class="form-actions">

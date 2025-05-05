@@ -1130,8 +1130,9 @@ public class OrderController(
             
         if (order.TargetDeliveryDate.HasValue)
         {
-            // No adjustments, just return the date as is
-            string formattedDate = order.TargetDeliveryDate.Value.ToString("yyyy-MM-dd");
+            // Add one day to align with the grid display
+            DateTime displayDate = order.TargetDeliveryDate.Value.AddDays(1);
+            string formattedDate = displayDate.ToString("yyyy-MM-dd");
             
             // Debug info
             System.Diagnostics.Debug.WriteLine($"Target delivery date from DB: {order.TargetDeliveryDate.Value}");

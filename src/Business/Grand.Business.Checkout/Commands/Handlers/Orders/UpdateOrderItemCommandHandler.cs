@@ -54,8 +54,22 @@ public class UpdateOrderItemCommandHandler : IRequestHandler<UpdateOrderItemComm
             {
                 var qtyDifference = originalOrderItem.Quantity - request.OrderItem.Quantity;
                 var product = await _productService.GetProductById(request.OrderItem.ProductId);
-                await _inventoryManageService.AdjustReserved(product, qtyDifference, request.OrderItem.Attributes,
-                    request.OrderItem.WarehouseId);
+                
+                // Add null check to prevent ArgumentNullException
+                if (product != null)
+                {
+                    await _inventoryManageService.AdjustReserved(product, qtyDifference, request.OrderItem.Attributes,
+                        request.OrderItem.WarehouseId);
+                }
+                else
+                {
+                    // Log that product was not found - inventory cannot be adjusted
+                    await _orderService.InsertOrderNote(new OrderNote {
+                        Note = $"Warning: Could not adjust inventory for order item (Product ID: {request.OrderItem.ProductId}) because product was not found.",
+                        DisplayToCustomer = false,
+                        OrderId = request.Order.Id
+                    });
+                }
 
                 if (request.Order.ShippingStatusId == ShippingStatus.PartiallyShipped)
                 {

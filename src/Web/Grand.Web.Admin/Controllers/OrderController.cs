@@ -668,35 +668,76 @@ public class OrderController(
     
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveSalesEmployee(string id, string salesEmployeeId)
     {
-        var order = await orderService.GetOrderById(id);
-        if (order == null || await CheckSalesManager(order))
-            //No order found with the specified id
-            return RedirectToAction("List");
+        // Enhanced debug information
+        System.Diagnostics.Debug.WriteLine($"SaveSalesEmployee called - Order ID: {id}, Sales Employee ID: {salesEmployeeId}");
+        System.Diagnostics.Debug.WriteLine($"Request form data: {string.Join(", ", Request.Form.Select(x => $"{x.Key}={x.Value}"))}");
+        
+        // If salesEmployeeId is not provided directly, try to get it from form
+        if (string.IsNullOrEmpty(salesEmployeeId) && Request.Form.ContainsKey("salesEmployeeId"))
+        {
+            salesEmployeeId = Request.Form["salesEmployeeId"].ToString();
+            System.Diagnostics.Debug.WriteLine($"Retrieved salesEmployeeId from form: {salesEmployeeId}");
+        }
+        
+        try 
+        {
+            var order = await orderService.GetOrderById(id);
+            if (order == null || await CheckSalesManager(order))
+            {
+                System.Diagnostics.Debug.WriteLine("Order not found or CheckSalesManager failed");
+                //No order found with the specified id
+                return RedirectToAction("List");
+            }
 
-        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
-            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            {
+                System.Diagnostics.Debug.WriteLine("Staff permission check failed");
+                return RedirectToAction("Edit", "Order", new { id });
+            }
+
+            // Update sales employee
+            System.Diagnostics.Debug.WriteLine($"Current SeId: {order.SeId}, New SeId: {salesEmployeeId}");
+            order.SeId = salesEmployeeId;
+            await orderService.UpdateOrder(order);
+            System.Diagnostics.Debug.WriteLine($"Order updated with new SeId: {salesEmployeeId}");
+
+            // Add a note
+            await orderService.InsertOrderNote(new OrderNote {
+                Note = string.IsNullOrEmpty(salesEmployeeId) ? 
+                    "Sales representative has been removed from this order." :
+                    $"Sales representative has been assigned to this order. Sales employee ID: {salesEmployeeId}",
+                DisplayToCustomer = false,
+                OrderId = order.Id
+            });
+            System.Diagnostics.Debug.WriteLine("Order note added successfully");
+
+            var model = new OrderModel();
+            await orderViewModelService.PrepareOrderDetailsModel(model, order);
+
+            //selected tab
+            await SaveSelectedTabIndex(persistForTheNextRequest: true);
+            
+            System.Diagnostics.Debug.WriteLine("SaveSalesEmployee completed successfully");
+            
+            // Add a success message
+            Success("Sales representative has been updated successfully.");
+            
             return RedirectToAction("Edit", "Order", new { id });
-
-        // Update sales employee
-        order.SeId = salesEmployeeId;
-        await orderService.UpdateOrder(order);
-
-        // Add a note
-        await orderService.InsertOrderNote(new OrderNote {
-            Note = "Sales representative has been assigned to this order",
-            DisplayToCustomer = false,
-            OrderId = order.Id
-        });
-
-        var model = new OrderModel();
-        await orderViewModelService.PrepareOrderDetailsModel(model, order);
-
-        //selected tab
-        await SaveSelectedTabIndex(persistForTheNextRequest: true);
-
-        return RedirectToAction("Edit", "Order", new { id });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in SaveSalesEmployee: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            
+            // Add error message for the user
+            Error($"Error saving sales employee: {ex.Message}");
+            
+            return RedirectToAction("Edit", "Order", new { id });
+        }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]

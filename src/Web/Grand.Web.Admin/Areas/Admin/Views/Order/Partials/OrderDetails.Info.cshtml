@@ -253,47 +253,84 @@
         {
             <button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-plus"></i> @Loc["Admin.Common.Add"]</button>
         }
+        @Html.AntiForgeryToken()
         <div id="pnlEditSalesEmployee" style="display: none; margin-top: 10px;">
-            <form asp-controller="Order" asp-action="SaveSalesEmployee" method="post">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <div class="form-horizontal">
-                    <div class="form-body">
-                        <div class="form-group">
-                            <div class="col-md-9 col-sm-9">
-                                @{
-                                    var salesEmployees = await _salesEmployeeService.GetAll();
-                                    if (salesEmployees.Any())
-                                    {
-                                        <select name="salesEmployeeId" class="form-control">
-                                            <option value="">@Loc["Admin.Common.Select"]</option>
-                                            @foreach (var salesEmployee in salesEmployees)
+            <div class="form-horizontal">
+                <div class="form-body">
+                    <div class="form-group">
+                        <div class="col-md-9 col-sm-9">
+                            @{
+                                var salesEmployees = await _salesEmployeeService.GetAll();
+                                if (salesEmployees.Any())
+                                {
+                                    <select name="salesEmployeeId" class="form-control" id="salesEmployeeIdSelect">
+                                        <option value="">@Loc["Admin.Common.Select"]</option>
+                                        @foreach (var salesEmployee in salesEmployees)
+                                        {
+                                            if (Model.SalesEmployeeId == salesEmployee.Id)
                                             {
-                                                <option value="@salesEmployee.Id" selected="@(Model.SalesEmployeeId == salesEmployee.Id)">@salesEmployee.Name</option>
+                                                <option value="@salesEmployee.Id" selected="selected">@salesEmployee.Name</option>
                                             }
-                                        </select>
-                                    }
-                                    else
-                                    {
-                                        <div class="alert alert-warning">
-                                            No sales employees found. Please add sales employees in the Sales Employees section.
-                                            <a href="@Url.Action("Index", "SalesEmployee", new { area = Constants.AreaAdmin })" class="btn btn-sm btn-info">
-                                                Go to Sales Employees
-                                            </a>
-                                        </div>
-                                    }
+                                            else
+                                            {
+                                                <option value="@salesEmployee.Id">@salesEmployee.Name</option>
+                                            }
+                                        }
+                                    </select>
                                 }
-                            </div>
+                                else
+                                {
+                                    <div class="alert alert-warning">
+                                        No sales employees found. Please add sales employees in the Sales Employees section.
+                                        <a href="@Url.Action("Index", "SalesEmployee", new { area = "Admin" })" class="btn btn-sm btn-info">
+                                            Go to Sales Employees
+                                        </a>
+                                    </div>
+                                }
+                            }
                         </div>
-                        <div class="form-actions">
-                            <div class="offset-md-3 col-md-9 offset-sm-3 col-sm-9">
-                                <button type="submit" class="btn btn-success">@Loc["Admin.Common.Save"]</button>
-                                <button type="button" class="btn btn-secondary" onclick="toggleSalesEmployeeEdit(false); return false;">@Loc["Admin.Common.Cancel"]</button>
-                            </div>
+                    </div>
+                    <div class="form-actions">
+                        <div class="offset-md-3 col-md-9 offset-sm-3 col-sm-9">
+                            <button type="button" class="btn btn-success" id="submitSalesEmployee">@Loc["Admin.Common.Save"]</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleSalesEmployeeEdit(false); return false;">@Loc["Admin.Common.Cancel"]</button>
                         </div>
                     </div>
                 </div>
-            </form>
+            </div>
         </div>
+        
+<script>
+    $(document).ready(function() {
+        $("#submitSalesEmployee").click(function(e) {
+            e.preventDefault();
+            
+            // Get values
+            var orderId = '@Model.Id';
+            var salesEmployeeId = $("#salesEmployeeIdSelect").val();
+            
+            // Log what we're submitting
+            console.log("Submitting sales employee form:", {
+                orderId: orderId,
+                salesEmployeeId: salesEmployeeId
+            });
+            
+            // Create a direct form submission instead of AJAX
+            var form = $('<form></form>');
+            form.attr('method', 'post');
+            form.attr('action', '@Url.Action("SaveSalesEmployee", "Order", new { area = "Admin" })');
+            
+            // Add the parameters
+            form.append($('<input></input>').attr('type', 'hidden').attr('name', 'id').attr('value', orderId));
+            form.append($('<input></input>').attr('type', 'hidden').attr('name', 'salesEmployeeId').attr('value', salesEmployeeId));
+            form.append($('<input></input>').attr('type', 'hidden').attr('name', '__RequestVerificationToken').attr('value', $('input[name="__RequestVerificationToken"]').val()));
+            
+            // Add form to body and submit
+            $('body').append(form);
+            form.submit();
+        });
+    });
+</script>
     </div>
 </div>
 

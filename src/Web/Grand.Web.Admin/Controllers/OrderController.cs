@@ -689,14 +689,14 @@ public class OrderController(
             {
                 System.Diagnostics.Debug.WriteLine("Order not found or CheckSalesManager failed");
                 //No order found with the specified id
-                return RedirectToAction("List");
+                return Json(new { success = false, message = "Order not found" });
             }
 
             if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
                 order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
             {
                 System.Diagnostics.Debug.WriteLine("Staff permission check failed");
-                return RedirectToAction("Edit", "Order", new { id });
+                return Json(new { success = false, message = "Access denied" });
             }
 
             // Update sales employee
@@ -714,29 +714,17 @@ public class OrderController(
                 OrderId = order.Id
             });
             System.Diagnostics.Debug.WriteLine("Order note added successfully");
-
-            var model = new OrderModel();
-            await orderViewModelService.PrepareOrderDetailsModel(model, order);
-
-            //selected tab
-            await SaveSelectedTabIndex(persistForTheNextRequest: true);
             
-            System.Diagnostics.Debug.WriteLine("SaveSalesEmployee completed successfully");
-            
-            // Add a success message
-            Success("Sales representative has been updated successfully.");
-            
-            return RedirectToAction("Edit", "Order", new { id });
+            // Return success response for AJAX
+            return Json(new { success = true, message = "Sales representative has been updated successfully" });
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error in SaveSalesEmployee: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             
-            // Add error message for the user
-            Error($"Error saving sales employee: {ex.Message}");
-            
-            return RedirectToAction("Edit", "Order", new { id });
+            // Return error for AJAX
+            return Json(new { success = false, message = $"Error saving sales employee: {ex.Message}" });
         }
     }
 

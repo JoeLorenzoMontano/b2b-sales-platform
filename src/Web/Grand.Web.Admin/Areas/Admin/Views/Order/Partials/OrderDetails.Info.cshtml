@@ -241,7 +241,7 @@
 }
 <div class="form-group">
     <admin-label asp-for="SalesEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
+    <div class="col-9 col-md-9 col-sm-9 salesEmployeeDisplay">
         @if (!string.IsNullOrEmpty(Model.SalesEmployeeId))
         {
             <div class="input-group">
@@ -315,19 +315,38 @@
                 salesEmployeeId: salesEmployeeId
             });
             
-            // Create a direct form submission instead of AJAX
-            var form = $('<form></form>');
-            form.attr('method', 'post');
-            form.attr('action', '@Url.Action("SaveSalesEmployee", "Order", new { area = "Admin" })');
-            
-            // Add the parameters
-            form.append($('<input></input>').attr('type', 'hidden').attr('name', 'id').attr('value', orderId));
-            form.append($('<input></input>').attr('type', 'hidden').attr('name', 'salesEmployeeId').attr('value', salesEmployeeId));
-            form.append($('<input></input>').attr('type', 'hidden').attr('name', '__RequestVerificationToken').attr('value', $('input[name="__RequestVerificationToken"]').val()));
-            
-            // Add form to body and submit
-            $('body').append(form);
-            form.submit();
+            // Use AJAX instead of direct form submission to preserve tab state
+            $.ajax({
+                url: '@Url.Action("SaveSalesEmployee", "Order", new { area = "Admin" })',
+                type: 'POST',
+                data: {
+                    id: orderId,
+                    salesEmployeeId: salesEmployeeId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(result) {
+                    // Successful update
+                    // Just update the display instead of full page reload to maintain tab selection
+                    if (!salesEmployeeId || salesEmployeeId === "") {
+                        // Handle empty selection
+                        $(".salesEmployeeDisplay").html('<button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-plus"></i> @Loc["Admin.Common.Add"]</button>');
+                    } else {
+                        // Find the selected employee name from dropdown
+                        var selectedName = $("#salesEmployeeIdSelect option:selected").text();
+                        $(".salesEmployeeDisplay").html('<div class="input-group"><span class="form-control"><label class="control-label">' + selectedName + '</label></span><button type="button" class="btn btn-info" onclick="toggleSalesEmployeeEdit(true); return false;"><i class="fa fa-edit"></i> @Loc["Admin.Common.Edit"]</button></div>');
+                    }
+                    
+                    // Hide the edit form
+                    toggleSalesEmployeeEdit(false);
+                    
+                    // Show success message
+                    alert("Sales representative has been updated successfully.");
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error saving sales employee:", error);
+                    alert("Error saving sales employee. Please try again.");
+                }
+            });
         });
     });
 </script>

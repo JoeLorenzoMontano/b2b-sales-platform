@@ -261,6 +261,28 @@
                                 success: function(response) {
                                     if (response && response.success) {
                                         // Silent success - no notification needed
+                                        
+                                        // Update the delivery date in the parent row
+                                        var mainGrid = $("#fulfillment-queue-grid").data("kendoGrid");
+                                        var dataItem = mainGrid.dataSource.get(orderId);
+                                        
+                                        if (dataItem) {
+                                            // Update the data item
+                                            dataItem.set("TargetDeliveryDate", newDate);
+                                            
+                                            // Find the parent row and update visual display
+                                            var parentRow = mainGrid.tbody.find("tr[data-uid='" + dataItem.uid + "']");
+                                            var dateCell = parentRow.find("td:eq(7)"); // 8th column (0-based index)
+                                            
+                                            if (newDate) {
+                                                // Format the date for display
+                                                var date = new Date(newDate);
+                                                date.setDate(date.getDate() + 1); // Add one day to fix display as in the template
+                                                dateCell.text(kendo.toString(date, "yyyy-MM-dd"));
+                                            } else {
+                                                dateCell.text("");
+                                            }
+                                        }
                                     } else {
                                         alert("Failed to save delivery date");
                                     }

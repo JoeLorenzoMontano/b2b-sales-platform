@@ -79,10 +79,11 @@
                         format: "{0:yyyy-MM-dd}", // Use consistent date format
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
-                        // Use the date directly without adjustment
+                        // Add one day to compensate for timezone conversion issue with business dates
                         template: function(dataItem) {
                             if (dataItem.TargetDeliveryDate) {
                                 var date = new Date(dataItem.TargetDeliveryDate);
+                                date.setDate(date.getDate() + 1); // Add one day to fix display
                                 return kendo.toString(date, "yyyy-MM-dd");
                             }
                             return "";

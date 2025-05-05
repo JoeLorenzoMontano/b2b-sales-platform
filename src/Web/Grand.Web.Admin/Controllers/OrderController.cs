@@ -173,7 +173,8 @@ public class OrderController(
     
     [PermissionAuthorizeAction(PermissionActionName.List)]
     [HttpPost]
-    public async Task<IActionResult> FulfillmentOrderList(DataSourceRequest command, OrderListModel model)
+    public async Task<IActionResult> FulfillmentOrderList(DataSourceRequest command, OrderListModel model,
+        [FromServices] ICustomerService customerService)
     {
         try
         {
@@ -219,6 +220,26 @@ public class OrderController(
                             ShippingAddressString = order.ShippingAddress?.Address1,
                             TargetDeliveryDate = order.TargetDeliveryDate
                         };
+
+                        // Get customer groups that are not system groups
+                        if (!string.IsNullOrEmpty(order.CustomerId))
+                        {
+                            var customer = await customerService.GetCustomerById(order.CustomerId);
+                            if (customer != null && customer.Groups.Any())
+                            {
+                                // Get all customer groups by IDs
+                                var customerGroups = await groupService.GetAllByIds(customer.Groups.ToArray());
+                                
+                                // Filter out system groups
+                                var nonSystemGroups = customerGroups.Where(x => !x.IsSystem).ToList();
+                                
+                                if (nonSystemGroups.Any())
+                                {
+                                    // Join the group names with commas
+                                    orderModel.CustomerGroups = string.Join(", ", nonSystemGroups.Select(x => x.Name));
+                                }
+                            }
+                        }
 
                         // Add sales employee name if available
                         if (!string.IsNullOrEmpty(order.SeId))

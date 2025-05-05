@@ -53,6 +53,11 @@
                         template: '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/#=CustomerId#">#=CustomerFullName# (#=CustomerEmail#)</a>'                        
                     },
                     {
+                        field: "CustomerGroups",
+                        title: "@Loc["Admin.Orders.Fields.CustomerGroups"]",
+                        width: 150
+                    },
+                    {
                         field: "OrderStatus",
                         title: "@Loc["Admin.Orders.Fields.OrderStatus"]",
                         width: 120,

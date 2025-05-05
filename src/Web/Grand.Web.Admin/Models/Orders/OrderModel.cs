@@ -39,6 +39,9 @@ public class OrderModel : BaseEntityModel
     public string CustomerEmail { get; set; }
 
     public string CustomerFullName { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.CustomerGroups")]
+    public string CustomerGroups { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomerIP")]
     public string CustomerIp { get; set; }

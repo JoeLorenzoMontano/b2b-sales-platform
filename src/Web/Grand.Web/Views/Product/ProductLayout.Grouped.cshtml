@@ -59,15 +59,19 @@
                         <vc:widget widget-zone="productdetails_before_pictures" additional-data="@Model.Id"></vc:widget>
                         
                         @{
+                            // For grouped products, always hide the main product image and use full width
                             bool hasRealImage = Model.DefaultPictureModel != null && 
                                              !string.IsNullOrEmpty(Model.DefaultPictureModel.ImageUrl) && 
                                              !Model.DefaultPictureModel.ImageUrl.Contains("/no-image");
+                            
+                            // For grouped products, we'll always force full width layout
+                            bool useFullWidth = true; // Since this is ProductLayout.Grouped.cshtml
                         }
                         
                         <!--product pictures-->
                         <partial name="Partials/Pictures" model="Model"/>
                         <vc:widget widget-zone="productdetails_after_pictures" additional-data="@Model.Id"></vc:widget>
-                        <div class="@(hasRealImage ? "col-xl-6 col-lg-6 col-md-7 col-12" : "col-12") overview pl-md-3 pl-0 pr-0">
+                        <div class="col-12 overview pl-md-3 pl-0 pr-0">
                             @if (!string.IsNullOrEmpty(Model.Flag))
                             {
                                 <div class="product-label">

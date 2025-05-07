@@ -4,9 +4,13 @@
     bool hasRealImage = Model.DefaultPictureModel != null && 
                       !string.IsNullOrEmpty(Model.DefaultPictureModel.ImageUrl) && 
                       !Model.DefaultPictureModel.ImageUrl.Contains("/no-image");
+                      
+    // For grouped products on the product detail page, always hide the main product image
+    bool isGroupedProduct = Model.ProductType == Grand.Domain.Catalog.ProductType.GroupedProduct;
+    bool shouldShowImage = hasRealImage && !isGroupedProduct;
 }
 
-@if (hasRealImage)
+@if (shouldShowImage)
 {
     <div class="col-xl-6 col-lg-6 col-md-5 col-12 mt-md-0 mt-3 px-0">
         <div class="gallery">

@@ -304,11 +304,28 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
             //ensure no circular references
             if (!isAssociatedProduct)
             {
+                var warehouseId = updateCartItem != null
+                    ? updateCartItem.WarehouseId
+                    : _contextAccessor.StoreContext.CurrentStore.DefaultWarehouseId;
+                
                 var associatedProducts =
                     await _productService.GetAssociatedProducts(product.Id, _contextAccessor.StoreContext.CurrentStore.Id);
+                
                 foreach (var associatedProduct in associatedProducts)
-                    model.AssociatedProducts.Add(
-                        await PrepareProductDetailsModel(store, associatedProduct, null, true));
+                {
+                    // Create a temporary ShoppingCartItem to pass the warehouse ID to associated products
+                    ShoppingCartItem tempCartItem = null;
+                    if (associatedProduct.UseMultipleWarehouses && !string.IsNullOrEmpty(warehouseId))
+                    {
+                        tempCartItem = new ShoppingCartItem
+                        {
+                            WarehouseId = warehouseId
+                        };
+                    }
+                    
+                    var associatedModel = await PrepareProductDetailsModel(store, associatedProduct, tempCartItem, true);
+                    model.AssociatedProducts.Add(associatedModel);
+                }
             }
 
         #endregion
@@ -380,7 +397,8 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
                 (product.AvailableEndDateTimeUtc.HasValue &&
                  product.AvailableEndDateTimeUtc.Value < DateTime.UtcNow),
             CompareProductsEnabled = _catalogSettings.CompareProductsEnabled,
-            AllowToSelectWarehouse = _shoppingCartSettings.AllowToSelectWarehouse,
+            // Only show warehouse selector if both the global setting AND product-specific setting are enabled
+            AllowToSelectWarehouse = _shoppingCartSettings.AllowToSelectWarehouse && product.UseMultipleWarehouses,
             IsShipEnabled = product.IsShipEnabled,
             AdditionalShippingCharge = product.AdditionalShippingCharge,
             NotReturnable = product.NotReturnable,

@@ -111,15 +111,15 @@
                             {
                                 <partial name="Partials/ProductBundles" model="Model"/>
                             }
-                            <!--attributes-->
-                            @if (Model.ProductAttributes.Any())
-                            {
-                                <partial name="Partials/ProductAttributes" model="Model"/>
-                            }
                             <!--warehouses-->
                             @if (Model.AllowToSelectWarehouse)
                             {
                                 <partial name="Partials/Warehouses" model="Model"/>
+                            }
+                            <!--attributes-->
+                            @if (Model.ProductAttributes.Any())
+                            {
+                                <partial name="Partials/ProductAttributes" model="Model"/>
                             }
                             <!--gift voucher-->
                             @if (Model.GiftVoucher.IsGiftVoucher)

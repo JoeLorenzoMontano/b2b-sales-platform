@@ -342,14 +342,23 @@ public static class ProductExtensions
         if (allProductAttributMappings.Count == 0)
             return null;
 
-        var query = allProductAttributMappings.Select(o1 => o1.ProductAttributeValues.Select(o2 =>
-            new CustomAttribute {
-                Key = o1.Id,
-                Value = o2.Id
-            }
-        )).SelectMany(x => x).ToList();
+        // Group attributes by their mapping ID
+        var attributesByMapping = allProductAttributMappings
+            .Select(mapping => mapping.ProductAttributeValues
+                .Select(value => new CustomAttribute {
+                    Key = mapping.Id,
+                    Value = value.Id
+                })
+                .ToList())
+            .Where(attributes => attributes.Any()) // Skip empty attribute lists
+            .ToList();
 
-        var result = query.GroupBy(t => t.Key).CartesianProduct().ToList();
+        // If no valid attribute values, return null
+        if (!attributesByMapping.Any())
+            return null;
+
+        // Apply cartesian product to get all combinations
+        var result = attributesByMapping.CartesianProduct().ToList();
 
         return result;
     }

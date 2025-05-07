@@ -27,6 +27,7 @@ services:
     networks:
       - grandnode-network
     restart: always
+    command: mongod --bind_ip_all
 
 networks:
   grandnode-network:

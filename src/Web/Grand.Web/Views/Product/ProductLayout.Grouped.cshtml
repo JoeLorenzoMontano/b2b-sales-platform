@@ -277,10 +277,19 @@
                 // Create FormData from this form
                 var formData = form ? new FormData(form) : new FormData();
                 
-                // Always ensure warehouseId is included
+                // Always ensure correct parameters are included
                 if (!form) {
                     formData.append('productId', productId);
                     formData.append('warehouseId', warehouseId);
+                } else {
+                    // Make sure the form data has the correct warehouseId
+                    var existingWarehouseInput = Array.from(formData.entries()).find(entry => entry[0] === 'warehouseId');
+                    if (!existingWarehouseInput) {
+                        formData.set('WarehouseId', warehouseId);
+                    }
+                    
+                    // Make sure ProductId is set correctly
+                    formData.set('ProductId', productId);
                 }
                 
                 // Use different endpoint based on whether product has attributes
@@ -351,8 +360,28 @@
                         hiddenInput.value = select.value;
                     }
                     
-                    // Update stock info
+                    // Update stock info with correct values
                     updateProductStockInfo(productId, select.value, form);
+                    
+                    // Create a standalone FormData specifically for warehouse change
+                    var warehouseData = new FormData();
+                    warehouseData.append('productId', productId);
+                    warehouseData.append('warehouseId', select.value);
+                    
+                    // Always use the direct warehouse change endpoint for immediate stock update
+                    axios({
+                        url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
+                        data: warehouseData,
+                        method: 'post',
+                    }).then(function (response) {
+                        // Update stock availability display
+                        if (response.data.stockAvailability) {
+                            var stockElement = document.getElementById('stock-availability-value-' + productId);
+                            if (stockElement) {
+                                stockElement.innerText = response.data.stockAvailability;
+                            }
+                        }
+                    });
                 });
             });
             
@@ -362,11 +391,61 @@
             var associatedForms = document.querySelectorAll('form[id^="product-details-form-"]');
             associatedForms.forEach(function(form) {
                 var productId = form.id.replace('product-details-form-', '');
-                var hiddenInput = form.querySelector('.associated-warehouse-input');
-                var warehouseId = hiddenInput ? hiddenInput.value : '';
                 
-                if (warehouseId) {
-                    updateProductStockInfo(productId, warehouseId, form);
+                // First check if this product has its own warehouse selector
+                var variantWarehouseSelect = form.querySelector('.variant-warehouse-select');
+                if (variantWarehouseSelect) {
+                    // Use the selected warehouse from the variant's own selector
+                    var selectedOption = variantWarehouseSelect.options[variantWarehouseSelect.selectedIndex];
+                    var warehouseId = variantWarehouseSelect.value;
+                    
+                    // Make sure hidden input is synced
+                    var hiddenInput = form.querySelector('.associated-warehouse-input');
+                    if (hiddenInput) {
+                        hiddenInput.value = warehouseId;
+                    }
+                    
+                    // Direct API call for accurate stock info
+                    var warehouseData = new FormData();
+                    warehouseData.append('productId', productId);
+                    warehouseData.append('warehouseId', warehouseId);
+                    
+                    axios({
+                        url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
+                        data: warehouseData,
+                        method: 'post',
+                    }).then(function (response) {
+                        if (response.data.stockAvailability) {
+                            var stockElement = document.getElementById('stock-availability-value-' + productId);
+                            if (stockElement) {
+                                stockElement.innerText = response.data.stockAvailability;
+                            }
+                        }
+                    });
+                } else {
+                    // Use parent product's warehouse selection
+                    var hiddenInput = form.querySelector('.associated-warehouse-input');
+                    var warehouseId = hiddenInput ? hiddenInput.value : '';
+                    
+                    if (warehouseId) {
+                        // Direct API call for accurate stock info
+                        var warehouseData = new FormData();
+                        warehouseData.append('productId', productId);
+                        warehouseData.append('warehouseId', warehouseId);
+                        
+                        axios({
+                            url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
+                            data: warehouseData,
+                            method: 'post',
+                        }).then(function (response) {
+                            if (response.data.stockAvailability) {
+                                var stockElement = document.getElementById('stock-availability-value-' + productId);
+                                if (stockElement) {
+                                    stockElement.innerText = response.data.stockAvailability;
+                                }
+                            }
+                        });
+                    }
                 }
             });
         });

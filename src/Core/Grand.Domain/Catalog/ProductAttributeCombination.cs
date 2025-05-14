@@ -29,6 +29,11 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
     ///     Gets or sets a value indicating whether to allow orders when out of stock
     /// </summary>
     public bool AllowOutOfStockOrders { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets a value indicating whether to allow a sample (quantity of 1) regardless of allowed quantities
+    /// </summary>
+    public bool AllowSample { get; set; }
 
     /// <summary>
     ///     Gets or sets the text

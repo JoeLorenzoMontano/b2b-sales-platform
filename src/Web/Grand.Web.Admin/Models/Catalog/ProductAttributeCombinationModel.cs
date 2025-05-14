@@ -21,6 +21,10 @@ public class ProductAttributeCombinationModel : BaseModel
     [GrandResourceDisplayName(
         "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowOutOfStockOrders")]
     public bool AllowOutOfStockOrders { get; set; }
+    
+    [GrandResourceDisplayName(
+        "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowSample")]
+    public bool AllowSample { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.Text")]
     public string Text { get; set; }

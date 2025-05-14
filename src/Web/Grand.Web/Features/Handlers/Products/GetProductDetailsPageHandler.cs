@@ -771,7 +771,21 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
 
         //allowed quantities
         var allowedQuantities = product.ParseAllowedQuantities();
-        foreach (var qty in allowedQuantities)
+        var allowedQuantitiesList = new List<int>(allowedQuantities);
+        
+        // Add "1" option if the combination allows samples
+        var combination = product.FindProductAttributeCombination(
+            updatecartitem?.Attributes ?? new List<Domain.Common.CustomAttribute>());
+        if (combination != null && combination.AllowSample)
+        {
+            // Add sample quantity (1) if not already in the list
+            if (!allowedQuantitiesList.Contains(1))
+            {
+                allowedQuantitiesList.Insert(0, 1);
+            }
+        }
+        
+        foreach (var qty in allowedQuantitiesList)
             model.AllowedQuantities.Add(new SelectListItem {
                 Text = qty.ToString(),
                 Value = qty.ToString(),

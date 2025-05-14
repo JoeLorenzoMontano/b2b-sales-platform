@@ -36,7 +36,13 @@ public class ShoppingCartInventoryProductValidator : AbstractValidator<ShoppingC
             }
 
             var allowedQuantities = value.Product.ParseAllowedQuantities();
-            if (allowedQuantities.Length > 0 && !allowedQuantities.Contains(value.ShoppingCartItem.Quantity))
+            
+            // Get combination to check if sample is allowed
+            var combination = value.Product.FindProductAttributeCombination(value.ShoppingCartItem.Attributes);
+            bool isSampleAllowed = combination != null && combination.AllowSample && value.ShoppingCartItem.Quantity == 1;
+            
+            // Only validate allowed quantities if it's not an allowed sample
+            if (allowedQuantities.Length > 0 && !isSampleAllowed && !allowedQuantities.Contains(value.ShoppingCartItem.Quantity))
                 context.AddFailure(string.Format(translationService.GetResource("ShoppingCart.AllowedQuantities"),
                     string.Join(", ", allowedQuantities)));
 

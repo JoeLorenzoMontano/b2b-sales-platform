@@ -2013,6 +2013,7 @@ public class ProductViewModelService(
                     ? x.WarehouseInventory.Sum(y => y.StockQuantity - y.ReservedQuantity)
                     : x.StockQuantity,
                 AllowOutOfStockOrders = x.AllowOutOfStockOrders,
+                AllowSample = x.AllowSample,
                 Sku = x.Sku,
                 Mpn = x.Mpn,
                 Gtin = x.Gtin,
@@ -2203,6 +2204,7 @@ public class ProductViewModelService(
                     StockQuantity = model.StockQuantity,
                     ReservedQuantity = model.ReservedQuantity,
                     AllowOutOfStockOrders = model.AllowOutOfStockOrders,
+                    AllowSample = model.AllowSample,
                     Sku = model.Sku,
                     Text = model.Text,
                     Mpn = model.Mpn,
@@ -2242,6 +2244,7 @@ public class ProductViewModelService(
             combination.StockQuantity = model.StockQuantity;
             combination.ReservedQuantity = model.ReservedQuantity;
             combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
+            combination.AllowSample = model.AllowSample;
             combination.Sku = model.Sku;
             combination.Text = model.Text;
             combination.Mpn = model.Mpn;
@@ -2302,6 +2305,7 @@ public class ProductViewModelService(
                 Attributes = customAttributes.ToList(),
                 StockQuantity = 0,
                 AllowOutOfStockOrders = false,
+                AllowSample = false,
                 Sku = null,
                 Mpn = null,
                 Gtin = null,

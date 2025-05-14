@@ -38,8 +38,8 @@ public class ShoppingCartInventoryProductValidator : AbstractValidator<ShoppingC
             var allowedQuantities = value.Product.ParseAllowedQuantities();
             
             // Get combination to check if sample is allowed
-            var combination = value.Product.FindProductAttributeCombination(value.ShoppingCartItem.Attributes);
-            bool isSampleAllowed = combination != null && combination.AllowSample && value.ShoppingCartItem.Quantity == 1;
+            var attributeCombination = value.Product.FindProductAttributeCombination(value.ShoppingCartItem.Attributes);
+            bool isSampleAllowed = attributeCombination != null && attributeCombination.AllowSample && value.ShoppingCartItem.Quantity == 1;
             
             // Only validate allowed quantities if it's not an allowed sample
             if (allowedQuantities.Length > 0 && !isSampleAllowed && !allowedQuantities.Contains(value.ShoppingCartItem.Quantity))
@@ -105,14 +105,14 @@ public class ShoppingCartInventoryProductValidator : AbstractValidator<ShoppingC
 
                             if (p1.ManageInventoryMethodId != ManageInventoryMethod.ManageStockByAttributes)
                                 continue;
-                            var combination = p1.FindProductAttributeCombination(value.ShoppingCartItem.Attributes);
-                            if (combination != null)
+                            var bundleItemCombination = p1.FindProductAttributeCombination(value.ShoppingCartItem.Attributes);
+                            if (bundleItemCombination != null)
                             {
                                 //combination exists - check stock level
                                 var stockQuantity =
-                                    stockQuantityService.GetTotalStockQuantityForCombination(p1, combination,
+                                    stockQuantityService.GetTotalStockQuantityForCombination(p1, bundleItemCombination,
                                         warehouseId: warehouseId);
-                                if (!combination.AllowOutOfStockOrders && stockQuantity < qty)
+                                if (!bundleItemCombination.AllowOutOfStockOrders && stockQuantity < qty)
                                     context.AddFailure(stockQuantity <= 0
                                         ? string.Format(
                                             translationService.GetResource(
@@ -131,15 +131,15 @@ public class ShoppingCartInventoryProductValidator : AbstractValidator<ShoppingC
                         break;
                     case ManageInventoryMethod.ManageStockByAttributes:
                     {
-                        var combination =
+                        var productCombination =
                             value.Product.FindProductAttributeCombination(value.ShoppingCartItem.Attributes);
-                        if (combination != null)
+                        if (productCombination != null)
                         {
                             //combination exists - check stock level
                             var stockQuantity =
-                                stockQuantityService.GetTotalStockQuantityForCombination(value.Product, combination,
+                                stockQuantityService.GetTotalStockQuantityForCombination(value.Product, productCombination,
                                     warehouseId: warehouseId);
-                            if (!combination.AllowOutOfStockOrders && stockQuantity < value.ShoppingCartItem.Quantity)
+                            if (!productCombination.AllowOutOfStockOrders && stockQuantity < value.ShoppingCartItem.Quantity)
                                 context.AddFailure(stockQuantity <= 0
                                     ? translationService.GetResource("ShoppingCart.OutOfStock")
                                     : string.Format(

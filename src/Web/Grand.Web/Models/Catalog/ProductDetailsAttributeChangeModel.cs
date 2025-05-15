@@ -1,4 +1,5 @@
 ﻿using Grand.Infrastructure.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Models.Catalog;
 
@@ -16,4 +17,5 @@ public class ProductDetailsAttributeChangeModel : BaseEntityModel
     public IList<string> NotAvailableAttributeMappingids { get; set; } = new List<string>();
     public string PictureFullSizeUrl { get; set; }
     public string PictureDefaultSizeUrl { get; set; }
+    public IList<SelectListItem> AllowedQuantities { get; set; } = new List<SelectListItem>();
 }

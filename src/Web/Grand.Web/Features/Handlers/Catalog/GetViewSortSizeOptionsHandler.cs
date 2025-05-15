@@ -38,7 +38,8 @@ public class GetViewSortSizeOptionsHandler : IRequestHandler<GetViewSortSizeOpti
 
     private void PrepareSortingOptions(GetViewSortSizeOptions request)
     {
-        ArgumentNullException.ThrowIfNull(request.PageSizeOptions);
+        // Don't require PageSizeOptions to be non-null
+        request.PageSizeOptions ??= "";
         ArgumentNullException.ThrowIfNull(request.Command);
 
         var allDisabled = _catalogSettings.ProductSortingEnumDisabled.Count ==

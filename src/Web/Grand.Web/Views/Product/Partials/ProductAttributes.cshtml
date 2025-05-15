@@ -268,6 +268,35 @@
                                 document.getElementById('main-product-img-@Model.Id').setAttribute("src", response.data.pictureDefaultSizeUrl);
                             }
                         }, 100);
+                        
+                        // Update allowed quantities if they are in the response
+                        if (response.data.allowedQuantities && response.data.allowedQuantities.length > 0) {
+                            var quantitySelect = document.querySelector('#product_enteredQuantity_@Model.Id');
+                            if (quantitySelect) {
+                                // Save current selection
+                                var currentValue = quantitySelect.value;
+                                
+                                // Clear current options
+                                quantitySelect.innerHTML = '';
+                                
+                                // Add new options
+                                response.data.allowedQuantities.forEach(function(option) {
+                                    var opt = document.createElement('option');
+                                    opt.value = option.value;
+                                    opt.text = option.text;
+                                    quantitySelect.appendChild(opt);
+                                });
+                                
+                                // Try to restore selection if it exists in new options
+                                var optionExists = Array.from(quantitySelect.options).some(function(option) {
+                                    return option.value === currentValue;
+                                });
+                                
+                                if (optionExists) {
+                                    quantitySelect.value = currentValue;
+                                }
+                            }
+                        }
                     });
                 },
             },

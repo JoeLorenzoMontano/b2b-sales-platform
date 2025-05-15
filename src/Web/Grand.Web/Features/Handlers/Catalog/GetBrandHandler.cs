@@ -42,7 +42,7 @@ public class GetBrandHandler : IRequestHandler<GetBrand, BrandModel>
             PagingFilteringModel = request.Command,
             Language = request.Language,
             AllowCustomersToSelectPageSize = request.Brand.AllowCustomersToSelectPageSize,
-            PageSizeOptions = request.Brand.PageSizeOptions,
+            PageSizeOptions = request.Brand.PageSizeOptions ?? "",  // Ensure PageSizeOptions is not null
             PageSize = request.Brand.PageSize
         }, cancellationToken);
         model.PagingFilteringContext = options.command;

@@ -15,6 +15,7 @@ using Grand.Web.Features.Models.ShoppingCart;
 using Grand.Web.Models.Catalog;
 using Grand.Web.Models.Media;
 using MediatR;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Features.Handlers.Products;
 
@@ -155,7 +156,12 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         }
 
         //picture. used when we want to override a default product picture when some attribute is selected
-        if (!request.Model.LoadPicture) return model;
+        if (!request.Model.LoadPicture) 
+        {
+            // Add allowed quantities to the model even if no picture is loaded
+            AddAllowedQuantitiesToModel(request.Product, model, customAttributes);
+            return model;
+        }
 
         //first, try to get product attribute combination picture
         var pictureId = request.Product.FindProductAttributeCombination(customAttributes)?.PictureId;
@@ -163,7 +169,12 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             pictureId = request.Product.ParseProductAttributeValues(customAttributes)
                 .FirstOrDefault(attributeValue => !string.IsNullOrEmpty(attributeValue.PictureId))?.PictureId ?? "";
 
-        if (string.IsNullOrEmpty(pictureId)) return model;
+        if (string.IsNullOrEmpty(pictureId)) 
+        {
+            // Add allowed quantities to the model even if no picture ID is found
+            AddAllowedQuantitiesToModel(request.Product, model, customAttributes);
+            return model;
+        }
 
         var pictureModel = new PictureModel {
             Id = pictureId,
@@ -172,9 +183,40 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         };
         model.PictureFullSizeUrl = pictureModel.FullSizeImageUrl;
         model.PictureDefaultSizeUrl = pictureModel.ImageUrl;
+        
+        // Add allowed quantities to the model
+        AddAllowedQuantitiesToModel(request.Product, model, customAttributes);
+        
         return model;
     }
 
+    private void AddAllowedQuantitiesToModel(Product product, ProductDetailsAttributeChangeModel model, IList<CustomAttribute> customAttributes)
+    {
+        // Get the product's allowed quantities
+        var allowedQuantities = product.ParseAllowedQuantities();
+        var allowedQuantitiesList = new List<int>(allowedQuantities);
+        
+        // Add "1" option if the combination allows samples
+        var combination = product.FindProductAttributeCombination(customAttributes);
+        if (combination != null && combination.AllowSample)
+        {
+            // Add sample quantity (1) if not already in the list
+            if (!allowedQuantitiesList.Contains(1))
+            {
+                allowedQuantitiesList.Insert(0, 1);
+            }
+        }
+        
+        // Add quantities to the model
+        foreach (var qty in allowedQuantitiesList)
+        {
+            model.AllowedQuantities.Add(new SelectListItem {
+                Text = qty.ToString(),
+                Value = qty.ToString()
+            });
+        }
+    }
+    
     private static List<string> PrepareNotAvailableAttributeMapping(GetProductDetailsAttributeChange request,
         IList<CustomAttribute> customAttributes)
     {

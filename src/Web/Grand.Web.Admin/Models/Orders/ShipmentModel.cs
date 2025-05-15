@@ -17,6 +17,24 @@ public class ShipmentModel : BaseEntityModel
     public int OrderNumber { get; set; }
     public string OrderCode { get; set; }
 
+    // Customer information
+    public string CustomerId { get; set; }
+    public string CustomerEmail { get; set; }
+    public string CustomerFullName { get; set; }
+
+    // Order information
+    public decimal OrderTotal { get; set; }
+    public string SalesEmployeeName { get; set; }
+
+    // Shipping information
+    public string ShippingAddressString { get; set; }
+    public string ShippingCity { get; set; }
+    public string ShippingStateProvince { get; set; }
+    
+    // Time/date fields
+    public DateTime? CreatedOn { get; set; }
+    public DateTime? UpdatedOn { get; set; }
+
     [GrandResourceDisplayName("Admin.Orders.Shipments.TotalWeight")]
     public string TotalWeight { get; set; }
 

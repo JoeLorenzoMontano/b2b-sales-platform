@@ -5,6 +5,7 @@ using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
+using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Storage;
 using Grand.Domain.Catalog;
 using Grand.Domain.Directory;
@@ -34,6 +35,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
     private readonly ITranslationService _translationService;
     private readonly IWarehouseService _warehouseService;
     private readonly IContextAccessor _contextAccessor;
+    private readonly ISalesEmployeeService _salesEmployeeService;
 
     public ShipmentViewModelService(
         IOrderService orderService,
@@ -48,6 +50,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
         IDownloadService downloadService,
         IShippingService shippingService,
         IStockQuantityService stockQuantityService,
+        ISalesEmployeeService salesEmployeeService,
         MeasureSettings measureSettings,
         ShippingSettings shippingSettings,
         ShippingProviderSettings shippingProviderSettings)
@@ -64,6 +67,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
         _downloadService = downloadService;
         _shippingService = shippingService;
         _stockQuantityService = stockQuantityService;
+        _salesEmployeeService = salesEmployeeService;
         _measureSettings = measureSettings;
         _shippingSettings = shippingSettings;
         _shippingProviderSettings = shippingProviderSettings;
@@ -85,6 +89,15 @@ public class ShipmentViewModelService : IShipmentViewModelService
             OrderId = shipment.OrderId,
             OrderNumber = order?.OrderNumber ?? 0,
             OrderCode = order != null ? order.Code : "",
+            CustomerId = order?.CustomerId ?? "",
+            CustomerEmail = order?.CustomerEmail ?? "",
+            CustomerFullName = order != null ? $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}" : "",
+            OrderTotal = order != null ? (decimal)order.OrderTotal : 0,
+            SalesEmployeeName = "",
+            ShippingAddressString = order?.ShippingAddress != null ? 
+                $"{order.ShippingAddress.Address1}, {order.ShippingAddress.ZipPostalCode}" : "",
+            ShippingCity = order?.ShippingAddress?.City ?? "",
+            ShippingStateProvince = order?.ShippingAddress?.StateProvinceId ?? "",
             TrackingNumber = shipment.TrackingNumber,
             TotalWeight = shipment.TotalWeight.HasValue ? $"{shipment.TotalWeight:F2} [{baseWeightIn}]" : "",
             ShippedDate = shipment.ShippedDateUtc.HasValue
@@ -98,8 +111,21 @@ public class ShipmentViewModelService : IShipmentViewModelService
             DeliveryDateUtc = shipment.DeliveryDateUtc,
             CanDeliver = shipment.ShippedDateUtc.HasValue && !shipment.DeliveryDateUtc.HasValue,
             AdminComment = shipment.AdminComment,
-            UserFields = shipment.UserFields
+            UserFields = shipment.UserFields,
+            // Explicitly set date fields for grid
+            CreatedOn = shipment.CreatedOnUtc,
+            UpdatedOn = shipment.UpdatedOnUtc
         };
+        
+        // Get sales employee name
+        if (order != null && !string.IsNullOrEmpty(order.SeId))
+        {
+            var salesEmployee = await _salesEmployeeService.GetSalesEmployeeById(order.SeId);
+            if (salesEmployee != null)
+            {
+                model.SalesEmployeeName = salesEmployee.Name;
+            }
+        }
 
         if (prepareProducts)
             foreach (var shipmentItem in shipment.ShipmentItems)
@@ -482,9 +508,18 @@ public class ShipmentViewModelService : IShipmentViewModelService
 
     public virtual async Task<(bool valid, string message)> ValidStockShipment(Shipment shipment)
     {
+        if (shipment == null || shipment.ShipmentItems == null)
+            return (false, "Shipment or shipment items are null");
+
         foreach (var item in shipment.ShipmentItems)
         {
+            if (string.IsNullOrEmpty(item.ProductId))
+                continue;
+
             var product = await _productService.GetProductById(item.ProductId);
+            if (product == null)
+                continue;
+
             switch (product.ManageInventoryMethodId)
             {
                 case ManageInventoryMethod.ManageStock:
@@ -497,6 +532,12 @@ public class ShipmentViewModelService : IShipmentViewModelService
                 }
                 case ManageInventoryMethod.ManageStockByAttributes:
                 {
+                    // Safely check if attributes exist
+                    if (item.Attributes == null)
+                    {
+                        return (false, $"Attributes missing for product {product.Name}");
+                    }
+
                     var combination = product.FindProductAttributeCombination(item.Attributes);
                     if (combination == null)
                         return (false, $"Can't find combination for product {product.Name}");
@@ -505,6 +546,53 @@ public class ShipmentViewModelService : IShipmentViewModelService
                         false, item.WarehouseId);
                     if (stock - item.Quantity < 0)
                         return (false, $"Out of stock for product {product.Name}");
+                    break;
+                }
+                case ManageInventoryMethod.ManageStockByBundleProducts:
+                {
+                    // For bundle products, we need to check stock of each bundle item
+                    if (product.BundleProducts == null || !product.BundleProducts.Any())
+                    {
+                        // No bundle products defined, can't validate stock
+                        break;
+                    }
+
+                    foreach (var bundleItem in product.BundleProducts)
+                    {
+                        var bundleProduct = await _productService.GetProductById(bundleItem.ProductId);
+                        if (bundleProduct == null)
+                            continue;
+
+                        // Skip bundle items that don't use inventory tracking
+                        if (bundleProduct.ManageInventoryMethodId == ManageInventoryMethod.DontManageStock)
+                            continue;
+
+                        int requiredQuantity = bundleItem.Quantity * item.Quantity;
+
+                        if (bundleProduct.UseMultipleWarehouses)
+                        {
+                            // Check stock in the specific warehouse
+                            var warehouseInventory = bundleProduct.ProductWarehouseInventory
+                                .FirstOrDefault(x => x.WarehouseId == item.WarehouseId);
+
+                            if (warehouseInventory != null)
+                            {
+                                if (warehouseInventory.StockQuantity - warehouseInventory.ReservedQuantity - requiredQuantity < 0)
+                                    return (false, $"Out of stock for bundle item {bundleProduct.Name} in product {product.Name}");
+                            }
+                            else
+                            {
+                                // Warehouse not found for this bundle item
+                                return (false, $"Warehouse not found for bundle item {bundleProduct.Name} in product {product.Name}");
+                            }
+                        }
+                        else
+                        {
+                            // Check the main stock
+                            if (bundleProduct.StockQuantity - requiredQuantity < 0)
+                                return (false, $"Out of stock for bundle item {bundleProduct.Name} in product {product.Name}");
+                        }
+                    }
                     break;
                 }
             }

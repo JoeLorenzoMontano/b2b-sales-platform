@@ -192,26 +192,35 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
 
     private void AddAllowedQuantitiesToModel(Product product, ProductDetailsAttributeChangeModel model, IList<CustomAttribute> customAttributes)
     {
+        // Clear any existing quantities in the model
+        model.AllowedQuantities.Clear();
+        
         // Get the product's allowed quantities
         var allowedQuantities = product.ParseAllowedQuantities();
         var allowedQuantitiesList = new List<int>(allowedQuantities);
         
-        // Add "1" option if the combination allows samples
+        // Check if the combination allows samples
         var combination = product.FindProductAttributeCombination(customAttributes);
         if (combination != null && combination.AllowSample)
         {
-            // Add sample quantity (1) if not already in the list
-            if (!allowedQuantitiesList.Contains(1))
-            {
-                allowedQuantitiesList.Insert(0, 1);
-            }
+            // Set the sample availability flag on the model
+            model.SampleEnabled = true;
+            
+            // Remove 1 if it exists already (to avoid duplicates)
+            allowedQuantitiesList.Remove(1);
+            // Add sample quantity (1) at the beginning of the list
+            allowedQuantitiesList.Insert(0, 1);
+        }
+        else
+        {
+            model.SampleEnabled = false;
         }
         
         // Add quantities to the model
         foreach (var qty in allowedQuantitiesList)
         {
             model.AllowedQuantities.Add(new SelectListItem {
-                Text = qty.ToString(),
+                Text = qty.ToString() + (qty == 1 && model.SampleEnabled ? " (Sample)" : ""),
                 Value = qty.ToString()
             });
         }

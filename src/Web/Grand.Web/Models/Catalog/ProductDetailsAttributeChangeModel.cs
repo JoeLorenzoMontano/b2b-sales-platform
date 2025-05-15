@@ -18,4 +18,5 @@ public class ProductDetailsAttributeChangeModel : BaseEntityModel
     public string PictureFullSizeUrl { get; set; }
     public string PictureDefaultSizeUrl { get; set; }
     public IList<SelectListItem> AllowedQuantities { get; set; } = new List<SelectListItem>();
+    public bool SampleEnabled { get; set; }
 }

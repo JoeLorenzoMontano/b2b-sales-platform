@@ -271,7 +271,7 @@
                         
                         // Update allowed quantities if they are in the response
                         if (response.data.allowedQuantities && response.data.allowedQuantities.length > 0) {
-                            var quantitySelect = document.querySelector('#product_enteredQuantity_@Model.Id');
+                            var quantitySelect = document.querySelector('#EnteredQuantity_@Model.Id');
                             if (quantitySelect) {
                                 // Save current selection
                                 var currentValue = quantitySelect.value;
@@ -294,7 +294,37 @@
                                 
                                 if (optionExists) {
                                     quantitySelect.value = currentValue;
+                                } else if (quantitySelect.options.length > 0) {
+                                    // If the previous selection is no longer available, select the first option
+                                    quantitySelect.selectedIndex = 0;
                                 }
+                                
+                                // Force a change event to ensure all listeners update
+                                var event = new Event('change');
+                                quantitySelect.dispatchEvent(event);
+                            }
+                            
+                            // Show or hide the sample notification
+                            var sampleNotification = document.querySelector('#sample-notification-@Model.Id');
+                            if (!sampleNotification) {
+                                // Create notification if it doesn't exist
+                                sampleNotification = document.createElement('div');
+                                sampleNotification.id = 'sample-notification-@Model.Id';
+                                sampleNotification.className = 'sample-notification alert alert-info mt-2';
+                                sampleNotification.style.display = 'none';
+                                sampleNotification.innerHTML = '<small>Sample size (1) available for this product</small>';
+                                
+                                // Insert after the quantity dropdown
+                                if (quantitySelect) {
+                                    quantitySelect.parentNode.insertBefore(sampleNotification, quantitySelect.nextSibling);
+                                }
+                            }
+                            
+                            // Show or hide based on SampleEnabled
+                            if (response.data.sampleEnabled) {
+                                sampleNotification.style.display = 'block';
+                            } else {
+                                sampleNotification.style.display = 'none';
                             }
                         }
                     });

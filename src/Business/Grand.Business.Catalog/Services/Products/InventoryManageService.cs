@@ -142,6 +142,67 @@ public class InventoryManageService : IInventoryManageService
     private async Task ManageAttributesInventory(Product product, Shipment shipment, ShipmentItem shipmentItem)
     {
         var attributeValues = product.ParseProductAttributeValues(shipmentItem.Attributes);
+        
+        // First check for weight-based conversion attributes
+        foreach (var attributeValue in attributeValues)
+        {
+            if (attributeValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+            {
+                // For weight-based conversion, we directly adjust the main product's inventory
+                if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+                {
+                    // Apply conversion ratio to the main product stock
+                    if (!product.UseMultipleWarehouses)
+                    {
+                        product.StockQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                        product.ReservedQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                        if (product.ReservedQuantity < 0)
+                            product.ReservedQuantity = 0;
+                            
+                        await UpdateStockProduct(product);
+                    }
+                    else
+                    {
+                        var pwi = product.ProductWarehouseInventory.FirstOrDefault(pi =>
+                            pi.WarehouseId == shipmentItem.WarehouseId);
+                        if (pwi != null)
+                        {
+                            pwi.ReservedQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                            pwi.StockQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                            if (pwi.ReservedQuantity < 0)
+                                pwi.ReservedQuantity = 0;
+
+                            await _productRepository.UpdateToSet(product.Id, x => x.ProductWarehouseInventory, z => z.Id, pwi.Id, pwi);
+                            await _productRepository.UpdateField(product.Id, x => x.UpdatedOnUtc, DateTime.UtcNow);
+
+                            product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
+                            product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
+                            await UpdateStockProduct(product);
+                        }
+                    }
+                    
+                    // Create an inventory journal entry
+                    var ij = new InventoryJournal {
+                        CreateDateUtc = DateTime.UtcNow,
+                        ObjectType = typeof(Shipment).Name,
+                        ObjectId = shipment.Id,
+                        PositionId = shipmentItem.Id,
+                        Attributes = shipmentItem.Attributes,
+                        ProductId = product.Id,
+                        WarehouseId = shipmentItem.WarehouseId,
+                        Reference = shipment.ShipmentNumber.ToString(),
+                        Comments = $"Shipment - {shipment.TrackingNumber} - Weight based conversion ({attributeValue.Quantity}:1)",
+                        OutQty = shipmentItem.Quantity * attributeValue.Quantity
+                    };
+                    await _inventoryJournalRepository.InsertAsync(ij);
+                }
+                
+                // We've handled the weight-based conversion, return early
+                return;
+            }
+        }
+        
+        // Handle associated products if no weight-based conversion was found
         foreach (var attributeValue in attributeValues)
         {
             if (attributeValue.AttributeValueTypeId != AttributeValueType.AssociatedToProduct) continue;
@@ -490,15 +551,87 @@ public class InventoryManageService : IInventoryManageService
                     }) await AdjustReserved(p1, quantityToChange * item.Quantity, attributes, warehouseId);
             }
 
-        //bundled products
+        // Check for weight-based conversion first
+        int originalQuantityToChange = quantityToChange;
+        bool hasWeightBasedConversion = false;
+        int conversionRatio = 1;
+        
         var attributeValues = product.ParseProductAttributeValues(attributes);
         foreach (var attributeValue in attributeValues)
         {
-            if (attributeValue.AttributeValueTypeId != AttributeValueType.AssociatedToProduct) continue;
-            //associated product (bundle)
-            var associatedProduct = await _productRepository.GetByIdAsync(attributeValue.AssociatedProductId);
-            if (associatedProduct != null)
-                await AdjustReserved(associatedProduct, quantityToChange * attributeValue.Quantity, null, warehouseId);
+            if (attributeValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+            {
+                // Store the conversion ratio but don't apply it yet
+                hasWeightBasedConversion = true;
+                conversionRatio = attributeValue.Quantity;
+                break; // Only apply one conversion
+            }
+        }
+        
+        // If we found a weight-based conversion, apply it by directly manipulating the product's stock
+        if (hasWeightBasedConversion && product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+        {
+            // We need to manually adjust the stock by the conversion ratio
+            if (!product.UseMultipleWarehouses)
+            {
+                // For negative quantities (reserving inventory)
+                if (quantityToChange < 0)
+                {
+                    product.ReservedQuantity += -quantityToChange * conversionRatio;
+                    await UpdateStockProduct(product);
+                }
+                // For positive quantities (unreserving inventory)
+                else if (quantityToChange > 0)
+                {
+                    product.ReservedQuantity -= quantityToChange * conversionRatio;
+                    if (product.ReservedQuantity < 0)
+                        product.ReservedQuantity = 0;
+                    await UpdateStockProduct(product);
+                }
+            }
+            else
+            {
+                // Handle multi-warehouse scenario
+                var pwi = product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouseId);
+                if (pwi != null)
+                {
+                    // For negative quantities (reserving inventory)
+                    if (quantityToChange < 0)
+                    {
+                        pwi.ReservedQuantity += -quantityToChange * conversionRatio;
+                    }
+                    // For positive quantities (unreserving inventory)
+                    else if (quantityToChange > 0)
+                    {
+                        pwi.ReservedQuantity -= quantityToChange * conversionRatio;
+                        if (pwi.ReservedQuantity < 0)
+                            pwi.ReservedQuantity = 0;
+                    }
+                    
+                    await _productRepository.UpdateToSet(product.Id, x => x.ProductWarehouseInventory, z => z.Id, pwi.Id, pwi);
+                    await _productRepository.UpdateField(product.Id, x => x.UpdatedOnUtc, DateTime.UtcNow);
+                    
+                    product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
+                    product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
+                    
+                    await UpdateStockProduct(product);
+                }
+            }
+            
+            // Since we've manually handled the inventory, return early
+            return;
+        }
+        
+        // Process associated products
+        foreach (var attributeValue in attributeValues)
+        {
+            if (attributeValue.AttributeValueTypeId == AttributeValueType.AssociatedToProduct)
+            {
+                //associated product (bundle)
+                var associatedProduct = await _productRepository.GetByIdAsync(attributeValue.AssociatedProductId);
+                if (associatedProduct != null)
+                    await AdjustReserved(associatedProduct, originalQuantityToChange * attributeValue.Quantity, null, warehouseId);
+            }
         }
 
         //event notification

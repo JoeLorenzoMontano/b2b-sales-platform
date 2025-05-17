@@ -37,11 +37,22 @@
             $('#group-quantity').hide();
             $('#group-weight-adjustment').show();
             $('#group-cost').show();
+            $("#quantity-hint").hide();
+            $("label[for='@Html.IdFor(model => model.Quantity)']").text("@Loc["Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity"]");
         } else if (selectedProductTypeId == @(((int)AttributeValueType.AssociatedToProduct).ToString())) {
             $('#group-associated-product').show();
             $('#group-quantity').show();
             $('#group-weight-adjustment').hide();
             $('#group-cost').hide();
+            $("#quantity-hint").hide();
+            $("label[for='@Html.IdFor(model => model.Quantity)']").text("@Loc["Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity"]");
+        } else if (selectedProductTypeId == @(((int)AttributeValueType.WeightBasedConversion).ToString())) {
+            $('#group-associated-product').hide();
+            $('#group-quantity').show();
+            $('#group-weight-adjustment').show();
+            $('#group-cost').hide();
+            $("#quantity-hint").show();
+            $("label[for='@Html.IdFor(model => model.Quantity)']").text("Conversion Ratio:");
         }
     }
 </script>
@@ -86,6 +97,10 @@
             <div class="col-md-9 col-sm-9">
                 <admin-input asp-for="Quantity"/>
                 <span asp-validation-for="Quantity"></span>
+                <div id="quantity-hint" class="small mt-1" style="display:none;">
+                    Enter the conversion ratio (e.g., 453 for pounds to grams).
+                    When a customer orders 1 unit, inventory will be decremented by this amount.
+                </div>
             </div>
         </div>
     </div>

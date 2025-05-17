@@ -13,5 +13,10 @@ public enum AttributeValueType
     /// <summary>
     ///     Associated to a product (used when configuring bundled products)
     /// </summary>
-    AssociatedToProduct = 10
+    AssociatedToProduct = 10,
+    
+    /// <summary>
+    ///     Weight-based conversion (used for inventory management with conversion ratios)
+    /// </summary>
+    WeightBasedConversion = 20
 }

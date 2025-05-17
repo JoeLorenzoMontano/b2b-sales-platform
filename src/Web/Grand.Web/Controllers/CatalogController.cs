@@ -471,29 +471,6 @@ public class CatalogController : BasePublicController
     }
 
     #endregion
-    
-    #region Batch Order
-
-    [HttpGet]
-    public virtual async Task<IActionResult> BatchOrder(CatalogPagingFilteringModel command)
-    {
-        var model = await _mediator.Send(new GetAllProducts {
-            Command = command,
-            Currency = _contextAccessor.WorkContext.WorkingCurrency,
-            Customer = _contextAccessor.WorkContext.CurrentCustomer,
-            Language = _contextAccessor.WorkContext.WorkingLanguage,
-            Store = _contextAccessor.StoreContext.CurrentStore
-        });
-        
-        if (model != null && model.Products != null && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-        {
-            return Json(model);
-        }
-        
-        return View(model);
-    }
-
-    #endregion
 
     #region Searching
 

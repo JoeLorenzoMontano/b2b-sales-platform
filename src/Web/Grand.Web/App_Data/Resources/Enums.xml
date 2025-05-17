@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Language Name="English">
+  <!-- Enum Translations -->
+  <Resource Name="Enums.AttributeValueType.Simple" Area="Admin">
+    <Value>Simple</Value>
+  </Resource>
+  <Resource Name="Enums.AttributeValueType.AssociatedToProduct" Area="Admin">
+    <Value>Associated to product</Value>
+  </Resource>
+  <Resource Name="Enums.AttributeValueType.WeightBasedConversion" Area="Admin">
+    <Value>Weight-based conversion</Value>
+  </Resource>
+</Language>

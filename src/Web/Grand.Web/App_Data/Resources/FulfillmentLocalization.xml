@@ -10,5 +10,9 @@
   <Resource Name="Admin.Orders.Fulfillment.NoItemsSelected">Please select at least one item to create a shipment.</Resource>
   <Resource Name="Admin.Orders.Fulfillment.TargetDeliveryDate">Target Delivery Date</Resource>
   <Resource Name="Catalog.AllProducts">All Products</Resource>
+  <Resource Name="Catalog.BatchOrder">Batch Order</Resource>
+  <Resource Name="Catalog.BatchOrderInfo">Enter quantities for the products you want to order. For products with attributes, click on the product to select options.</Resource>
   <Resource Name="Catalog.Products.NoData">No products found.</Resource>
+  <Resource Name="Products.Attributes">Has Options</Resource>
+  <Resource Name="Products.SelectAttributes">Select Options</Resource>
 </Language>

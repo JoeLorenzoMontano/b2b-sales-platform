@@ -349,6 +349,12 @@ public class ProductController : BasePublicController
             Product = product
         });
 
+        // Properly serialize SelectListItem objects into simpler JSON objects
+        var allowedQuantitiesArray = modelProduct.AllowedQuantities.Select(x => new {
+            value = x.Value,
+            text = x.Text
+        }).ToArray();
+
         return Json(new {
             gtin = modelProduct.Gtin,
             mpn = modelProduct.Mpn,
@@ -361,7 +367,9 @@ public class ProductController : BasePublicController
             disabledattributemappingids = modelProduct.DisabledAttributeMappingids.ToArray(),
             notAvailableAttributeMappingids = modelProduct.NotAvailableAttributeMappingids.ToArray(),
             pictureFullSizeUrl = modelProduct.PictureFullSizeUrl,
-            pictureDefaultSizeUrl = modelProduct.PictureDefaultSizeUrl
+            pictureDefaultSizeUrl = modelProduct.PictureDefaultSizeUrl,
+            sampleEnabled = modelProduct.SampleEnabled,
+            allowedQuantities = allowedQuantitiesArray
         });
     }
 

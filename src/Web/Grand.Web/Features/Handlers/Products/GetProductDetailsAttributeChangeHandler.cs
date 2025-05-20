@@ -201,6 +201,7 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         
         // Check if the combination allows samples
         var combination = product.FindProductAttributeCombination(customAttributes);
+        
         if (combination != null && combination.AllowSample)
         {
             // Set the sample availability flag on the model

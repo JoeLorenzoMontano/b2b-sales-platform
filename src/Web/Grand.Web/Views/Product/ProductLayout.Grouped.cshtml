@@ -64,8 +64,8 @@
                                              !string.IsNullOrEmpty(Model.DefaultPictureModel.ImageUrl) && 
                                              !Model.DefaultPictureModel.ImageUrl.Contains("/no-image");
                             
-                            // For grouped products, we'll always force full width layout
-                            bool useFullWidth = true; // Since this is ProductLayout.Grouped.cshtml
+                            // Grouped products always use full width layout
+                            // This is ProductLayout.Grouped.cshtml
                         }
                         
                         <!--product pictures-->
@@ -264,6 +264,8 @@
         @await Component.InvokeAsync("ProductEmailAFriend", new { productId = Model.Id })
     }
     @await Component.InvokeAsync("Widget", new { widgetZone = "productdetails_bottom", additionalData = Model.Id })
+    
+    <!-- Sample feature is now integrated into ProductAttributes.cshtml -->
     
     <script asp-location="Footer" asp-order="300">
         // Manage warehouses and stock for grouped products

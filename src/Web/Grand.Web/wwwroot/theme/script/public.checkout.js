@@ -724,18 +724,10 @@ var vmorder = new Vue({
                     if (termOfServiceOk) {
                         vmorder.Checkout.setLoadWaiting('confirm-order');
                         
-                        // Use FormData to ensure proper form submission
-                        var data = new FormData();
-                        if (vmorder.orderNote) {
-                            data.append('OrderNote', vmorder.orderNote);
-                        }
-                        
                         axios({
                             url: this.saveUrl,
                             method: 'post',
-                            data: data,
-                            // Let Axios set the correct Content-Type for FormData automatically
-                            // Don't manually set it to avoid boundary issues
+                            data: {},
                             showLoader: false
                         }).then(function (response) {
                             vmorder.vConfirmOrder.nextStep(response);

@@ -539,7 +539,9 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", $"order_{order.Id}.pdf", inline: true);
+        // Setting inline disposition to view the PDF in browser
+        Response.Headers.Append("Content-Disposition", $"inline; filename=order_{order.Id}.pdf");
+        return File(bytes, "application/pdf");
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Export)]
@@ -558,7 +560,9 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", "orders.pdf", inline: true);
+        // Setting inline disposition to view the PDF in browser
+        Response.Headers.Append("Content-Disposition", "inline; filename=orders.pdf");
+        return File(bytes, "application/pdf");
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Export)]
@@ -592,7 +596,9 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", "orders.pdf", inline: true);
+        // Setting inline disposition to view the PDF in browser
+        Response.Headers.Append("Content-Disposition", "inline; filename=orders.pdf");
+        return File(bytes, "application/pdf");
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]

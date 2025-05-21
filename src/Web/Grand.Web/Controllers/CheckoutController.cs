@@ -683,10 +683,30 @@ public class CheckoutController : BasePublicController
     }
 
     [HttpPost]
+    [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
     public virtual async Task<IActionResult> ConfirmOrder()
     {
         try
         {
+            // Try to get the order note from the form directly
+            string orderNote = null;
+            if (Request.HasFormContentType && Request.Form != null && Request.Form.ContainsKey("OrderNote"))
+            {
+                orderNote = Request.Form["OrderNote"].ToString();
+            }
+            
+            // Log that we received a request with the order note
+            _logger.LogInformation($"ConfirmOrder called with orderNote: '{orderNote}', ContentType: {Request.ContentType}");
+            
+            // Log all form values for debugging
+            if (Request.HasFormContentType)
+            {
+                foreach (var key in Request.Form.Keys)
+                {
+                    _logger.LogInformation($"Form key: {key}, Value: {Request.Form[key]}");
+                }
+            }
+            
             //validation
             var cart = await _shoppingCartService.GetShoppingCart(_contextAccessor.StoreContext.CurrentStore.Id,
                 ShoppingCartType.ShoppingCart, ShoppingCartType.Auctions);
@@ -704,6 +724,40 @@ public class CheckoutController : BasePublicController
             var placeOrderResult = await _mediator.Send(new PlaceOrderCommand());
             if (placeOrderResult.Success)
             {
+                // Add order note if provided
+                if (!string.IsNullOrWhiteSpace(orderNote) && placeOrderResult.PlacedOrder != null)
+                {
+                    _logger.LogInformation($"Creating order note for Order ID: {placeOrderResult.PlacedOrder.Id}, Note content: '{orderNote}'");
+                    
+                    try
+                    {
+                        var note = new OrderNote
+                        {
+                            Note = orderNote,
+                            DisplayToCustomer = false,
+                            CreatedByCustomer = true,
+                            OrderId = placeOrderResult.PlacedOrder.Id,
+                            CreatedOnUtc = DateTime.UtcNow
+                        };
+                        
+                        await _orderService.InsertOrderNote(note);
+                        
+                        // Log that we created a note for debugging
+                        _logger.LogInformation($"Successfully created customer order note for Order ID: {placeOrderResult.PlacedOrder.Id}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log detailed error information
+                        _logger.LogError($"Error creating order note: {ex.Message}");
+                        _logger.LogError($"Exception details: {ex}");
+                        _logger.LogError($"Stack trace: {ex.StackTrace}");
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation($"No order note to create. orderNote: '{orderNote}', placeOrderResult.PlacedOrder: {(placeOrderResult.PlacedOrder != null ? placeOrderResult.PlacedOrder.Id : "null")}");
+                }
+                
                 var paymentMethod =
                     _paymentService.LoadPaymentMethodBySystemName(placeOrderResult.PaymentTransaction
                         .PaymentMethodSystemName);

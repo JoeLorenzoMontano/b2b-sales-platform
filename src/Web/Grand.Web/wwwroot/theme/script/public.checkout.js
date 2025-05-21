@@ -42,6 +42,8 @@ var vmorder = new Vue({
             MinOrderTotalWarning: null,
             TermsOfServiceOnOrderConfirmPage: null,
             ConfirmWarnings: null,
+            // order note
+            orderNote: "",
             // terms of service
             terms: false,
             acceptTerms: false,
@@ -721,9 +723,19 @@ var vmorder = new Vue({
                     var termOfServiceOk = true;
                     if (termOfServiceOk) {
                         vmorder.Checkout.setLoadWaiting('confirm-order');
+                        
+                        // Use FormData to ensure proper form submission
+                        var data = new FormData();
+                        if (vmorder.orderNote) {
+                            data.append('OrderNote', vmorder.orderNote);
+                        }
+                        
                         axios({
                             url: this.saveUrl,
                             method: 'post',
+                            data: data,
+                            // Let Axios set the correct Content-Type for FormData automatically
+                            // Don't manually set it to avoid boundary issues
                             showLoader: false
                         }).then(function (response) {
                             vmorder.vConfirmOrder.nextStep(response);

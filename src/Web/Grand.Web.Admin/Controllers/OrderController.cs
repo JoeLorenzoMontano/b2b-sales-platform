@@ -539,7 +539,7 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", $"order_{order.Id}.pdf");
+        return File(bytes, "application/pdf", $"order_{order.Id}.pdf", inline: true);
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Export)]
@@ -558,7 +558,7 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", "orders.pdf");
+        return File(bytes, "application/pdf", "orders.pdf", inline: true);
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Export)]
@@ -592,7 +592,7 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", "orders.pdf");
+        return File(bytes, "application/pdf", "orders.pdf", inline: true);
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]

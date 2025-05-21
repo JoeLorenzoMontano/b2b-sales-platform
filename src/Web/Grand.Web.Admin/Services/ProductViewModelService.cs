@@ -2076,6 +2076,32 @@ public class ProductViewModelService(
         return model;
     }
 
+    /// <summary>
+    /// Ensures that the product's AllowedQuantities string includes the value "1"
+    /// Called when a product attribute combination has AllowSample=true
+    /// </summary>
+    /// <param name="product">The product to update</param>
+    private async Task EnsureAllowedQuantityContainsOne(Product product)
+    {
+        // If no allowed quantities specified, we don't need to add "1"
+        if (string.IsNullOrEmpty(product.AllowedQuantities))
+            return;
+
+        // Parse the existing allowed quantities
+        var quantities = product.ParseAllowedQuantities().ToList();
+
+        // Check if "1" is already in the list
+        if (!quantities.Contains(1))
+        {
+            // Add "1" to the beginning of the list
+            quantities.Insert(0, 1);
+
+            // Convert back to comma-separated string and update the product
+            product.AllowedQuantities = string.Join(",", quantities.OrderBy(q => q));
+            await productService.UpdateProduct(product);
+        }
+    }
+
     public virtual async Task<IList<string>> InsertOrUpdateProductAttributeCombinationPopup(Product product,
         ProductAttributeCombinationModel model)
     {
@@ -2222,6 +2248,12 @@ public class ProductViewModelService(
                 }
 
                 await productAttributeService.InsertProductAttributeCombination(combination, product.Id);
+                
+                // If AllowSample is true, ensure "1" is in the product's AllowedQuantities
+                if (model.AllowSample)
+                {
+                    await EnsureAllowedQuantityContainsOne(product);
+                }
 
                 if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
                 {
@@ -2264,6 +2296,12 @@ public class ProductViewModelService(
 
             //update combination
             await productAttributeService.UpdateProductAttributeCombination(combination, product.Id);
+            
+            // If AllowSample is true, ensure "1" is in the product's AllowedQuantities
+            if (model.AllowSample)
+            {
+                await EnsureAllowedQuantityContainsOne(product);
+            }
 
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {

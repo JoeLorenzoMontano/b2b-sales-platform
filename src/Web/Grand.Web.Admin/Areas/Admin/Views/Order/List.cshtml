@@ -33,7 +33,7 @@
                             <vc:admin-widget widget-zone="order_list_buttons" additional-data="null"/>
                         </div>
 
-                        <button type="submit" name="pdf-invoice-all" asp-action="PdfInvoiceAll" class="btn green">
+                        <button type="submit" name="pdf-invoice-all" asp-action="PdfInvoiceAll" class="btn green" formtarget="_blank">
                             <i class="fa fa-file-pdf-o"></i>
                             @Loc["Admin.Orders.PdfInvoice.All"]
                         </button>
@@ -540,7 +540,7 @@
     });
 
 </script>
-<form asp-area="@Constants.AreaAdmin" asp-controller="Order" asp-action="PdfInvoiceSelected" method="post" id="pdf-invoice-selected-form">
+<form asp-area="@Constants.AreaAdmin" asp-controller="Order" asp-action="PdfInvoiceSelected" method="post" id="pdf-invoice-selected-form" target="_blank">
 
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>

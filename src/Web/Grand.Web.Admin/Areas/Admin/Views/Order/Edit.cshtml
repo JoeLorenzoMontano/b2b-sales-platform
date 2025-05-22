@@ -25,7 +25,7 @@
                     </div>
                     <div class="actions">
                         <div class="btn-group btn-group-devided util-btn-margin-bottom-5">
-                            <a href="@Url.Action("PdfInvoice", new { orderId = Model.Id, area = Constants.AreaAdmin })" class="btn purple">
+                            <a href="@Url.Action("PdfInvoice", new { orderId = Model.Id, area = Constants.AreaAdmin })" class="btn purple" target="_blank">
                                 <i class="fa fa-file-pdf-o"></i> @Loc["Admin.Orders.PdfInvoice"]
                             </a>
                             <span id="order-delete" class="btn red">

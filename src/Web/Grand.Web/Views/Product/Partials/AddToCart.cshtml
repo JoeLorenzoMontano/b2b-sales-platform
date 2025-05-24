@@ -1,24 +1,5 @@
 ﻿@model ProductDetailsModel.AddToCartModel
 
-<style>
-    .qty-sample-indicator {
-        display: none; /* Initially hidden */
-        background-color: #ff9800;
-        color: white;
-        padding: 10px;
-        margin: 10px 0;
-        text-align: center;
-        font-weight: bold;
-        border-radius: 4px;
-        width: 100%;
-    }
-</style>
-
-<!-- Sample indicator that will be shown for quantity 1 -->
-<div id="qty-sample-indicator-@Model.ProductId" class="qty-sample-indicator">
-    <i class="fa fa-info-circle mr-2"></i> SAMPLE: You are ordering a SAMPLE of this product
-</div>
-
 <!-- Script moved to ImprovedSampleFix.cshtml for centralized management -->
 @{
     var shoppingCartType = Model.UpdateShoppingCartItemType ?? ShoppingCartType.ShoppingCart;

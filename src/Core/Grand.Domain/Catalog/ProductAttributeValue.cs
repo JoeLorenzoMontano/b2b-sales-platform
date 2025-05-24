@@ -67,6 +67,12 @@ public class ProductAttributeValue : SubBaseEntity, ITranslationEntity
     ///     picture once clicked (selected).
     /// </summary>
     public string PictureId { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the overridden price (used with AttributeValueType.WeightBasedConversion)
+    ///     If set, this price will be used instead of the product's base price
+    /// </summary>
+    public double? OverriddenPrice { get; set; }
 
     /// <summary>
     ///     Gets or sets the collection of locales

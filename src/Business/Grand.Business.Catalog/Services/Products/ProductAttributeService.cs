@@ -301,6 +301,7 @@ public class ProductAttributeService : IProductAttributeService
             pav.IsPreSelected = productAttributeValue.IsPreSelected;
             pav.DisplayOrder = productAttributeValue.DisplayOrder;
             pav.PictureId = productAttributeValue.PictureId;
+            pav.OverriddenPrice = productAttributeValue.OverriddenPrice;
             pav.Locales = productAttributeValue.Locales;
 
             await _productRepository.UpdateToSet(productId, x => x.ProductAttributeMappings, z => z.Id,

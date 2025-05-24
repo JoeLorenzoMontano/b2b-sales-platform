@@ -121,6 +121,7 @@ public interface IPricingService
     ///     Get a price adjustment of a product attribute value
     /// </summary>
     /// <param name="value">Product attribute value</param>
+    /// <param name="product">Product (optional, used for price override calculations)</param>
     /// <returns>Price adjustment</returns>
-    Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value);
+    Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value, Product product = null);
 }

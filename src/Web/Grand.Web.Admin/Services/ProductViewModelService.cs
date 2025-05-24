@@ -1939,7 +1939,8 @@ public class ProductViewModelService(
             Quantity = pav.Quantity,
             IsPreSelected = pav.IsPreSelected,
             DisplayOrder = pav.DisplayOrder,
-            PictureId = pav.PictureId
+            PictureId = pav.PictureId,
+            OverriddenPrice = pav.OverriddenPrice
         };
         if (model.DisplayColorSquaresRgb && string.IsNullOrEmpty(model.ColorSquaresRgb))
             model.ColorSquaresRgb = "#000000";
@@ -1961,6 +1962,7 @@ public class ProductViewModelService(
             IsPreSelected = model.IsPreSelected,
             DisplayOrder = model.DisplayOrder,
             PictureId = model.PictureId,
+            OverriddenPrice = model.OverriddenPrice,
             Locales = model.Locales.ToTranslationProperty()
         };
         await productAttributeService.InsertProductAttributeValue(pav, model.ProductId,
@@ -1982,6 +1984,21 @@ public class ProductViewModelService(
         pav.IsPreSelected = model.IsPreSelected;
         pav.DisplayOrder = model.DisplayOrder;
         pav.PictureId = model.PictureId;
+        // Ensure the OverriddenPrice is correctly set
+        if (pav.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+        {
+            pav.OverriddenPrice = model.OverriddenPrice;
+            // Explicitly log the price change
+            if (pav.OverriddenPrice != model.OverriddenPrice)
+            {
+                // Some issue with OverriddenPrice assignment
+                Console.WriteLine($"WARNING: OverriddenPrice mismatch - Model: {model.OverriddenPrice}, PAV: {pav.OverriddenPrice}");
+            }
+        }
+        else
+        {
+            pav.OverriddenPrice = model.OverriddenPrice;
+        }
         pav.Locales = model.Locales.ToTranslationProperty();
 
         await productAttributeService.UpdateProductAttributeValue(pav, model.ProductId,

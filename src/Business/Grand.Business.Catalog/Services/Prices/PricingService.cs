@@ -303,7 +303,7 @@ public class PricingService : IPricingService
                 var attributeValues = product.ParseProductAttributeValues(attributes);
                 if (attributeValues != null)
                     foreach (var attributeValue in attributeValues)
-                        attributesTotalPrice += await GetProductAttributeValuePriceAdjustment(attributeValue);
+                        attributesTotalPrice += await GetProductAttributeValuePriceAdjustment(attributeValue, product);
                 if (product.ProductTypeId == ProductType.BundledProduct)
                     foreach (var item in product.BundleProducts)
                     {
@@ -312,7 +312,7 @@ public class PricingService : IPricingService
                         if (bundledProductsAttributeValues == null) continue;
                         foreach (var attributeValue in bundledProductsAttributeValues)
                             attributesTotalPrice += item.Quantity *
-                                                    await GetProductAttributeValuePriceAdjustment(attributeValue);
+                                                    await GetProductAttributeValuePriceAdjustment(attributeValue, p1);
                     }
             }
 
@@ -442,8 +442,9 @@ public class PricingService : IPricingService
     ///     Get a price adjustment of a product attribute value
     /// </summary>
     /// <param name="value">Product attribute value</param>
+    /// <param name="product">Product (optional, used for price override calculations)</param>
     /// <returns>Price adjustment</returns>
-    public virtual async Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value)
+    public virtual async Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value, Product product = null)
     {
         ArgumentNullException.ThrowIfNull(value);
 
@@ -470,6 +471,35 @@ public class PricingService : IPricingService
                             _contextAccessor.StoreContext.CurrentStore,
                             _contextAccessor.WorkContext.WorkingCurrency,
                             value.PriceAdjustment)).finalPrice * value.Quantity;
+                }
+                break;
+            case AttributeValueType.WeightBasedConversion:
+                {
+                    // Weight-based conversion with price override
+                    if (value.OverriddenPrice.HasValue)
+                    {
+                        // For weight-based conversions, if an overridden price is set, 
+                        // we need to return a special adjustment that will effectively replace the product price
+                        
+                        // If the product is supplied, use it to calculate the price adjustment
+                        if (product != null)
+                        {
+                            // Get the product's base price in the current currency
+                            var productBasePrice = product.ProductPrices.FirstOrDefault(x => x.CurrencyCode == _contextAccessor.WorkContext.WorkingCurrency.CurrencyCode)?.Price
+                                ?? await _currencyService.ConvertFromPrimaryStoreCurrency(product.Price, _contextAccessor.WorkContext.WorkingCurrency);
+                            
+                            // Convert the overridden price to current currency
+                            var overriddenPrice = await _currencyService.ConvertFromPrimaryStoreCurrency(value.OverriddenPrice.Value, _contextAccessor.WorkContext.WorkingCurrency);
+                            
+                            // Calculate adjustment needed to replace product price with overridden price
+                            adjustment = overriddenPrice - productBasePrice;
+                        }
+                        else
+                        {
+                            // If no product is supplied, just use the overridden price directly as an adjustment
+                            adjustment = await _currencyService.ConvertFromPrimaryStoreCurrency(value.OverriddenPrice.Value, _contextAccessor.WorkContext.WorkingCurrency);
+                        }
+                    }
                 }
                 break;
         }

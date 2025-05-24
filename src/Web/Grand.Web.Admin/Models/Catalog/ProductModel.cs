@@ -952,6 +952,10 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
 
         [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity")]
         public int Quantity { get; set; }
+        
+        [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.OverriddenPrice")]
+        [UIHint("DoubleNullable")]
+        public double? OverriddenPrice { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.IsPreSelected")]
         public bool IsPreSelected { get; set; }

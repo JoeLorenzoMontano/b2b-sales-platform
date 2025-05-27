@@ -5,6 +5,7 @@ using Grand.Infrastructure.ModelBinding;
 using Grand.Infrastructure.Models;
 using Grand.Web.Models.Media;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Models.Catalog;
 
@@ -102,7 +103,8 @@ public class ProductDetailsModel : BaseEntityModel
 
         //qty
         [GrandResourceDisplayName("Products.Qty")]
-        public int EnteredQuantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double EnteredQuantity { get; set; }
 
         public string MinimumQuantityNotification { get; set; }
         public List<SelectListItem> AllowedQuantities { get; set; } = new();
@@ -200,7 +202,8 @@ public class ProductDetailsModel : BaseEntityModel
     {
         public string Price { get; set; }
 
-        public int Quantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double Quantity { get; set; }
     }
 
     public class ProductAttributeModel : BaseEntityModel
@@ -273,7 +276,8 @@ public class ProductDetailsModel : BaseEntityModel
         public string Sku { get; set; }
         public string Mpn { get; set; }
         public string Gtin { get; set; }
-        public int Quantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double Quantity { get; set; }
         public string Price { get; set; }
         public double PriceValue { get; set; }
         public PictureModel DefaultPictureModel { get; set; }
@@ -286,8 +290,10 @@ public class ProductDetailsModel : BaseEntityModel
         public string WarehouseId { get; set; }
         public string Code { get; set; }
         public string Name { get; set; }
-        public int StockQuantity { get; set; }
-        public int ReservedQuantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double StockQuantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double ReservedQuantity { get; set; }
         public bool Selected { get; set; }
     }
 

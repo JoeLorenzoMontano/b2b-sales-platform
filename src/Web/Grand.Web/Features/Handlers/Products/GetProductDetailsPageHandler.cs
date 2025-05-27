@@ -19,6 +19,7 @@ using Grand.Domain.Customers;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
 using Grand.Domain.Seo;
+using Grand.SharedKernel.Extensions;
 using Grand.Domain.Stores;
 using Grand.Domain.Vendors;
 using Grand.Infrastructure;
@@ -422,8 +423,8 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
                     product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouse.Id);
                 model.ProductWarehouses.Add(new ProductDetailsModel.ProductWarehouseModel {
                     Use = productwarehouse != null,
-                    StockQuantity = productwarehouse?.StockQuantity ?? 0,
-                    ReservedQuantity = productwarehouse?.ReservedQuantity ?? 0,
+                    StockQuantity = (productwarehouse?.StockQuantity ?? 0).ToInt(),
+                    ReservedQuantity = (productwarehouse?.ReservedQuantity ?? 0).ToInt(),
                     WarehouseId = warehouse.Id,
                     Name = warehouse.Name,
                     Code = warehouse.Code,
@@ -764,14 +765,14 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
         }
 
         //quantity
-        model.EnteredQuantity = updatecartitem?.Quantity ?? product.OrderMinimumQuantity;
+        model.EnteredQuantity = updatecartitem != null ? updatecartitem.Quantity : product.OrderMinimumQuantity;
         model.MeasureUnit = !string.IsNullOrEmpty(product.UnitId)
             ? (await _measureService.GetMeasureUnitById(product.UnitId)).Name
             : string.Empty;
 
         //allowed quantities
         var allowedQuantities = product.ParseAllowedQuantities();
-        var allowedQuantitiesList = new List<int>(allowedQuantities);
+        var allowedQuantitiesList = new List<double>(allowedQuantities);
         
         // Add "1" option if the combination allows samples
         var combination = product.FindProductAttributeCombination(
@@ -787,9 +788,9 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
         
         foreach (var qty in allowedQuantitiesList)
             model.AllowedQuantities.Add(new SelectListItem {
-                Text = qty.ToString(),
-                Value = qty.ToString(),
-                Selected = updatecartitem != null && updatecartitem.Quantity == qty
+                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.'),
+                Value = qty.ToString("F2").TrimEnd('0').TrimEnd('.'),
+                Selected = updatecartitem != null && updatecartitem.Quantity.ToInt() == qty
             });
 
         //minimum quantity notification
@@ -1086,7 +1087,7 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
             var priceBase = await _taxService.GetProductPrice(product, (await _pricingService.GetFinalPrice(product,
                 _contextAccessor.WorkContext.CurrentCustomer, _contextAccessor.StoreContext.CurrentStore, _contextAccessor.WorkContext.WorkingCurrency,
                 0, _catalogSettings.DisplayTierPricesWithDiscounts, tierPrice.Quantity)).finalPrice);
-            tier.Quantity = tierPrice.Quantity;
+            tier.Quantity = tierPrice.Quantity.ToInt();
             tier.Price = _priceFormatter.FormatPrice(priceBase.productprice, _contextAccessor.WorkContext.WorkingCurrency);
             model.Add(tier);
         }

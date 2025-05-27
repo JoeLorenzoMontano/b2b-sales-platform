@@ -9,6 +9,7 @@ using Grand.Domain.Catalog;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
 using Grand.Domain.Tax;
+using Grand.SharedKernel.Extensions;
 using Grand.Web.Extensions;
 using Grand.Web.Features.Models.ShoppingCart;
 using Grand.Web.Models.Media;

@@ -180,7 +180,7 @@ public class ProductViewModelService(
         model.AssociatedProductName = associatedProduct != null ? associatedProduct.Name : "";
     }
 
-    public virtual async Task OutOfStockNotifications(Product product, ProductModel model, int prevStockQuantity,
+    public virtual async Task OutOfStockNotifications(Product product, ProductModel model, double prevStockQuantity,
         List<ProductWarehouseInventory> prevMultiWarehouseStock
     )
     {
@@ -1164,7 +1164,7 @@ public class ProductViewModelService(
             throw new ArgumentException("No product found with the specified id");
 
         bundleProduct.ProductId = model.ProductId;
-        bundleProduct.Quantity = model.Quantity > 0 ? model.Quantity : 1;
+        bundleProduct.Quantity = model.Quantity > 0 ? model.Quantity.ToInt() : 1;
         bundleProduct.DisplayOrder = model.DisplayOrder;
         await productService.UpdateBundleProduct(bundleProduct, model.ProductBundleId);
     }
@@ -2253,7 +2253,7 @@ public class ProductViewModelService(
                     Mpn = model.Mpn,
                     Gtin = model.Gtin,
                     OverriddenPrice = model.OverriddenPrice,
-                    NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow,
+                    NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow.ToInt(),
                     PictureId = model.PictureId
                 };
 
@@ -2299,7 +2299,7 @@ public class ProductViewModelService(
             combination.Mpn = model.Mpn;
             combination.Gtin = model.Gtin;
             combination.OverriddenPrice = model.OverriddenPrice;
-            combination.NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow;
+            combination.NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow.ToInt();
             combination.PictureId = model.PictureId;
 
             if (product.UseMultipleWarehouses)
@@ -2436,7 +2436,7 @@ public class ProductViewModelService(
         {
             var pctp = new ProductCombinationTierPrices {
                 Price = model.Price,
-                Quantity = model.Quantity,
+                Quantity = model.Quantity.ToInt(),
                 StoreId = model.StoreId,
                 CustomerGroupId = model.CustomerGroupId
             };
@@ -2458,7 +2458,7 @@ public class ProductViewModelService(
             if (tierPrice != null)
             {
                 tierPrice.Price = model.Price;
-                tierPrice.Quantity = model.Quantity;
+                tierPrice.Quantity = model.Quantity.ToInt();
                 tierPrice.StoreId = model.StoreId;
                 tierPrice.CustomerGroupId = model.CustomerGroupId;
                 await productAttributeService.UpdateProductAttributeCombination(productAttributeCombination,

@@ -165,7 +165,7 @@ public class ShoppingCartValidator : IShoppingCartValidator
     public async Task<IList<string>> CheckCommonWarnings(Customer customer, IList<ShoppingCartItem> currentCart,
         Product product,
         ShoppingCartType shoppingCartType, DateTime? rentalStartDate, DateTime? rentalEndDate,
-        int quantity, string reservationId)
+        double quantity, string reservationId)
     {
         var warnings = new List<string>();
 

@@ -114,13 +114,13 @@ public class LiquidOrderItem : Drop
 
     public string WarehouseId => _orderItem.WarehouseId;
 
-    public int Quantity => _orderItem.Quantity;
+    public double Quantity => _orderItem.Quantity;
 
-    public int OpenQty => _orderItem.OpenQty;
+    public double OpenQty => _orderItem.OpenQty;
 
-    public int CancelQty => _orderItem.CancelQty;
+    public double CancelQty => _orderItem.CancelQty;
 
-    public int ShipQty => _orderItem.ShipQty;
+    public double ShipQty => _orderItem.ShipQty;
 
     public bool IsShipEnabled => _orderItem.IsShipEnabled;
 

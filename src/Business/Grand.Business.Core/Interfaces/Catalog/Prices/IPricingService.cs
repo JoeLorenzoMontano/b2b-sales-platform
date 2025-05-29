@@ -32,7 +32,7 @@ public interface IPricingService
             Currency currency,
             double additionalCharge = 0,
             bool includeDiscounts = true,
-            int quantity = 1);
+            double quantity = 1);
 
     /// <summary>
     ///     Gets the final price
@@ -54,7 +54,7 @@ public interface IPricingService
             Currency currency,
             double additionalCharge,
             bool includeDiscounts,
-            int quantity,
+            double quantity,
             DateTime? rentalStartDate,
             DateTime? rentalEndDate);
 
@@ -91,7 +91,7 @@ public interface IPricingService
         Store store,
         Currency currency,
         ShoppingCartType shoppingCartType,
-        int quantity,
+        double quantity,
         IList<CustomAttribute> attributes,
         double? customerEnteredPrice,
         DateTime? rentalStartDate, DateTime? rentalEndDate,

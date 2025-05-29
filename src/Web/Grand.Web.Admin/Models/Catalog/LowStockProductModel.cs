@@ -14,7 +14,7 @@ public class LowStockProductModel : BaseEntityModel
     public string ManageInventoryMethod { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.Fields.StockQuantity")]
-    public int StockQuantity { get; set; }
+    public double StockQuantity { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.Fields.Published")]
     public bool Published { get; set; }

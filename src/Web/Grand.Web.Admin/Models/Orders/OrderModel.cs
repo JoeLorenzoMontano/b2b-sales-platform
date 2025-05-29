@@ -281,11 +281,11 @@ public class OrderModel : BaseEntityModel
         public double UnitPriceInclTaxValue { get; set; }
         public double UnitPriceExclTaxValue { get; set; }
 
-        public int Quantity { get; set; }
-        public int OpenQty { get; set; }
-        public int CancelQty { get; set; }
-        public int ShipQty { get; set; }
-        public int ReturnQty { get; set; }
+        public double Quantity { get; set; }
+        public double OpenQty { get; set; }
+        public double CancelQty { get; set; }
+        public double ShipQty { get; set; }
+        public double ReturnQty { get; set; }
 
         public string DiscountInclTax { get; set; }
         public string DiscountExclTax { get; set; }

@@ -13,10 +13,10 @@ public class ProductAttributeCombinationModel : BaseModel
     public string Id { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.StockQuantity")]
-    public int StockQuantity { get; set; }
+    public double StockQuantity { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.ReservedQuantity")]
-    public int ReservedQuantity { get; set; }
+    public double ReservedQuantity { get; set; }
 
     [GrandResourceDisplayName(
         "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowOutOfStockOrders")]
@@ -46,7 +46,7 @@ public class ProductAttributeCombinationModel : BaseModel
 
     [GrandResourceDisplayName(
         "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.NotifyAdminForQuantityBelow")]
-    public int NotifyAdminForQuantityBelow { get; set; }
+    public double NotifyAdminForQuantityBelow { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.Picture")]
     public string PictureId { get; set; }
@@ -103,11 +103,11 @@ public class ProductAttributeCombinationModel : BaseModel
 
         [GrandResourceDisplayName(
             "Admin.Catalog.Products.ProductAttributes.AttributeCombination.WarehouseInventory.Fields.StockQuantity")]
-        public int StockQuantity { get; set; }
+        public double StockQuantity { get; set; }
 
         [GrandResourceDisplayName(
             "Admin.Catalog.Products.ProductAttributes.AttributeCombination.WarehouseInventory.Fields.ReservedQuantity")]
-        public int ReservedQuantity { get; set; }
+        public double ReservedQuantity { get; set; }
     }
 
     #endregion

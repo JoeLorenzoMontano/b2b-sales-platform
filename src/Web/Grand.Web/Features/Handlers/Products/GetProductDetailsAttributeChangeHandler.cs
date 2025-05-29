@@ -99,7 +99,47 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
                 rentalStartDate, rentalEndDate,
                 true);
 
-            var finalPrice = unitprice.unitprice;
+            // Check if this is a sample selection
+            bool isSample = false;
+            
+            if (customAttributes != null && customAttributes.Any())
+            {
+                var attributeValues = request.Product.ParseProductAttributeValues(customAttributes);
+                if (attributeValues != null && attributeValues.Any(av => av.AllowSample))
+                {
+                    isSample = true;
+                }
+                
+                var combination = request.Product.FindProductAttributeCombination(customAttributes);
+                if (combination != null && combination.AllowSample)
+                {
+                    isSample = true;
+                }
+            }
+            
+            double finalPrice;
+            
+            // Default to quantity 1
+            var quantity = 1.0;
+            
+            // If it's a sample and quantity is 1, set price to 0
+            if (isSample && quantity <= 1)
+            {
+                finalPrice = 0;
+                model.SampleEnabled = true;
+            }
+            else
+            {
+                // Otherwise use normal price
+                finalPrice = unitprice.unitprice;
+                
+                // Still mark sample as available if applicable
+                if (isSample)
+                {
+                    model.SampleEnabled = true;
+                }
+            }
+            
             var productprice = await _taxService.GetProductPrice(request.Product, finalPrice);
             var finalPriceWithDiscount = productprice.productprice;
             model.Price = _priceFormatter.FormatPrice(finalPriceWithDiscount);
@@ -116,25 +156,34 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             request.Product.AllowOutOfStockSubscriptions)
         {
             var combination = request.Product.FindProductAttributeCombination(customAttributes);
-
+            
+            // Check stock quantity - only show subscription if actually out of stock
+            bool isOutOfStock = false;
+            
             if (combination != null)
-                if (_stockQuantityService.GetTotalStockQuantityForCombination(request.Product, combination,
-                        warehouseId: warehouseId) <= 0)
-                    model.DisplayOutOfStockSubscription = true;
-
+                isOutOfStock = _stockQuantityService.GetTotalStockQuantityForCombination(request.Product, combination,
+                        warehouseId: warehouseId) <= 0;
+                        
             if (request.Product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+                isOutOfStock = request.Product.StockQuantity <= 0;
+            
+            // Only display subscription option if actually out of stock
+            if (isOutOfStock)
             {
-                model.DisplayOutOfStockSubscription = request.Product.AllowOutOfStockSubscriptions;
-                customAttributes = new List<CustomAttribute>();
+                model.DisplayOutOfStockSubscription = true;
+                
+                var subscription = await _outOfStockSubscriptionService
+                    .FindSubscription(request.Customer.Id,
+                        request.Product.Id, customAttributes, request.Store.Id, warehouseId);
+    
+                model.ButtonTextOutOfStockSubscription = _translationService.GetResource(subscription != null
+                    ? "OutOfStockSubscriptions.DeleteNotifyWhenAvailable"
+                    : "OutOfStockSubscriptions.NotifyMeWhenAvailable");
             }
-
-            var subscription = await _outOfStockSubscriptionService
-                .FindSubscription(request.Customer.Id,
-                    request.Product.Id, customAttributes, request.Store.Id, warehouseId);
-
-            model.ButtonTextOutOfStockSubscription = _translationService.GetResource(subscription != null
-                ? "OutOfStockSubscriptions.DeleteNotifyWhenAvailable"
-                : "OutOfStockSubscriptions.NotifyMeWhenAvailable");
+            else
+            {
+                model.DisplayOutOfStockSubscription = false;
+            }
         }
 
         if (request.Product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
@@ -197,7 +246,7 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         
         // Get the product's allowed quantities
         var allowedQuantities = product.ParseAllowedQuantities();
-        var allowedQuantitiesList = new List<int>(allowedQuantities);
+        var allowedQuantitiesList = new List<double>(allowedQuantities);
         
         // Check if the combination allows samples
         var combination = product.FindProductAttributeCombination(customAttributes);
@@ -221,8 +270,8 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         foreach (var qty in allowedQuantitiesList)
         {
             model.AllowedQuantities.Add(new SelectListItem {
-                Text = qty.ToString() + (qty == 1 && model.SampleEnabled ? " (Sample)" : ""),
-                Value = qty.ToString()
+                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.') + (qty == 1 && model.SampleEnabled ? " (Sample)" : ""),
+                Value = qty.ToString("F2").TrimEnd('0').TrimEnd('.')
             });
         }
     }

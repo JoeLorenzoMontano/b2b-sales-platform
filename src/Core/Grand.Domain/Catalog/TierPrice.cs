@@ -23,7 +23,7 @@ public class TierPrice : SubBaseEntity
     /// <summary>
     ///     Gets or sets the quantity
     /// </summary>
-    public int Quantity { get; set; }
+    public double Quantity { get; set; }
 
     /// <summary>
     ///     Gets or sets the price

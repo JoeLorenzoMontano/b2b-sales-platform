@@ -91,7 +91,7 @@ public class PricingService : IPricingService
             Currency currency,
             double additionalCharge = 0,
             bool includeDiscounts = true,
-            int quantity = 1)
+            double quantity = 1)
     {
         return await GetFinalPrice(product, customer, store, currency, additionalCharge, includeDiscounts, quantity,
             null, null);
@@ -120,7 +120,7 @@ public class PricingService : IPricingService
             Currency currency,
             double additionalCharge,
             bool includeDiscounts,
-            int quantity,
+            double quantity,
             DateTime? rentalStartDate,
             DateTime? rentalEndDate)
     {
@@ -217,6 +217,12 @@ public class PricingService : IPricingService
             Product product, bool includeDiscounts = true)
     {
         ArgumentNullException.ThrowIfNull(shoppingCartItem);
+        
+        // If this is explicitly marked as a sample item, return $0 price
+        if (shoppingCartItem.IsSampleItem)
+        {
+            return (0, 0, new List<ApplyDiscount>());
+        }
 
         return await GetUnitPrice(product,
             _contextAccessor.WorkContext.CurrentCustomer,
@@ -253,7 +259,7 @@ public class PricingService : IPricingService
             Store store,
             Currency currency,
             ShoppingCartType shoppingCartType,
-            int quantity,
+            double quantity,
             IList<CustomAttribute> attributes,
             double? customerEnteredPrice,
             DateTime? rentalStartDate,
@@ -265,6 +271,23 @@ public class PricingService : IPricingService
 
         double discountAmount = 0;
         var appliedDiscounts = new List<ApplyDiscount>();
+
+        // Check if this is a sample selection (when quantity is 1)
+        if (attributes != null && attributes.Any() && quantity == 1)
+        {
+            var attributeValues = product.ParseProductAttributeValues(attributes);
+            if (attributeValues != null && attributeValues.Any(av => av.AllowSample))
+            {
+                return (0, 0, new List<ApplyDiscount>());
+            }
+            
+            // Check if product combination has AllowSample=true
+            var combination = product.FindProductAttributeCombination(attributes);
+            if (combination != null && combination.AllowSample)
+            {
+                return (0, 0, new List<ApplyDiscount>());
+            }
+        }
 
         double? finalPrice = null;
 
@@ -318,7 +341,7 @@ public class PricingService : IPricingService
 
             if (!product.EnteredPrice)
             {
-                var qty = 0;
+                var qty = 0.0;
                 if (_shoppingCartSettings.GroupTierPrices)
                     qty = customer.ShoppingCartItems
                         .Where(x => x.ProductId == product.Id)
@@ -362,6 +385,12 @@ public class PricingService : IPricingService
             bool includeDiscounts = true)
     {
         ArgumentNullException.ThrowIfNull(shoppingCartItem);
+
+        // If this is explicitly marked as a sample item, return $0 price
+        if (shoppingCartItem.IsSampleItem)
+        {
+            return (0, 0, new List<ApplyDiscount>());
+        }
 
         double subTotal = 0;
         //unit price
@@ -447,6 +476,12 @@ public class PricingService : IPricingService
     public virtual async Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value, Product product = null)
     {
         ArgumentNullException.ThrowIfNull(value);
+
+        // If this attribute value allows sampling, price should be 0
+        if (value.AllowSample)
+        {
+            return 0;
+        }
 
         double adjustment = 0;
         switch (value.AttributeValueTypeId)

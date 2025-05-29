@@ -25,7 +25,7 @@ public class ShipmentItem : SubBaseEntity
     /// <summary>
     ///     Gets or sets the quantity
     /// </summary>
-    public int Quantity { get; set; }
+    public double Quantity { get; set; }
 
     /// <summary>
     ///     Gets or sets the warehouse identifier

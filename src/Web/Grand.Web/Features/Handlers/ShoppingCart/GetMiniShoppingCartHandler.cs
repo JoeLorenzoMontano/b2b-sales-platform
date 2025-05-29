@@ -12,6 +12,7 @@ using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
+using Grand.SharedKernel.Extensions;
 using Grand.Domain.Tax;
 using Grand.Web.Extensions;
 using Grand.Web.Features.Models.ShoppingCart;
@@ -99,7 +100,7 @@ public class GetMiniShoppingCartHandler : IRequestHandler<GetMiniShoppingCart, M
             shoppingCartTypes.Add(ShoppingCartType.OnHoldCart);
 
         var cart = await _shoppingCartService.GetShoppingCart(request.Store.Id, shoppingCartTypes.ToArray());
-        model.TotalProducts = cart.Sum(x => x.Quantity);
+        model.TotalProducts = cart.Sum(x => x.Quantity).ToInt();
         if (!cart.Any()) return model;
 
         //subtotal
@@ -142,7 +143,7 @@ public class GetMiniShoppingCartHandler : IRequestHandler<GetMiniShoppingCart, M
                 ProductName = product.GetTranslation(x => x.Name, request.Language.Id),
                 ProductSeName = sename,
                 ProductUrl = _linkGenerator.GetPathByRouteValues("Product", new { SeName = sename }),
-                Quantity = sci.Quantity,
+                Quantity = sci.Quantity.ToInt(),
                 AttributeInfo = await _productAttributeFormatter.FormatAttributes(product, sci.Attributes)
             };
             if (product.ProductTypeId == ProductType.Reservation)

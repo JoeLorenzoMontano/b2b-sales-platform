@@ -82,7 +82,7 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
         return true;
     }
 
-    protected async Task OutOfStockNotifications(Product product, int prevStockQuantity,
+    protected async Task OutOfStockNotifications(Product product, double prevStockQuantity,
         List<ProductWarehouseInventory> prevMultiWarehouseStock)
     {
         if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock &&

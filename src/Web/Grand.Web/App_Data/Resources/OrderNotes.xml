@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Language Name="English">
+  <Resource Name="Order.OrderNote" Area="Front">
+    <Value>Order Note</Value>
+  </Resource>
+  <Resource Name="Order.OrderNote.Placeholder" Area="Front">
+    <Value>Enter any special instructions for your order here...</Value>
+  </Resource>
+  <Resource Name="Order.OrderNote.Description" Area="Front">
+    <Value>Your note will be visible to the store staff only. Add any special delivery instructions or any other information.</Value>
+  </Resource>
+</Language>

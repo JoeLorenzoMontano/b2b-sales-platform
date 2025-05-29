@@ -26,7 +26,7 @@ public class BulkEditProductModel : BaseEntityModel
 
 
     [GrandResourceDisplayName("Admin.Catalog.BulkEdit.Fields.StockQuantity")]
-    public int StockQuantity { get; set; }
+    public double StockQuantity { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.BulkEdit.Fields.Published")]
     public bool Published { get; set; }

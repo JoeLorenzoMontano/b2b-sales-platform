@@ -454,7 +454,7 @@ public class OrderReportService : IOrderReportService
         var queryItem = query.GroupBy(x => new { x.ProductId }).Select(x => new BestsellersReportLine {
             ProductId = x.Key.ProductId,
             TotalAmount = x.Sum(y => y.PriceInclTax / y.Rate),
-            TotalQuantity = x.Sum(y => y.Quantity)
+            TotalQuantity = (int)x.Sum(y => y.Quantity)
         });
 
         var queryItemOrdered = orderBy == 1

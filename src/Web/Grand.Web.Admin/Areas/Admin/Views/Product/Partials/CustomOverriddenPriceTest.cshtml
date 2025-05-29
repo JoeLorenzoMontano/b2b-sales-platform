@@ -1,0 +1,31 @@
+@model ProductModel.ProductAttributeValueModel
+
+<div class="form-horizontal">
+    <div class="form-body">
+        <h3>Custom Test for OverriddenPrice</h3>
+        <p>Current ID: @Model.Id</p>
+        <p>Current ProductId: @Model.ProductId</p>
+        <p>Current ProductAttributeMappingId: @Model.ProductAttributeMappingId</p>
+        <p>Current OverriddenPrice: @(Model.OverriddenPrice?.ToString() ?? "null")</p>
+        
+        <form method="post" action="@Url.Action("CustomTestOverriddenPrice", "Product", new { area = "Admin", id = Model.Id, productId = Model.ProductId, productAttributeMappingId = Model.ProductAttributeMappingId })">
+            <input type="hidden" name="Id" value="@Model.Id" />
+            <input type="hidden" name="ProductId" value="@Model.ProductId" />
+            <input type="hidden" name="ProductAttributeMappingId" value="@Model.ProductAttributeMappingId" />
+            <input type="hidden" name="AttributeValueTypeId" value="@((int)AttributeValueType.WeightBasedConversion)" />
+            
+            <div class="form-group">
+                <label>Test OverriddenPrice:</label>
+                <input type="number" name="overriddenPrice" value="@(Model.OverriddenPrice?.ToString() ?? "")" step="0.01" class="form-control" />
+                <small class="text-muted">Current value: @(Model.OverriddenPrice?.ToString() ?? "not set")</small>
+            </div>
+
+            <div class="alert alert-info">
+                <p>This form will directly update the OverriddenPrice value on the ProductAttributeValue object.</p>
+                <p>Enter a numeric value and click Save to update the price override.</p>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Save Test</button>
+        </form>
+    </div>
+</div>

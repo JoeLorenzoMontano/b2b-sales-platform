@@ -101,7 +101,8 @@
                 <admin-input asp-for="Quantity"/>
                 <span asp-validation-for="Quantity"></span>
                 <div id="quantity-hint" class="small mt-1" style="display:none;">
-                    Enter the conversion ratio (e.g., 453 for pounds to grams).
+                    Enter the conversion ratio (e.g., 453.59 for pounds to grams).
+                    Decimal values with up to 2 decimal places are supported (e.g., 1.25, 0.75).
                     When a customer orders 1 unit, inventory will be decremented by this amount.
                 </div>
             </div>
@@ -182,6 +183,8 @@
                 </div>
             </div>
         </div>
+        <!-- AllowSample option removed - only use the one in Product Attribute Combination -->
+        <input type="hidden" asp-for="AllowSample" value="false" />
         <div class="form-group">
             <admin-label asp-for="IsPreSelected" class="col-sm-3 control-label"/>
             <div class="col-md-9 col-sm-9">

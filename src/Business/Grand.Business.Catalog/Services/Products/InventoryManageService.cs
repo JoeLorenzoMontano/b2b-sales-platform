@@ -345,7 +345,7 @@ public class InventoryManageService : IInventoryManageService
     /// <summary>
     /// Generates a descriptive comment for inventory journal entries
     /// </summary>
-    private string GenerateInventoryJournalComment(int previousStockQty, int newStockQty, string userId, IList<CustomAttribute> attributes)
+    private string GenerateInventoryJournalComment(double previousStockQty, double newStockQty, string userId, IList<CustomAttribute> attributes)
     {
         // Format user who made the change
         string userInfo = string.IsNullOrEmpty(userId) ? "administrator" : userId;
@@ -362,7 +362,7 @@ public class InventoryManageService : IInventoryManageService
         return $"Stock changed from {previousStockQty} to {newStockQty}{attributeInfo} by {userInfo}";
     }
     
-    private async Task InsertManualInventoryJournal(Product product, string warehouseId, int previousStockQty, int newStockQty, string userId = null, IList<CustomAttribute> attributes = null)
+    private async Task InsertManualInventoryJournal(Product product, string warehouseId, double previousStockQty, double newStockQty, string userId = null, IList<CustomAttribute> attributes = null)
     {
         var qtyChange = newStockQty - previousStockQty;
         if (qtyChange == 0)
@@ -407,7 +407,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="quantityToChange">Quantity to increase or decrease</param>
     /// <param name="attributes">Attributes</param>
     /// <param name="warehouseId">Warehouse ident</param>
-    public virtual async Task AdjustReserved(Product product, int quantityToChange,
+    public virtual async Task AdjustReserved(Product product, double quantityToChange,
         IList<CustomAttribute> attributes = null, string warehouseId = "")
     {
         ArgumentNullException.ThrowIfNull(product);
@@ -552,9 +552,9 @@ public class InventoryManageService : IInventoryManageService
             }
 
         // Check for weight-based conversion first
-        int originalQuantityToChange = quantityToChange;
+        double originalQuantityToChange = quantityToChange;
         bool hasWeightBasedConversion = false;
-        int conversionRatio = 1;
+        double conversionRatio = 1;
         
         var attributeValues = product.ParseProductAttributeValues(attributes);
         foreach (var attributeValue in attributeValues)
@@ -644,7 +644,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="product">Product</param>
     /// <param name="quantity">Quantity, must be negative</param>
     /// <param name="warehouseId"></param>
-    protected virtual async Task ReserveInventory(Product product, int quantity, string warehouseId)
+    protected virtual async Task ReserveInventory(Product product, double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
 
@@ -688,7 +688,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="quantity">Quantity, must be negative</param>
     /// <param name="warehouseId">Warehouse ident</param>
     protected virtual async Task ReserveInventoryCombination(Product product, ProductAttributeCombination combination,
-        int quantity, string warehouseId)
+        double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
         ArgumentNullException.ThrowIfNull(combination);
@@ -745,7 +745,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="product">Product</param>
     /// <param name="quantity">Quantity, must be positive</param>
     /// <param name="warehouseId">Warehouse ident</param>
-    protected virtual async Task UnblockReservedInventory(Product product, int quantity, string warehouseId)
+    protected virtual async Task UnblockReservedInventory(Product product, double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
 
@@ -791,7 +791,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="quantity">Quantity, must be positive</param>
     /// <param name="warehouseId">Warehouse ident</param>
     protected virtual async Task UnblockReservedInventoryCombination(Product product,
-        ProductAttributeCombination combination, int quantity, string warehouseId)
+        ProductAttributeCombination combination, double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
 
@@ -905,7 +905,7 @@ public class InventoryManageService : IInventoryManageService
     }
 
 
-    public virtual async Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, int? previousStockQuantity = null, string warehouseId = null, string userId = null, IList<CustomAttribute> attributes = null)
+    public virtual async Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, double? previousStockQuantity = null, string warehouseId = null, string userId = null, IList<CustomAttribute> attributes = null)
     {
         ArgumentNullException.ThrowIfNull(product);
 

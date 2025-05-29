@@ -747,7 +747,7 @@ public class ProductViewModelService : IProductViewModelService
         await UpdatePictureSeoNames(product);
 
         //out of stock notifications
-        await OutOfStockNotifications(product, prevStockQuantity, prevMultiWarehouseStock);
+        await OutOfStockNotifications(product, prevStockQuantity.ToInt(), prevMultiWarehouseStock);
 
         return product;
     }
@@ -1856,8 +1856,8 @@ public class ProductViewModelService : IProductViewModelService
                         {
                             warehouseInventoryModel.WarehouseUsed = true;
                             warehouseInventoryModel.Id = winv.Id;
-                            warehouseInventoryModel.StockQuantity = winv.StockQuantity;
-                            warehouseInventoryModel.ReservedQuantity = winv.ReservedQuantity;
+                            warehouseInventoryModel.StockQuantity = winv.StockQuantity.ToInt();
+                            warehouseInventoryModel.ReservedQuantity = winv.ReservedQuantity.ToInt();
                         }
                     }
             }
@@ -2156,7 +2156,7 @@ public class ProductViewModelService : IProductViewModelService
         {
             var pctp = new ProductCombinationTierPrices {
                 Price = model.Price,
-                Quantity = model.Quantity
+                Quantity = model.Quantity.ToInt()
             };
             productAttributeCombination.TierPrices.Add(pctp);
             await _productAttributeService.UpdateProductAttributeCombination(productAttributeCombination,
@@ -2174,7 +2174,7 @@ public class ProductViewModelService : IProductViewModelService
             if (tierPrice != null)
             {
                 tierPrice.Price = model.Price;
-                tierPrice.Quantity = model.Quantity;
+                tierPrice.Quantity = model.Quantity.ToInt();
                 await _productAttributeService.UpdateProductAttributeCombination(productAttributeCombination,
                     product.Id);
             }

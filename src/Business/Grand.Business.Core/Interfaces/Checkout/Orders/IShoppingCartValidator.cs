@@ -103,7 +103,7 @@ public interface IShoppingCartValidator
     /// <param name="reservationId">reservation Id</param>
     /// <returns>Warnings</returns>
     Task<IList<string>> CheckCommonWarnings(Customer customer, IList<ShoppingCartItem> currentCart, Product product,
-        ShoppingCartType shoppingCartType, DateTime? rentalStartDate, DateTime? rentalEndDate, int quantity,
+        ShoppingCartType shoppingCartType, DateTime? rentalStartDate, DateTime? rentalEndDate, double quantity,
         string reservationId);
 
     /// <summary>

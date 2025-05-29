@@ -1,0 +1,43 @@
+@model ProductModel.ProductAttributeValueModel
+
+<div asp-validation-summary="All"></div>
+<input asp-for="Id" type="hidden"/>
+<input asp-for="ProductAttributeMappingId" type="hidden"/>
+<input asp-for="DisplayColorSquaresRgb" type="hidden"/>
+<input asp-for="DisplayImageSquaresPicture" type="hidden"/>
+
+<div class="form-horizontal">
+    <div class="form-body">
+        <div class="form-group">
+            <h3>Debug Information</h3>
+            <ul>
+                <li>Model ID: @Model.Id</li>
+                <li>Name: @Model.Name</li>
+                <li>Price Adjustment: @Model.PriceAdjustment</li>
+                <li>Has OverriddenPrice: @(Model.OverriddenPrice.HasValue)</li>
+                <li>OverriddenPrice Value: @(Model.OverriddenPrice?.ToString() ?? "null")</li>
+                <li>AttributeValueTypeId: @Model.AttributeValueTypeId</li>
+            </ul>
+        </div>
+        
+        <div class="form-group">
+            <label>Available Properties:</label>
+            <textarea readonly style="width: 100%; height: 200px;">
+@foreach (var prop in Model.GetType().GetProperties())
+{
+    @($"{prop.Name}: {prop.GetValue(Model)?.ToString() ?? "null"}\n")
+}
+            </textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label">Set OverriddenPrice with Regular Input:</label>
+            <div class="col-md-9 col-sm-9">
+                <input type="number" id="OverriddenPrice" name="OverriddenPrice" value="@(Model.OverriddenPrice?.ToString() ?? "")" step="0.01" />
+                <span class="small">This is a regular input field to test if binding works with this</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button type="submit" name="save" class="btn btn-primary">Submit Debug Form</button>

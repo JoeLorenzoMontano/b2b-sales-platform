@@ -1,5 +1,6 @@
 ﻿using Grand.Infrastructure.ModelBinding;
 using Grand.Infrastructure.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Vendor.Models.Shipment;
 
@@ -74,13 +75,17 @@ public class ShipmentModel : BaseEntityModel
         [GrandResourceDisplayName("Vendor.Orders.Shipments.Products.ItemDimensions")]
         public string ItemDimensions { get; set; }
 
-        public int QuantityToAdd { get; set; }
-        public int QuantityOrdered { get; set; }
+        [UIHint("DecimalN2")]
+        public double QuantityToAdd { get; set; }
+        [UIHint("DecimalN2")]
+        public double QuantityOrdered { get; set; }
 
         [GrandResourceDisplayName("Vendor.Orders.Shipments.Products.QtyShipped")]
-        public int QuantityInThisShipment { get; set; }
+        [UIHint("DecimalN2")]
+        public double QuantityInThisShipment { get; set; }
 
-        public int QuantityInAllShipments { get; set; }
+        [UIHint("DecimalN2")]
+        public double QuantityInAllShipments { get; set; }
 
         public string ShippedFromWarehouse { get; set; }
 
@@ -97,8 +102,10 @@ public class ShipmentModel : BaseEntityModel
             public string WarehouseId { get; set; }
             public string WarehouseCode { get; set; }
             public string WarehouseName { get; set; }
-            public int StockQuantity { get; set; }
-            public int ReservedQuantity { get; set; }
+            [UIHint("DecimalN2")]
+            public double StockQuantity { get; set; }
+            [UIHint("DecimalN2")]
+            public double ReservedQuantity { get; set; }
         }
 
         #endregion

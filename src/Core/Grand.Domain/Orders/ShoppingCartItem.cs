@@ -40,7 +40,7 @@ public class ShoppingCartItem : SubBaseEntity
     /// <summary>
     ///     Gets or sets the quantity
     /// </summary>
-    public int Quantity { get; set; }
+    public double Quantity { get; set; }
 
     /// <summary>
     ///     Gets or sets the rental product start date (null if it's not a rental product)
@@ -106,4 +106,9 @@ public class ShoppingCartItem : SubBaseEntity
     ///     Gets or sets owner cid
     /// </summary>
     public string cId { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets a value indicating whether this is a sample item (quantity=1, price=0)
+    /// </summary>
+    public bool IsSampleItem { get; set; }
 }

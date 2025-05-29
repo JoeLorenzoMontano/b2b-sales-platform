@@ -12,5 +12,5 @@ public class ShoppingCartModel : BaseModel
     public string CustomerEmail { get; set; }
 
     [GrandResourceDisplayName("Admin.CurrentCarts.TotalItems")]
-    public int TotalItems { get; set; }
+    public double TotalItems { get; set; }
 }

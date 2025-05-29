@@ -18,12 +18,12 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
     /// <summary>
     ///     Gets or sets the stock quantity
     /// </summary>
-    public int StockQuantity { get; set; }
+    public double StockQuantity { get; set; }
 
     /// <summary>
     ///     Gets or sets the reserved quantity (ordered but not shipped yet)
     /// </summary>
-    public int ReservedQuantity { get; set; }
+    public double ReservedQuantity { get; set; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether to allow orders when out of stock

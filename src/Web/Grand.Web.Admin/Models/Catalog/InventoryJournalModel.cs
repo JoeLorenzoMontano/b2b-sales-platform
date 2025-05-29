@@ -16,8 +16,8 @@ namespace Grand.Web.Admin.Models.Catalog
         public IList<CustomAttribute> Attributes { get; set; } = new List<CustomAttribute>();
         public string WarehouseId { get; set; }
         public string WarehouseName { get; set; }
-        public int InQty { get; set; }
-        public int OutQty { get; set; }
+        public double InQty { get; set; }
+        public double OutQty { get; set; }
         public string Comments { get; set; }
         public string Reference { get; set; }
     }

@@ -8,6 +8,7 @@ using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
+using Grand.SharedKernel.Extensions;
 using Grand.Web.Extensions;
 using Grand.Web.Features.Models.ShoppingCart;
 using Grand.Web.Models.Media;
@@ -80,7 +81,7 @@ public class GetMiniWishlistHandler : IRequestHandler<GetMiniWishlist, MiniWishl
                 ProductName = product.GetTranslation(x => x.Name, request.Language.Id),
                 ProductSeName = sename,
                 ProductUrl = _linkGenerator.GetPathByRouteValues("Product", new { SeName = sename }),
-                Quantity = sci.Quantity,
+                Quantity = sci.Quantity.ToInt(),
                 AttributeInfo = await _productAttributeFormatter.FormatAttributes(product, sci.Attributes)
             };
 

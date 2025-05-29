@@ -31,7 +31,7 @@ public class LiquidShoppingCartItem : Drop
 
     public string PictureUrl { get; }
 
-    public int Quantity => _shoppingCartItem.Quantity;
+    public double Quantity => _shoppingCartItem.Quantity;
 
     public ShoppingCartType ShoppingCartType => _shoppingCartItem.ShoppingCartTypeId;
 

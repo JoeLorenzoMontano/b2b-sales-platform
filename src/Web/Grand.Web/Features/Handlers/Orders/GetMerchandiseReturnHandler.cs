@@ -8,6 +8,7 @@ using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Domain.Common;
 using Grand.Domain.Orders;
+using Grand.SharedKernel.Extensions;
 using Grand.Domain.Tax;
 using Grand.Infrastructure;
 using Grand.Web.Features.Models.Common;
@@ -130,7 +131,7 @@ public class GetMerchandiseReturnHandler : IRequestHandler<GetMerchandiseReturn,
                 VendorName = string.IsNullOrEmpty(orderItem.VendorId)
                     ? ""
                     : (await _vendorService.GetVendorById(orderItem.VendorId))?.Name,
-                Quantity = qtyDelivery - qtyReturn
+                Quantity = (qtyDelivery - qtyReturn).ToInt()
             };
             if (orderItemModel.Quantity > 0)
                 model.Items.Add(orderItemModel);

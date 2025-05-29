@@ -40,7 +40,7 @@ public class OrderItem : SubBaseEntity
     /// <summary>
     ///     Gets or sets the quantity
     /// </summary>
-    public int Quantity { get; set; }
+    public double Quantity { get; set; }
 
     /// <summary>
     ///     Gets or sets item is ship
@@ -50,17 +50,17 @@ public class OrderItem : SubBaseEntity
     /// <summary>
     ///     Gets or sets the open quantity
     /// </summary>
-    public int OpenQty { get; set; }
+    public double OpenQty { get; set; }
 
     /// <summary>
     ///     Gets or sets the open quantity
     /// </summary>
-    public int ShipQty { get; set; }
+    public double ShipQty { get; set; }
 
     /// <summary>
     ///     Gets or sets the cancel quantity
     /// </summary>
-    public int CancelQty { get; set; }
+    public double CancelQty { get; set; }
 
     /// <summary>
     ///     Gets or sets the cancel amount
@@ -70,7 +70,7 @@ public class OrderItem : SubBaseEntity
     /// <summary>
     ///     Gets or sets the return quantity
     /// </summary>
-    public int ReturnQty { get; set; }
+    public double ReturnQty { get; set; }
 
     /// <summary>
     ///     Gets or sets the open quantity

@@ -92,7 +92,7 @@ public interface ITaxService
         Customer customer,
         double unitPrice,
         double unitPriceWithoutDisc,
-        int quantity,
+        double quantity,
         double subTotal,
         double discountAmount,
         bool priceIncludesTax

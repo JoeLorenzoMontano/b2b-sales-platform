@@ -1352,9 +1352,9 @@ public class OrderController(
                 continue;
 
             // Get the quantity to ship from the provided quantities JSON
-            int shipQty = orderItem.OpenQty;
+            double shipQty = orderItem.OpenQty;
             if (quantityMap.TryGetValue(orderItemId, out var qtyStr) &&
-                int.TryParse(qtyStr, out var parsedQty) &&
+                double.TryParse(qtyStr, out var parsedQty) &&
                 parsedQty > 0 && parsedQty <= orderItem.OpenQty)
             {
                 shipQty = parsedQty;

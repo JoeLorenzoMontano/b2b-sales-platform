@@ -98,43 +98,20 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
                 1, customAttributes, default,
                 rentalStartDate, rentalEndDate,
                 true);
-
-            // Check if this is a sample selection
-            bool isSample = false;
+                
+            double finalPrice = unitprice.unitprice;
             
+            // Check if this is a sample selection (just for UI indication, not price)
             if (customAttributes != null && customAttributes.Any())
             {
                 var attributeValues = request.Product.ParseProductAttributeValues(customAttributes);
                 if (attributeValues != null && attributeValues.Any(av => av.AllowSample))
                 {
-                    isSample = true;
+                    model.SampleEnabled = true;
                 }
                 
                 var combination = request.Product.FindProductAttributeCombination(customAttributes);
                 if (combination != null && combination.AllowSample)
-                {
-                    isSample = true;
-                }
-            }
-            
-            double finalPrice;
-            
-            // Default to quantity 1
-            var quantity = 1.0;
-            
-            // If it's a sample and quantity is 1, set price to 0
-            if (isSample && quantity <= 1)
-            {
-                finalPrice = 0;
-                model.SampleEnabled = true;
-            }
-            else
-            {
-                // Otherwise use normal price
-                finalPrice = unitprice.unitprice;
-                
-                // Still mark sample as available if applicable
-                if (isSample)
                 {
                     model.SampleEnabled = true;
                 }

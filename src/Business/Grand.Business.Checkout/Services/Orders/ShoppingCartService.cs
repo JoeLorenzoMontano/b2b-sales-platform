@@ -212,27 +212,6 @@ public class ShoppingCartService : IShoppingCartService
         if (warnings.Any())
             return (warnings, null);
 
-        // Check if any attribute value has AllowSample=true and quantity is 1
-        bool isSample = false;
-        if (attributes != null && attributes.Any() && quantity == 1)
-        {
-            var attributeValues = product.ParseProductAttributeValues(attributes);
-            isSample = attributeValues != null && attributeValues.Any(av => av.AllowSample);
-            
-            // Check if product combination has AllowSample=true
-            var combination = product.FindProductAttributeCombination(attributes);
-            if (combination != null && combination.AllowSample)
-            {
-                isSample = true;
-            }
-        }
-
-        // If this is a sample, force quantity to 1 (ignore customer's quantity if higher)
-        if (isSample)
-        {
-            quantity = 1;
-        }
-
         var shoppingCartItem = await FindShoppingCartItem(cart,
             shoppingCartType, productId, warehouseId, attributes, customerEnteredPrice,
             rentalStartDate, rentalEndDate);
@@ -253,15 +232,14 @@ public class ShoppingCartService : IShoppingCartService
                 RentalStartDateUtc = rentalStartDate,
                 RentalEndDateUtc = rentalEndDate,
                 AdditionalShippingChargeProduct = product.AdditionalShippingCharge,
-                IsFreeShipping = product.IsFreeShipping || isSample, // Samples should be free shipping
+                IsFreeShipping = product.IsFreeShipping,
                 IsShipEnabled = product.IsShipEnabled,
-                IsTaxExempt = product.IsTaxExempt || isSample, // Samples should be tax exempt
+                IsTaxExempt = product.IsTaxExempt,
                 IsGiftVoucher = product.IsGiftVoucher,
                 CreatedOnUtc = DateTime.UtcNow,
                 ReservationId = reservationId,
                 Parameter = parameter,
-                Duration = duration,
-                IsSampleItem = isSample // Mark as sample item
+                Duration = duration
             };
         warnings.AddRange(
             await _shoppingCartValidator.GetShoppingCartItemWarnings(customer, shoppingCartItem, product, validator));

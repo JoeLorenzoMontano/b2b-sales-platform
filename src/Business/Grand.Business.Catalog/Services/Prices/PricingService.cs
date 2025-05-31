@@ -217,12 +217,6 @@ public class PricingService : IPricingService
             Product product, bool includeDiscounts = true)
     {
         ArgumentNullException.ThrowIfNull(shoppingCartItem);
-        
-        // If this is explicitly marked as a sample item, return $0 price
-        if (shoppingCartItem.IsSampleItem)
-        {
-            return (0, 0, new List<ApplyDiscount>());
-        }
 
         return await GetUnitPrice(product,
             _contextAccessor.WorkContext.CurrentCustomer,
@@ -271,23 +265,6 @@ public class PricingService : IPricingService
 
         double discountAmount = 0;
         var appliedDiscounts = new List<ApplyDiscount>();
-
-        // Check if this is a sample selection (when quantity is 1)
-        if (attributes != null && attributes.Any() && quantity == 1)
-        {
-            var attributeValues = product.ParseProductAttributeValues(attributes);
-            if (attributeValues != null && attributeValues.Any(av => av.AllowSample))
-            {
-                return (0, 0, new List<ApplyDiscount>());
-            }
-            
-            // Check if product combination has AllowSample=true
-            var combination = product.FindProductAttributeCombination(attributes);
-            if (combination != null && combination.AllowSample)
-            {
-                return (0, 0, new List<ApplyDiscount>());
-            }
-        }
 
         double? finalPrice = null;
 
@@ -386,12 +363,6 @@ public class PricingService : IPricingService
     {
         ArgumentNullException.ThrowIfNull(shoppingCartItem);
 
-        // If this is explicitly marked as a sample item, return $0 price
-        if (shoppingCartItem.IsSampleItem)
-        {
-            return (0, 0, new List<ApplyDiscount>());
-        }
-
         double subTotal = 0;
         //unit price
         var getUnitPrice = await GetUnitPrice(shoppingCartItem, product, includeDiscounts);
@@ -476,12 +447,6 @@ public class PricingService : IPricingService
     public virtual async Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value, Product product = null)
     {
         ArgumentNullException.ThrowIfNull(value);
-
-        // If this attribute value allows sampling, price should be 0
-        if (value.AllowSample)
-        {
-            return 0;
-        }
 
         double adjustment = 0;
         switch (value.AttributeValueTypeId)

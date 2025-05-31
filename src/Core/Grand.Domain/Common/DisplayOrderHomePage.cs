@@ -80,8 +80,8 @@ public class DisplayOrderHomePage : ISettings
 
     //Home page brands
     public int HomePageBrands { get; set; }
-    public int Bm_Xl { get; set; } = 4; //default 4
-    public int Bm_Lg { get; set; } = 4; //default 4
+    public int Bm_Xl { get; set; } = 3; //default 4
+    public int Bm_Lg { get; set; } = 3; //default 4
     public int Bm_Md { get; set; } = 6; //default 6
     public int Bm_Sm { get; set; } = 6; //default 6
     public int Bm_Col { get; set; } = 12; //default 12

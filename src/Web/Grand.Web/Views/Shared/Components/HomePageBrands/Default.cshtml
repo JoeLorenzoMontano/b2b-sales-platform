@@ -1,7 +1,7 @@
 ﻿@model IList<BrandModel>
 @inject DisplayOrderHomePage order
 <div class="categoryGrid  order-@order.HomePageBrands">
-    <div cols="12" class="col-12 px-0">
+    <div cols="16" class="col-12 px-0">
         <div class="form-row">
             @foreach (var item in Model)
             {
@@ -23,7 +23,7 @@
                                 </div>
                             }
                             <div class="mt-2 mb-1">
-                                <a href="@Url.RouteUrl("Brand", new { item.SeName })" class="btn btn-secondary">VIEW PRODUCTS</a>
+                                <a href="@Url.RouteUrl("Brand", new { item.SeName })" class="btn btn-light">VIEW PRODUCTS</a>
                             </div>
                         </div>
                     </div>

@@ -127,4 +127,12 @@ public class DisplayOrderHomePage : ISettings
     public int Pb_Md { get; set; } = 6; //default 6
     public int Pb_Sm { get; set; } = 6; //default 6
     public int Pb_Col { get; set; } = 12; //default 12
+
+
+
+
+
+
+  //JOLOMO CUSTOM
+  public int HomePageCustomFooter { get; set; }
 }

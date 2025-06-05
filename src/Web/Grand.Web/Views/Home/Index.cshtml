@@ -59,4 +59,5 @@
     @await Component.InvokeAsync("Widget", new { widgetZone = "home_page_before_blog" })
     @await Component.InvokeAsync("HomePageBlog")
     @await Component.InvokeAsync("Widget", new { widgetZone = "home_page_bottom" })
+    @await Component.InvokeAsync("PageBlock", new { systemName = "HomePageCustomFooter" })
 </div>

@@ -49,6 +49,11 @@
     @await RenderSectionAsync("head", false)
 }
 
+@{
+    // Ignore the filters section as we don't need it in a one-column layout
+    IgnoreSection("filters");
+}
+
 @if (!string.IsNullOrEmpty(currentCategoryId))
 {
     @await Component.InvokeAsync("Widget", new { widgetZone = "home_page_category", additionalData = Model.Id })

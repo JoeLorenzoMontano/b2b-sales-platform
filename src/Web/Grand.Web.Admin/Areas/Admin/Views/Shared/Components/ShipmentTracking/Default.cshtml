@@ -683,8 +683,15 @@
                     type: "POST",
                     data: postData,
                     success: function(data) {
-                        // Refresh the grid
+                        // Refresh the shipment tracking grid
                         $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
+                        
+                        // Refresh the fulfillment queue grid if it exists
+                        if ($("#fulfillment-queue-grid").length > 0) {
+                            setTimeout(function() {
+                                $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                            }, 500);
+                        }
                     },
                     error: function(xhr, status, error) {
                         alert(error);
@@ -708,8 +715,15 @@
                     type: "POST",
                     data: postData,
                     success: function(data) {
-                        // Refresh the grid
+                        // Refresh the shipment tracking grid
                         $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
+                        
+                        // Refresh the fulfillment queue grid if it exists
+                        if ($("#fulfillment-queue-grid").length > 0) {
+                            setTimeout(function() {
+                                $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                            }, 500);
+                        }
                     },
                     error: function(xhr, status, error) {
                         alert(error);

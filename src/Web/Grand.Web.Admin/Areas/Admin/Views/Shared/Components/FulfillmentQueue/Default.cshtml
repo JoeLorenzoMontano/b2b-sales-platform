@@ -357,8 +357,16 @@
                                 if (response.success) {
                                     // Use standard notification
                                     alert("Full shipment created successfully for all order items");
-                                    // Refresh the grid
+                                    
+                                    // Refresh the fulfillment queue grid
                                     $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                    
+                                    // Refresh the shipment tracking grid if it exists
+                                    if ($("#shipment-tracking-grid").length > 0) {
+                                        setTimeout(function() {
+                                            $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
+                                        }, 500);
+                                    }
                                 } else {
                                     alert("Error: " + (response.error || "Unknown error"));
                                 }

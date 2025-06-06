@@ -26,7 +26,7 @@ namespace Grand.Web.Features.Handlers.Catalog
         {
             var model = new CatalogProductsModel();
 
-            var pageSize = 12;
+            var pageSize = 50; // Changed from 12 to 50 items per page
             
             if (request.Command.PageSize > 0)
             {
@@ -45,7 +45,7 @@ namespace Grand.Web.Features.Handlers.Catalog
                 PagingFilteringModel = request.Command,
                 Language = request.Language,
                 AllowCustomersToSelectPageSize = true,
-                PageSizeOptions = "12,24,36,72",
+                PageSizeOptions = "25,50,100,200",
                 PageSize = pageSize
             }, cancellationToken);
             model.PagingFilteringContext = options.command;

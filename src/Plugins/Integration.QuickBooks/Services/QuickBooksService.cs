@@ -27,6 +27,7 @@ namespace Integration.QuickBooks.Services
 
         private const string SETTINGS_KEY = "QuickBooks.Settings";
         private const string OAUTH_BASE_URL = "https://oauth.platform.intuit.com/oauth2/v1";
+        private const string OAUTH_AUTHORIZE_URL = "https://appcenter.intuit.com/connect/oauth2";
         private const string API_BASE_URL_SANDBOX = "https://sandbox-quickbooks.api.intuit.com/v3/company/";
         private const string API_BASE_URL_PRODUCTION = "https://quickbooks.api.intuit.com/v3/company/";
 
@@ -90,7 +91,7 @@ namespace Integration.QuickBooks.Services
             };
 
             var queryString = string.Join("&", queryParams.Select(x => $"{x.Key}={HttpUtility.UrlEncode(x.Value)}"));
-            return $"{OAUTH_BASE_URL}/authorize?{queryString}";
+            return $"{OAUTH_AUTHORIZE_URL}?{queryString}";
         }
 
         /// <summary>

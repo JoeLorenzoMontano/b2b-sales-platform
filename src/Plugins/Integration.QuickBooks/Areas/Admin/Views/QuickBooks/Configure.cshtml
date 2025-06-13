@@ -1,0 +1,170 @@
+@model Integration.QuickBooks.Models.QuickBooksConfigurationModel
+@{
+    Layout = "_AdminLayout";
+    //page title
+    ViewBag.Title = "QuickBooks Integration";
+}
+
+<form asp-controller="QuickBooks" asp-action="Configure" method="post">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card card-default">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        QuickBooks Integration
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <div class="label-wrapper">
+                                <label asp-for="Enabled" class="control-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
+                                <input asp-for="Enabled" type="checkbox" />
+                                <div class="control__indicator"></div>
+                            </label>
+                            <span asp-validation-for="Enabled"></span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <div class="label-wrapper">
+                                <label asp-for="Environment" class="control-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <select asp-for="Environment" class="form-control">
+                                <option value="Sandbox">Sandbox</option>
+                                <option value="Production">Production</option>
+                            </select>
+                            <span asp-validation-for="Environment"></span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <div class="label-wrapper">
+                                <label asp-for="ClientId" class="control-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <input asp-for="ClientId" class="form-control" />
+                            <span asp-validation-for="ClientId"></span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <div class="label-wrapper">
+                                <label asp-for="ClientSecret" class="control-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <input asp-for="ClientSecret" class="form-control" />
+                            <span asp-validation-for="ClientSecret"></span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <div class="label-wrapper">
+                                <label asp-for="RedirectUri" class="control-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <input asp-for="RedirectUri" class="form-control" />
+                            <span asp-validation-for="RedirectUri"></span>
+                            <span class="hint">
+                                Example: https://yourdomain.com/Admin/QuickBooks/Callback
+                            </span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <div class="label-wrapper">
+                                <label asp-for="WebhookToken" class="control-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <input asp-for="WebhookToken" class="form-control" />
+                            <span asp-validation-for="WebhookToken"></span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <div class="label-wrapper">
+                                <label asp-for="IsConnected" class="control-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            @if (Model.IsConnected)
+                            {
+                                <div class="badge badge-success">Connected</div>
+                                <div class="mt-2">
+                                    <button type="submit" name="Disconnect" class="btn btn-danger" formaction="@Url.Action("Disconnect")">
+                                        Disconnect from QuickBooks
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="badge badge-warning">Not Connected</div>
+                                <div class="mt-2">
+                                    <a href="@Url.Action("ConnectToQuickBooks")" class="btn btn-primary">
+                                        Connect to QuickBooks
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" name="save" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+
+            @if (Model.IsConnected)
+            {
+                <div class="card card-default mt-4">
+                    <div class="card-header">
+                        <h4 class="card-title">
+                            Sync Operations
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group row">
+                            <div class="col-md-3">
+                                <div class="label-wrapper">
+                                    <label class="control-label">Sync Customers</label>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <button type="submit" name="SyncCustomers" class="btn btn-primary" formaction="@Url.Action("SyncCustomers")">
+                                    Sync Customers to QuickBooks
+                                </button>
+                                <div class="small text-muted mt-2">
+                                    Synchronize all customers to QuickBooks
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-3">
+                                <div class="label-wrapper">
+                                    <label class="control-label">Sync Invoices</label>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <button type="submit" name="SyncInvoices" class="btn btn-primary" formaction="@Url.Action("SyncInvoices")">
+                                    Sync Invoices to QuickBooks
+                                </button>
+                                <div class="small text-muted mt-2">
+                                    Synchronize all invoices to QuickBooks
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</form>

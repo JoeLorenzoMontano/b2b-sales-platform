@@ -80,4 +80,8 @@
     <PackageVersion Update="Aspire.Dashboard.Sdk.win-x64" Version="9.1.0" />
     <PackageVersion Update="Aspire.Hosting.Orchestration.win-x64" Version="9.1.0" />
   </ItemGroup>
+  <!-- QuickBooks API Integration Packages -->
+  <ItemGroup>
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
 </Project>

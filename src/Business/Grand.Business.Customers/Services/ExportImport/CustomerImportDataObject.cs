@@ -2,6 +2,7 @@ using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Utilities.Customers;
+using Grand.Business.Customers.Dto;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
 using System;

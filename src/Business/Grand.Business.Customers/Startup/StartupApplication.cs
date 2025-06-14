@@ -42,5 +42,6 @@ public class StartupApplication : IStartupApplication
         serviceCollection.AddScoped<IAffiliateService, AffiliateService>();
         serviceCollection.AddScoped<ISchemaProperty<Customer>, CustomerSchemaProperty>();
         serviceCollection.AddScoped<ISchemaProperty<Address>, AddressSchemaProperty>();
+        serviceCollection.AddScoped<IImportDataObject<CustomerImportDto>, CustomerImportDataObject>();
     }
 }

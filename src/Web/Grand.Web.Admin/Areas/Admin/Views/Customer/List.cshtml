@@ -36,6 +36,11 @@
                             </ul>
                             <vc:admin-widget widget-zone="customer_list_buttons" additional-data="null"/>
                         </div>
+                        <div class="btn-group btn-group-devided">
+                            <a class="btn green" id="import-csv-button" href="javascript:;">
+                                <i class="fa fa-upload"></i>&nbsp;@Loc["Admin.Common.Import"]
+                            </a>
+                        </div>
                         <button type="button" name="delete-selected" id="delete-selected" class="btn red">
                             <i class="fa fa-trash-o"></i>
                             @Loc["Admin.Common.Delete.Selected"]
@@ -458,6 +463,45 @@
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>
 
+<!-- Import CSV Modal -->
+<div class="modal fade" id="import-csv-modal" tabindex="-1" role="dialog" aria-labelledby="import-csv-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="import-csv-modal-label">@Loc["Admin.Common.ImportFromCsv"]</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            </div>
+            <form asp-area="@Constants.AreaAdmin" asp-controller="Customer" asp-action="ImportFromCsv" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <div class="col-md-12">
+                                    <div class="note note-info">
+                                        <p>
+                                            <strong>@Loc["Admin.Common.ImportFromCsvTip"]</strong><br/>
+                                            Active,Company,FirstName,LastName,Phone,Email,StreetAddress,City,State,Zip
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-md-12">
+                                    <input type="file" id="importcsvfile" name="importcsvfile" class="form-control"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">@Loc["Admin.Common.Import"]</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Loc["Admin.Common.Cancel"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 
     $(document).ready(function () {
@@ -467,6 +511,11 @@
             $('#export-excel-selected-form #selectedIds').val(ids);
             $('#export-excel-selected-form').submit();
             return false;
+        });
+        
+        // Open the CSV import modal when the import button is clicked
+        $('#import-csv-button').click(function() {
+            $('#import-csv-modal').modal('show');
         });
     });
 

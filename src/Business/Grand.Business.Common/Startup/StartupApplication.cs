@@ -104,6 +104,7 @@ public class StartupApplication : IStartupApplication
         serviceCollection.AddScoped(typeof(IExportManager<>), typeof(ExportManager<>));
 
         serviceCollection.AddScoped<IImportDataProvider, ExcelImportProvider>();
+        serviceCollection.AddScoped<IImportDataProvider, CsvImportProvider>();
         serviceCollection.AddScoped(typeof(IImportManager<>), typeof(ImportManager<>));
 
         serviceCollection.AddScoped<IImportDataObject<CountryStatesDto>, CountryImportDataObject>();

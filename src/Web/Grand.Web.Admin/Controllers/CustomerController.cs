@@ -25,7 +25,9 @@ using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Filters;
 using Grand.Web.Common.Models;
 using Grand.Web.Common.Security.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Grand.Business.Customers.Dto;
 
 namespace Grand.Web.Admin.Controllers;
 
@@ -1010,6 +1012,36 @@ public class CustomerController : BaseAdminController
 
         var bytes = await _exportManager.Export(customers);
         return File(bytes, "text/xls", "customers.xlsx");
+    }
+
+    #endregion
+    
+    #region Import
+
+    [PermissionAuthorizeAction(PermissionActionName.Import)]
+    [HttpPost]
+    public async Task<IActionResult> ImportFromCsv(IFormFile importcsvfile, [FromServices] IImportManager<CustomerImportDto> importManager)
+    {
+        if (importcsvfile == null || importcsvfile.Length == 0)
+        {
+            Error(_translationService.GetResource("Admin.Common.UploadFile"));
+            return RedirectToAction("List");
+        }
+
+        try
+        {
+            using (var stream = importcsvfile.OpenReadStream())
+            {
+                await importManager.Import(stream);
+            }
+            Success(_translationService.GetResource("Admin.Customers.Customers.Imported"));
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+        }
+
+        return RedirectToAction("List");
     }
 
     #endregion

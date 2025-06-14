@@ -1,15 +1,74 @@
 ﻿@model IList<ProductOverviewModel>
-@inject DisplayOrderHomePage order 
+@inject DisplayOrderHomePage order
 <div class="product-grid order-@order.HomePageProducts">
-    <h2 class="generalTitle text-center">@Loc["HomePage.Products"]</h2>
-    <div class="col-12 px-0">
-        <div class="form-row">
-            @foreach (var item in Model)
-            {
-                <div class="col-xl-@order.Hp_Xl col-lg-@order.Hp_Lg col-md-@order.Hp_Md col-sm-@order.Hp_Sm col-@order.Hp_Col product-container mb-2">
-                    <partial name="Partials/CatalogProductView" model="item"/>
-                </div>
-            }
+  <h2 class="generalTitle text-center">@Loc["HomePage.Products"]</h2>
+
+    <!-- Featured Brand Card -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="row g-0">
+        <div class="col-md-6">
+          <div class="bg-dark d-flex align-items-center justify-content-center h-100 p-3" style="min-height: 280px;">
+            <img src="/assets/images/uploaded/Self_Made_Farms_Logo_White_1000.png" class="img-fluid" alt="SELF MADE CANNABIS" style="max-width: 100%; max-height: 500px;">
+          </div>
         </div>
+        <div class="col-md-6">
+          <div class="card-body p-4">
+            <h2 class="fw-bold mb-2">SELF MADE CANNABIS</h2>
+            <p class="lead mb-3">Handcrafted flower cultivated in Oregon with passion and care.</p>
+
+            <h4 class="fw-bold mt-4 mb-3">Top Products</h4>
+
+            <!-- Display top products here -->
+            <div class="row g-2">
+              @foreach(var item in Model.Take(3)) {
+                <div class="col-4 mb-2">
+                  <partial name="Partials/CatalogProductView" model="item" />
+                </div>
+              }
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-3">
+              <a href="/self-made-farms" class="btn btn-secondary">View All Products</a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <div class="row g-0">
+      <div class="col-12">
+        <div class="bg-secondary text-white p-3 text-center">
+          <h3 class="fw-bold m-0">GET 10% OFF YOUR FIRST ORDER</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-0 mt-2">
+      <div class="col-md-6 d-none d-md-block">
+        <!-- This cell intentionally left empty for layout balance -->
+      </div>
+      <div class="col-md-6">
+        <div class="card-body p-4">
+          <h3 class="fw-bold mb-3">WHY CHOOSE US</h3>
+          <ul class="list-unstyled">
+            <li class="mb-2"><i class="bi bi-check2-circle me-2"></i><span class="fw-bold">Locally Grown</span></li>
+            <li class="mb-2"><i class="bi bi-check2-circle me-2"></i><span class="fw-bold">OLCC Compliant</span></li>
+            <li class="mb-2"><i class="bi bi-check2-circle me-2"></i><span class="fw-bold">Lab-Tested Purity</span></li>
+            <li class="mb-2"><i class="bi bi-check2-circle me-2"></i><span class="fw-bold">Multiple Award-winning Brands</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Other Products -->
+  <div class="col-12 px-0">
+    <div class="form-row">
+      @foreach(var item in Model.Skip(2)) {
+        <div class="col-xl-@order.Hp_Xl col-lg-@order.Hp_Lg col-md-@order.Hp_Md col-sm-@order.Hp_Sm col-@order.Hp_Col product-container mb-2">
+          <partial name="Partials/CatalogProductView" model="item" />
+        </div>
+      }
+    </div>
+  </div>
 </div>

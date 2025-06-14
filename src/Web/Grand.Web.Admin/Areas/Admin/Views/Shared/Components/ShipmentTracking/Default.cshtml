@@ -275,28 +275,28 @@
                         }
                     }
                 },
-                // Apply client-side filtering to exclude completed shipments
-                filter: function(item) {
-                    // Check both ShippedDate and ShippedDateUtc properties
-                    var hasShippedDate = (item.ShippedDate && item.ShippedDate !== null) || 
-                                        (item.ShippedDateUtc && item.ShippedDateUtc !== null);
+                // // Apply client-side filtering to exclude completed shipments
+                // filter: function(item) {
+                //     // Check both ShippedDate and ShippedDateUtc properties
+                //     var hasShippedDate = (item.ShippedDate && item.ShippedDate !== null) || 
+                //                         (item.ShippedDateUtc && item.ShippedDateUtc !== null);
                                         
-                    // Check both DeliveryDate and DeliveryDateUtc properties
-                    var hasDeliveryDate = (item.DeliveryDate && item.DeliveryDate !== null) || 
-                                        (item.DeliveryDateUtc && item.DeliveryDateUtc !== null);
+                //     // Check both DeliveryDate and DeliveryDateUtc properties
+                //     var hasDeliveryDate = (item.DeliveryDate && item.DeliveryDate !== null) || 
+                //                         (item.DeliveryDateUtc && item.DeliveryDateUtc !== null);
                     
-                    // Log for debugging
-                    if (hasShippedDate && hasDeliveryDate) {
-                        console.log("Found completed shipment to exclude:", item.Id);
-                    }
+                //     // Log for debugging
+                //     if (hasShippedDate && hasDeliveryDate) {
+                //         console.log("Found completed shipment to exclude:", item.Id);
+                //     }
                     
-                    // The negation of: "Exclude shipments that have both dates set"
-                    // Keep a shipment in the queue if:
-                    // 1. It is NOT shipped (hasShippedDate is false) OR
-                    // 2. It is shipped but NOT delivered (hasShippedDate is true but hasDeliveryDate is false)
-                    var keepInQueue = !hasShippedDate || !hasDeliveryDate;
-                    return keepInQueue;
-                },
+                //     // The negation of: "Exclude shipments that have both dates set"
+                //     // Keep a shipment in the queue if:
+                //     // 1. It is NOT shipped (hasShippedDate is false) OR
+                //     // 2. It is shipped but NOT delivered (hasShippedDate is true but hasDeliveryDate is false)
+                //     var keepInQueue = !hasShippedDate || !hasDeliveryDate;
+                //     return keepInQueue;
+                // },
                 error: function(e) {
                     display_kendoui_grid_error(e);
                     // Cancel the changes

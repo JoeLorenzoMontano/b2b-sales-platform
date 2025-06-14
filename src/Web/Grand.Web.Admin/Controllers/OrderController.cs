@@ -12,6 +12,7 @@ using Grand.Domain.Permissions;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Orders;
+using Grand.Domain.Payments;
 using Grand.Domain.Shipping;
 using Grand.Infrastructure;
 using Grand.Web.Admin.Extensions;
@@ -21,6 +22,8 @@ using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Security.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
+using System.Text;
 
 namespace Grand.Web.Admin.Controllers;
 
@@ -1477,5 +1480,77 @@ public class OrderController(
         return new JsonResult("");
     }
 
+    #endregion
+    
+    #region Export CSV
+    
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportCsv(OrderListModel model)
+    {
+        // Load orders using existing service
+        var orders = await orderViewModelService.PrepareOrders(model);
+        
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            orders = orders.Where(x => x.StoreId == contextAccessor.WorkContext.CurrentCustomer.StaffStoreId).ToList();
+        
+        // Build CSV content
+        var csv = new StringBuilder();
+        
+        // Add CSV header
+        csv.AppendLine("OrderNumber,CustomerName,OrderDate,OrderTotal,PaymentStatus");
+        
+        // Add order data
+        foreach (var order in orders)
+        {
+            var customerName = $"{order.FirstName} {order.LastName}".Trim();
+            
+            if (string.IsNullOrEmpty(customerName))
+                customerName = order.CustomerEmail ?? "Guest";
+            
+            // Get payment status text
+            string paymentStatus = order.PaymentStatusId switch
+            {
+                PaymentStatus.Paid => "Paid",
+                PaymentStatus.Pending => "Pending",
+                PaymentStatus.PartiallyPaid => "Partially Paid",
+                PaymentStatus.PartiallyRefunded => "Partially Refunded",
+                PaymentStatus.Refunded => "Refunded",
+                PaymentStatus.Voided => "Voided",
+                _ => "Unknown"
+            };
+            
+            var line = new List<string>
+            {
+                EscapeCsvField(order.OrderNumber.ToString()),
+                EscapeCsvField(customerName),
+                EscapeCsvField(order.CreatedOnUtc.ToString("yyyy-MM-dd")),
+                EscapeCsvField(order.OrderTotal.ToString("0.00", CultureInfo.InvariantCulture)),
+                EscapeCsvField(paymentStatus)
+            };
+            
+            csv.AppendLine(string.Join(",", line));
+        }
+        
+        // Return CSV file
+        var fileName = $"orders_{DateTime.Now:yyyy-MM-dd}.csv";
+        return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", fileName);
+    }
+
+    private string EscapeCsvField(string field)
+    {
+        if (string.IsNullOrEmpty(field))
+            return string.Empty;
+            
+        // Escape quotes and wrap field in quotes if it contains comma, quotes or newlines
+        bool needsQuotes = field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r');
+        if (needsQuotes)
+        {
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+        
+        return field;
+    }
+    
     #endregion
 }

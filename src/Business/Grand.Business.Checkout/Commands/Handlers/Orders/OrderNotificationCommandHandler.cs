@@ -44,13 +44,22 @@ public class OrderNotificationCommandHandler : IRequestHandler<OrderNotification
         try
         {
             if (request.WorkContext.OriginalCustomerIfImpersonated != null)
+            {
                 //this order is placed by a store administrator impersonating a customer
+                var impersonatingEmployee = request.WorkContext.OriginalCustomerIfImpersonated;
+                
+                // No need to set ImpersonatedByEmployeeId again since we're already doing it in PlaceOrderCommandHandler
+                
                 await _orderService.InsertOrderNote(new OrderNote {
                     Note =
-                        $"Order placed by a store owner ('{request.WorkContext.OriginalCustomerIfImpersonated.Email}'. ID = {request.WorkContext.OriginalCustomerIfImpersonated.Id}) impersonating the customer.",
+                        $"Order placed by a store owner ('{impersonatingEmployee.Email}'. ID = {impersonatingEmployee.Id}) impersonating the customer.",
                     DisplayToCustomer = false,
                     OrderId = request.Order.Id
                 });
+                
+                // Log additional debug info
+                _logger.LogInformation($"Impersonation info saved for order {request.Order.Id}. Employee ID: {impersonatingEmployee.Id}, Email: {impersonatingEmployee.Email}");
+            }
             else
                 await _orderService.InsertOrderNote(new OrderNote {
                     Note = "Order placed",

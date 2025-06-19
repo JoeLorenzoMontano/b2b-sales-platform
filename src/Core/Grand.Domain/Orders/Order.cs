@@ -297,6 +297,11 @@ public class Order : BaseEntity
     ///     Gets or sets the target delivery date
     /// </summary>
     public DateTime? TargetDeliveryDate { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the ID of the employee who created this order via impersonation
+    /// </summary>
+    public string ImpersonatedByEmployeeId { get; set; }
 
     #endregion
 

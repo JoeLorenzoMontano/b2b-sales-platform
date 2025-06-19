@@ -219,6 +219,24 @@
         <label class="control-label">@Model.CustomerIp</label>
     </div>
 </div>
+@if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
+{
+    <div class="form-group">
+        <admin-label asp-for="ImpersonatedByEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
+        <div class="col-9 col-md-9 col-sm-9">
+            <label class="control-label bg-warning text-dark p-1 rounded">
+                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
+                {
+                    <a href="@Url.Action("Edit", "Customer", new { id = Model.ImpersonatedByEmployeeId })">@Model.ImpersonatedByEmployeeName</a>
+                }
+                else
+                {
+                    <span>@Model.ImpersonatedByEmployeeId</span>
+                }
+            </label>
+        </div>
+    </div>
+}
 @if (!string.IsNullOrEmpty(Model.VatNumber))
 {
     <div class="form-group">

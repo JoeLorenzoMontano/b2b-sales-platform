@@ -38,6 +38,9 @@ public class GetOrderQueryHandler : IRequestHandler<GetOrderQuery, IQueryable<Or
 
         if (!string.IsNullOrEmpty(request.SalesEmployeeId))
             query = query.Where(o => o.SeId == request.SalesEmployeeId);
+            
+        if (!string.IsNullOrEmpty(request.ImpersonatedByEmployeeId))
+            query = query.Where(o => o.ImpersonatedByEmployeeId == request.ImpersonatedByEmployeeId);
 
         if (!string.IsNullOrEmpty(request.ProductId))
             query = query

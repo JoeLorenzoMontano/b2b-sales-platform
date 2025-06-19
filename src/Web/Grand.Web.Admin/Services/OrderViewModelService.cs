@@ -242,6 +242,11 @@ public class OrderViewModelService : IOrderViewModelService
 
         model.AvailableCountries.Insert(0,
             new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
+            
+        //employees (sales)
+        model.AvailableEmployees.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
+        foreach (var salesEmployee in await _salesEmployeeService.GetAll())
+            model.AvailableEmployees.Add(new SelectListItem { Text = salesEmployee.Name, Value = salesEmployee.Id });
 
         if (startDate.HasValue)
             model.StartDate = startDate.Value;
@@ -284,6 +289,7 @@ public class OrderViewModelService : IOrderViewModelService
             filterByProductId,
             warehouseId: model.WarehouseId,
             salesEmployeeId: salesEmployeeId,
+            impersonatedByEmployeeId: model.ImpersonatedByEmployeeId,
             paymentMethodSystemName: model.PaymentMethodSystemName,
             createdFromUtc: startDateValue,
             createdToUtc: endDateValue,
@@ -382,6 +388,17 @@ public class OrderViewModelService : IOrderViewModelService
             {
                 model.SalesEmployeeId = salesEmployee.Id;
                 model.SalesEmployeeName = salesEmployee.Name;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+        {
+            // The impersonating user is a Customer entity, not a SalesEmployee
+            var impersonatingCustomer = await _customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+            if (impersonatingCustomer != null)
+            {
+                model.ImpersonatedByEmployeeId = impersonatingCustomer.Id;
+                model.ImpersonatedByEmployeeName = impersonatingCustomer.Email; // Using email as it's always available
             }
         }
 

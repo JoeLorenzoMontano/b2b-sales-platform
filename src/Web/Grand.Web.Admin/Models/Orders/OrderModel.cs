@@ -45,6 +45,12 @@ public class OrderModel : BaseEntityModel
 
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomerIP")]
     public string CustomerIp { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.ImpersonatedByEmployee")]
+    public string ImpersonatedByEmployeeId { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.ImpersonatedByEmployee")]
+    public string ImpersonatedByEmployeeName { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomValues")]
     public Dictionary<string, object> CustomValues { get; set; } = new();

@@ -177,7 +177,20 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
 
                 #region Events & notes
 
-                await _mediator.Send(new OrderNotificationCommand { Order = result.PlacedOrder, WorkContext = _contextAccessor.WorkContext }, cancellationToken);
+                // Check if the order is being placed by an impersonated customer, and store that information directly
+            if (_contextAccessor.WorkContext.OriginalCustomerIfImpersonated != null)
+            {
+                var impersonatingEmployee = _contextAccessor.WorkContext.OriginalCustomerIfImpersonated;
+                // Store the employee ID directly on the order
+                result.PlacedOrder.ImpersonatedByEmployeeId = impersonatingEmployee.Id;
+                
+                // Log the impersonation details to help with debugging
+                _logger.LogInformation($"Order {result.PlacedOrder.Id} created via impersonation by employee ID: {impersonatingEmployee.Id}, Email: {impersonatingEmployee.Email}");
+                
+                await _orderService.UpdateOrder(result.PlacedOrder);
+            }
+            
+            await _mediator.Send(new OrderNotificationCommand { Order = result.PlacedOrder, WorkContext = _contextAccessor.WorkContext }, cancellationToken);
 
                 //check order status
                 await _mediator.Send(new CheckOrderStatusCommand { Order = result.PlacedOrder }, cancellationToken);

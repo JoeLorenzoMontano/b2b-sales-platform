@@ -63,7 +63,7 @@ public class OrderController(
     
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
     [HttpPost]
-    public async Task<IActionResult> GetOrderItemsForFulfillment(string orderId)
+    public async Task<IActionResult> GetOrderItemsForFulfillment(string orderId, [FromServices] IProductService productService)
     {
         try
         {
@@ -80,17 +80,21 @@ public class OrderController(
             
             foreach (var item in order.OrderItems.Where(item => item.OpenQty > 0))
             {
+                // Get the product name from product service
+                var product = await productService.GetProductById(item.ProductId);
+                var productName = product != null ? product.Name : "Product #" + item.ProductId;
+                
                 // Create a simple anonymous object with only the necessary properties
                 items.Add(new {
                     Id = item.Id,
                     ProductId = item.ProductId,
-                    ProductName = "Product #" + item.ProductId,  // We don't have product name directly
+                    ProductName = productName,
                     Sku = item.Sku,
                     Quantity = item.Quantity,
                     OpenQty = item.OpenQty,
                     UnitPriceInclTax = item.UnitPriceInclTax.ToString("C"),
                     AttributeInfo = item.AttributeDescription,
-                    PictureThumbnailUrl = ""  // Empty for now, could be populated with product service later
+                    PictureThumbnailUrl = ""  // Empty for thumbnail since we removed it from the view
                 });
             }
                 

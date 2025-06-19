@@ -709,6 +709,36 @@ public class CustomerController : BaseAdminController
         };
         return Json(gridModel);
     }
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> ImpersonatedOrderList(string customerId, DataSourceRequest command,
+        [FromServices] IOrderViewModelService orderViewModelService, [FromServices] IOrderService orderService)
+    {
+        if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
+            return Json(new DataSourceResult {
+                Data = null,
+                Total = 0
+            });
+
+        var model = new OrderListModel();
+        if (await _groupService.IsStaff(_contextAccessor.WorkContext.CurrentCustomer))
+            model.StoreId = _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+
+        // Set the impersonatedByEmployeeId to the current customer ID to search orders created by them
+        model.ImpersonatedByEmployeeId = customerId;
+        
+        // Clear other filters that might interfere with our search
+        model.CustomerId = null; // Don't filter by customer ID since we want all orders created by this employee
+
+        var (orderModels, totalCount) =
+            await orderViewModelService.PrepareOrderModel(model, command.Page, command.PageSize);
+        var gridModel = new DataSourceResult {
+            Data = orderModels.ToList(),
+            Total = totalCount
+        };
+        return Json(gridModel);
+    }
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
     [HttpPost]

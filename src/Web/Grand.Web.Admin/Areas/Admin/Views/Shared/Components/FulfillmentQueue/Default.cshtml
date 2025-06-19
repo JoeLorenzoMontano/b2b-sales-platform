@@ -190,7 +190,7 @@
                     {
                         field: "ProductName",
                         title: "@Loc["Admin.Orders.Products.ProductName"]",
-                        template: '<div><img src="#=PictureThumbnailUrl#" alt="" style="width:50px;" /><a href="@Url.Action("Edit", "Product", new { area = Constants.AreaAdmin })/#=ProductId#">#:ProductName#</a>' +
+                        template: '<div><a href="@Url.Action("Edit", "Product", new { area = Constants.AreaAdmin })/#=ProductId#">#:ProductName#</a>' +
                             '# if(AttributeInfo && AttributeInfo.length > 0) {# <br /><small>#=AttributeInfo#</small> #} #</div>',
                         width: 350,
                         headerAttributes: { style: "background-color: #3f51b5; color: white;" }

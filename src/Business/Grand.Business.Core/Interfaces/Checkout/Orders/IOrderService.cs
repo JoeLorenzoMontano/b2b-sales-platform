@@ -80,6 +80,7 @@ public interface IOrderService
     /// <param name="billingCountryId">Billing country identifier; 0 to load all orders</param>
     /// <param name="ownerId">Owner identifier</param>
     /// <param name="salesEmployeeId">Sales ident</param>
+    /// <param name="impersonatedByEmployeeId">Employee who created order via impersonation</param>
     /// <param name="paymentMethodSystemName">Payment method system name; null to load all records</param>
     /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>
     /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
@@ -101,7 +102,7 @@ public interface IOrderService
         string vendorId = "", string customerId = "",
         string productId = "", string affiliateId = "", string warehouseId = "",
         string billingCountryId = "", string ownerId = "", string salesEmployeeId = "",
-        string paymentMethodSystemName = null,
+        string impersonatedByEmployeeId = "", string paymentMethodSystemName = null,
         DateTime? createdFromUtc = null, DateTime? createdToUtc = null,
         int? os = null, PaymentStatus? ps = null, ShippingStatus? ss = null,
         string billingEmail = null, string billingLastName = "", string orderGuid = null,

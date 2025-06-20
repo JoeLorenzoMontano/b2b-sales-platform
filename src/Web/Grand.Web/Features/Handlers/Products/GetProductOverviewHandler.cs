@@ -128,9 +128,47 @@ public class GetProductOverviewHandler : IRequestHandler<GetProductOverview, IEn
     private async Task<ProductOverviewModel> PrepareProductOverviewModel(Product product)
     {
         var sename = product.GetSeName(_contextAccessor.WorkContext.WorkingLanguage.Id);
+        var nowUtc = DateTime.UtcNow;
+        
+        // Check if any attribute combinations are marked as new
+        var newAttributeCombination = product.ProductAttributeCombinations.FirstOrDefault(c => 
+            c.MarkAsNew && 
+            (!c.MarkAsNewStartDateTimeUtc.HasValue || c.MarkAsNewStartDateTimeUtc.Value < nowUtc) && 
+            (!c.MarkAsNewEndDateTimeUtc.HasValue || c.MarkAsNewEndDateTimeUtc.Value > nowUtc));
+        
+        // Determine product name with attribute info if needed
+        string name = product.GetTranslation(x => x.Name, _contextAccessor.WorkContext.WorkingLanguage.Id);
+        string attributeInfo = null;
+        
+        // If product is showing due to a new attribute combo, append attribute info to name
+        if (newAttributeCombination != null && newAttributeCombination.Attributes.Any())
+        {
+            var attributes = new List<string>();
+            
+            foreach (var attr in newAttributeCombination.Attributes)
+            {
+                // Find the attribute mapping from the product
+                var attributeMapping = product.ProductAttributeMappings.FirstOrDefault(x => x.Id == attr.Key);
+                if (attributeMapping != null)
+                {
+                    var attributeValue = attributeMapping.ProductAttributeValues.FirstOrDefault(x => x.Id == attr.Value);
+                    if (attributeValue != null)
+                    {
+                        // Get the attribute name and value
+                        attributes.Add(attributeValue.Name);
+                    }
+                }
+            }
+            
+            if (attributes.Any())
+            {
+                attributeInfo = $" - {string.Join(", ", attributes)}";
+            }
+        }
+        
         var model = new ProductOverviewModel {
             Id = product.Id,
-            Name = product.GetTranslation(x => x.Name, _contextAccessor.WorkContext.WorkingLanguage.Id),
+            Name = attributeInfo != null ? $"{name}{attributeInfo}" : name,
             ShortDescription = product.GetTranslation(x => x.ShortDescription, _contextAccessor.WorkContext.WorkingLanguage.Id),
             FullDescription = product.GetTranslation(x => x.FullDescription, _contextAccessor.WorkContext.WorkingLanguage.Id),
             SeName = sename,
@@ -158,9 +196,9 @@ public class GetProductOverviewHandler : IRequestHandler<GetProductOverview, IEn
             UserFields = product.UserFields,
             MarkAsNew = product.MarkAsNew &&
                         (!product.MarkAsNewStartDateTimeUtc.HasValue ||
-                         product.MarkAsNewStartDateTimeUtc.Value < DateTime.UtcNow) &&
+                         product.MarkAsNewStartDateTimeUtc.Value < nowUtc) &&
                         (!product.MarkAsNewEndDateTimeUtc.HasValue ||
-                         product.MarkAsNewEndDateTimeUtc.Value > DateTime.UtcNow)
+                         product.MarkAsNewEndDateTimeUtc.Value > nowUtc)
         };
         return model;
     }

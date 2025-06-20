@@ -286,8 +286,23 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
         if (request.MarkedAsNewOnly)
         {
             var nowUtc = DateTime.UtcNow;
-            query = query.Where(p => p.MarkAsNew);
-            query = query.Where(p => (!p.MarkAsNewStartDateTimeUtc.HasValue || p.MarkAsNewStartDateTimeUtc.Value < nowUtc) && (!p.MarkAsNewEndDateTimeUtc.HasValue || p.MarkAsNewEndDateTimeUtc.Value > nowUtc));
+            
+            // Log debugging info
+            System.Diagnostics.Debug.WriteLine($"Applying new product filtering at {nowUtc}");
+            
+            // MongoDB prefers to have both conditions in a single Where clause rather than combining queries
+            // This approach is more compatible with MongoDB query translation
+            query = query.Where(p => 
+                (p.MarkAsNew && 
+                 (!p.MarkAsNewStartDateTimeUtc.HasValue || p.MarkAsNewStartDateTimeUtc.Value < nowUtc) && 
+                 (!p.MarkAsNewEndDateTimeUtc.HasValue || p.MarkAsNewEndDateTimeUtc.Value > nowUtc))
+                ||
+                (p.ProductAttributeCombinations.Any(c => 
+                    c.MarkAsNew && 
+                    (!c.MarkAsNewStartDateTimeUtc.HasValue || c.MarkAsNewStartDateTimeUtc.Value < nowUtc) && 
+                    (!c.MarkAsNewEndDateTimeUtc.HasValue || c.MarkAsNewEndDateTimeUtc.Value > nowUtc))
+                )
+            );
         }
         return query;
     }

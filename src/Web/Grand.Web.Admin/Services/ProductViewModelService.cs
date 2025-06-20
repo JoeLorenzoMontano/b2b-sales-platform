@@ -2248,6 +2248,9 @@ public class ProductViewModelService(
                     ReservedQuantity = model.ReservedQuantity,
                     AllowOutOfStockOrders = model.AllowOutOfStockOrders,
                     AllowSample = model.AllowSample,
+                    MarkAsNew = model.MarkAsNew,
+                    MarkAsNewStartDateTimeUtc = model.MarkAsNewStartDateTimeUtc,
+                    MarkAsNewEndDateTimeUtc = model.MarkAsNewEndDateTimeUtc,
                     Sku = model.Sku,
                     Text = model.Text,
                     Mpn = model.Mpn,
@@ -2294,6 +2297,9 @@ public class ProductViewModelService(
             combination.ReservedQuantity = model.ReservedQuantity;
             combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
             combination.AllowSample = model.AllowSample;
+            combination.MarkAsNew = model.MarkAsNew;
+            combination.MarkAsNewStartDateTimeUtc = model.MarkAsNewStartDateTimeUtc;
+            combination.MarkAsNewEndDateTimeUtc = model.MarkAsNewEndDateTimeUtc;
             combination.Sku = model.Sku;
             combination.Text = model.Text;
             combination.Mpn = model.Mpn;

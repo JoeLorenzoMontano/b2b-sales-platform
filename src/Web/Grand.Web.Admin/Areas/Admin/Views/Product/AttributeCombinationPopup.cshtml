@@ -166,6 +166,30 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <admin-label asp-for="MarkAsNew" class="col-sm-3 control-label"/>
+                            <div class="col-md-9 col-sm-9">
+                                <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
+                                    <admin-input asp-for="MarkAsNew"/>
+                                    <div class="control__indicator"></div>
+                                </label>
+                                <span asp-validation-for="MarkAsNew"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <admin-label asp-for="MarkAsNewStartDateTimeUtc" class="col-sm-3 control-label"/>
+                            <div class="col-md-9 col-sm-9">
+                                <admin-input asp-for="MarkAsNewStartDateTimeUtc"/>
+                                <span asp-validation-for="MarkAsNewStartDateTimeUtc"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <admin-label asp-for="MarkAsNewEndDateTimeUtc" class="col-sm-3 control-label"/>
+                            <div class="col-md-9 col-sm-9">
+                                <admin-input asp-for="MarkAsNewEndDateTimeUtc"/>
+                                <span asp-validation-for="MarkAsNewEndDateTimeUtc"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <admin-label asp-for="Text" class="col-sm-3 control-label"/>
                             <div class="col-md-9 col-sm-9">
                                 <admin-input asp-for="Text"/>

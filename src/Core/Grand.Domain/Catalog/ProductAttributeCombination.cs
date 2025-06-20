@@ -34,6 +34,21 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
     ///     Gets or sets a value indicating whether to allow a sample (quantity of 1) regardless of allowed quantities
     /// </summary>
     public bool AllowSample { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets a value indicating whether this attribute combination is marked as new
+    /// </summary>
+    public bool MarkAsNew { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the start date and time of the new attribute combination (set as "New" from date). Leave empty to ignore
+    /// </summary>
+    public DateTime? MarkAsNewStartDateTimeUtc { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the end date and time of the new attribute combination (set as "New" to date). Leave empty to ignore
+    /// </summary>
+    public DateTime? MarkAsNewEndDateTimeUtc { get; set; }
 
     /// <summary>
     ///     Gets or sets the text

@@ -25,6 +25,17 @@ public class ProductAttributeCombinationModel : BaseModel
     [GrandResourceDisplayName(
         "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowSample")]
     public bool AllowSample { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNew")]
+    public bool MarkAsNew { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewStartDate")]
+    [UIHint("DateTimeNullable")]
+    public DateTime? MarkAsNewStartDateTimeUtc { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewEndDate")]
+    [UIHint("DateTimeNullable")]
+    public DateTime? MarkAsNewEndDateTimeUtc { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.Text")]
     public string Text { get; set; }

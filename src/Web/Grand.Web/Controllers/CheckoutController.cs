@@ -687,14 +687,6 @@ public class CheckoutController : BasePublicController
     {
         try
         {
-            //Get order note from request
-            string orderNote = null;
-            var form = await HttpContext.Request.ReadFormAsync();
-            if (form.ContainsKey("orderNote"))
-            {
-                orderNote = form["orderNote"].ToString();
-            }
-            
             //validation
             var cart = await _shoppingCartService.GetShoppingCart(_contextAccessor.StoreContext.CurrentStore.Id,
                 ShoppingCartType.ShoppingCart, ShoppingCartType.Auctions);
@@ -708,6 +700,14 @@ public class CheckoutController : BasePublicController
                 return Json(new {
                     error = 1, message = _translationService.GetResource("Checkout.MinOrderPlacementInterval")
                 });
+
+            //Get order note from request
+            string orderNote = null;
+            var form = await HttpContext.Request.ReadFormAsync();
+            if (form.ContainsKey("orderNote"))
+            {
+                orderNote = form["orderNote"].ToString();
+            }
 
             var placeOrderCommand = new PlaceOrderCommand();
             if (!string.IsNullOrWhiteSpace(orderNote))

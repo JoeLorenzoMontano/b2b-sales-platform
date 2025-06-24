@@ -147,6 +147,7 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
             if (!string.IsNullOrWhiteSpace(command.OrderNote))
             {
                 details.OrderNote = command.OrderNote;
+                _logger.LogDebug($"Order note set from command: {command.OrderNote}");
             }
 
             //event notification
@@ -199,18 +200,26 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
             // Add order note if provided during checkout
             if (!string.IsNullOrWhiteSpace(details.OrderNote))
             {
-                var orderNote = new OrderNote
+                try 
                 {
-                    OrderId = result.PlacedOrder.Id,
-                    Note = details.OrderNote,
-                    DisplayToCustomer = true,
-                    CreatedByCustomer = true,
-                    CreatedOnUtc = DateTime.UtcNow
-                };
-                await _orderService.InsertOrderNote(orderNote);
-                
-                // Log that we've created an order note from checkout
-                _logger.LogInformation($"Created order note during checkout for order {result.PlacedOrder.Id}");
+                    var orderNote = new OrderNote
+                    {
+                        OrderId = result.PlacedOrder.Id,
+                        Note = details.OrderNote,
+                        DisplayToCustomer = true,
+                        CreatedByCustomer = true,
+                        CreatedOnUtc = DateTime.UtcNow
+                    };
+                    await _orderService.InsertOrderNote(orderNote);
+                    
+                    // Log that we've created an order note from checkout
+                    _logger.LogInformation($"Created order note during checkout for order {result.PlacedOrder.Id}");
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the entire order process
+                    _logger.LogError(ex, $"Error creating order note for order {result.PlacedOrder.Id}: {ex.Message}");
+                }
             }
             
             await _mediator.Send(new OrderNotificationCommand { Order = result.PlacedOrder, WorkContext = _contextAccessor.WorkContext }, cancellationToken);

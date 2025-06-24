@@ -724,8 +724,9 @@ var vmorder = new Vue({
                     if (termOfServiceOk) {
                         vmorder.Checkout.setLoadWaiting('confirm-order');
                         
-                        // Create form data with order note
+                        // Create form data for order submission
                         var formData = new FormData();
+                        // Add order note if provided
                         if (vmorder.orderNote) {
                             formData.append('orderNote', vmorder.orderNote);
                         }

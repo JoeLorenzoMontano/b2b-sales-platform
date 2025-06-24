@@ -142,6 +142,12 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
         {
             //prepare order details
             var details = await PreparePlaceOrderDetails();
+            
+            //set order note from command
+            if (!string.IsNullOrWhiteSpace(command.OrderNote))
+            {
+                details.OrderNote = command.OrderNote;
+            }
 
             //event notification
             await _mediator.PlaceOrderDetailsEvent(result, details);
@@ -188,6 +194,19 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
                 _logger.LogInformation($"Order {result.PlacedOrder.Id} created via impersonation by employee ID: {impersonatingEmployee.Id}, Email: {impersonatingEmployee.Email}");
                 
                 await _orderService.UpdateOrder(result.PlacedOrder);
+            }
+            
+            // Add order note if provided during checkout
+            if (!string.IsNullOrWhiteSpace(details.OrderNote))
+            {
+                var orderNote = new OrderNote
+                {
+                    OrderId = result.PlacedOrder.Id,
+                    Note = details.OrderNote,
+                    DisplayToCustomer = true,
+                    CreatedByCustomer = true
+                };
+                await _orderService.InsertOrderNote(orderNote);
             }
             
             await _mediator.Send(new OrderNotificationCommand { Order = result.PlacedOrder, WorkContext = _contextAccessor.WorkContext }, cancellationToken);

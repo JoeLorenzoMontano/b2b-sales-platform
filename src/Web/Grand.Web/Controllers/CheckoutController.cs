@@ -687,6 +687,13 @@ public class CheckoutController : BasePublicController
     {
         try
         {
+            //Get order note from request
+            string orderNote = null;
+            var form = await HttpContext.Request.ReadFormAsync();
+            if (form.ContainsKey("orderNote"))
+            {
+                orderNote = form["orderNote"].ToString();
+            }
             
             //validation
             var cart = await _shoppingCartService.GetShoppingCart(_contextAccessor.StoreContext.CurrentStore.Id,
@@ -702,10 +709,10 @@ public class CheckoutController : BasePublicController
                     error = 1, message = _translationService.GetResource("Checkout.MinOrderPlacementInterval")
                 });
 
-            var placeOrderResult = await _mediator.Send(new PlaceOrderCommand());
+            var placeOrderCommand = new PlaceOrderCommand { OrderNote = orderNote };
+            var placeOrderResult = await _mediator.Send(placeOrderCommand);
             if (placeOrderResult.Success)
             {
-                
                 var paymentMethod =
                     _paymentService.LoadPaymentMethodBySystemName(placeOrderResult.PaymentTransaction
                         .PaymentMethodSystemName);

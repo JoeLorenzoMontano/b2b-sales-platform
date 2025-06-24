@@ -724,10 +724,16 @@ var vmorder = new Vue({
                     if (termOfServiceOk) {
                         vmorder.Checkout.setLoadWaiting('confirm-order');
                         
+                        // Create form data with order note
+                        var formData = new FormData();
+                        if (vmorder.orderNote) {
+                            formData.append('orderNote', vmorder.orderNote);
+                        }
+                        
                         axios({
                             url: this.saveUrl,
                             method: 'post',
-                            data: {},
+                            data: formData,
                             showLoader: false
                         }).then(function (response) {
                             vmorder.vConfirmOrder.nextStep(response);

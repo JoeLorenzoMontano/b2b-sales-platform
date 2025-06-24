@@ -709,7 +709,11 @@ public class CheckoutController : BasePublicController
                     error = 1, message = _translationService.GetResource("Checkout.MinOrderPlacementInterval")
                 });
 
-            var placeOrderCommand = new PlaceOrderCommand { OrderNote = orderNote };
+            var placeOrderCommand = new PlaceOrderCommand();
+            if (!string.IsNullOrWhiteSpace(orderNote))
+            {
+                placeOrderCommand.OrderNote = orderNote;
+            }
             var placeOrderResult = await _mediator.Send(placeOrderCommand);
             if (placeOrderResult.Success)
             {

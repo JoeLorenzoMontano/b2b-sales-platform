@@ -143,7 +143,7 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
             //prepare order details
             var details = await PreparePlaceOrderDetails();
             
-            //set order note from command
+            //set order note from command if provided
             if (!string.IsNullOrWhiteSpace(command.OrderNote))
             {
                 details.OrderNote = command.OrderNote;
@@ -204,9 +204,13 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
                     OrderId = result.PlacedOrder.Id,
                     Note = details.OrderNote,
                     DisplayToCustomer = true,
-                    CreatedByCustomer = true
+                    CreatedByCustomer = true,
+                    CreatedOnUtc = DateTime.UtcNow
                 };
                 await _orderService.InsertOrderNote(orderNote);
+                
+                // Log that we've created an order note from checkout
+                _logger.LogInformation($"Created order note during checkout for order {result.PlacedOrder.Id}");
             }
             
             await _mediator.Send(new OrderNotificationCommand { Order = result.PlacedOrder, WorkContext = _contextAccessor.WorkContext }, cancellationToken);

@@ -6,6 +6,7 @@ using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Pdf;
+using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Domain.Permissions;
@@ -38,7 +39,8 @@ public class OrderController(
     IGroupService groupService,
     IExportManager<Order> exportManager,
     IMediator mediator,
-    ISalesEmployeeService _salesEmployeeService)
+    ISalesEmployeeService _salesEmployeeService,
+    IPermissionService _permissionService)
     : BaseAdminController
 {
     #region Utilities
@@ -1482,6 +1484,37 @@ public class OrderController(
         await orderViewModelService.DeleteOrderNote(order, id);
 
         return new JsonResult("");
+    }
+
+    #endregion
+    
+    #region Impersonated Orders
+
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> RecentImpersonatedOrdersList(DataSourceRequest command)
+    {
+        if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
+            return Json(new { Data = new List<OrderModel>(), Total = 0 });
+
+        // We display only orders that were impersonated by the current user
+        var model = new OrderListModel
+        {
+            // Filter by the currently logged in user as the impersonator
+            ImpersonatedByEmployeeId = contextAccessor.WorkContext.CurrentCustomer.Id,
+            StartDate = DateTime.UtcNow.AddDays(-30) // Show orders from the last 30 days
+        };
+
+        var (orderModels, totalCount) =
+            await orderViewModelService.PrepareOrderModel(model, command.Page, command.PageSize);
+
+        var gridModel = new DataSourceResult
+        {
+            Data = orderModels.ToList(),
+            Total = totalCount
+        };
+
+        return Json(gridModel);
     }
 
     #endregion

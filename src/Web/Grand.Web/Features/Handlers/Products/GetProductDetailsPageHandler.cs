@@ -758,7 +758,7 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
         var model = new ProductDetailsModel.AddToCartModel {
             ProductId = product.Id
         };
-        if (updatecartitem != null)
+        if (updatecartitem != null && !string.IsNullOrEmpty(updatecartitem.Id))
         {
             model.UpdatedShoppingCartItemId = updatecartitem.Id;
             model.UpdateShoppingCartItemType = updatecartitem.ShoppingCartTypeId;

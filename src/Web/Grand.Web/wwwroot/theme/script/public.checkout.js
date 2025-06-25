@@ -735,6 +735,9 @@ var vmorder = new Vue({
                             url: this.saveUrl,
                             method: 'post',
                             data: formData,
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            },
                             showLoader: false
                         }).then(function (response) {
                             vmorder.vConfirmOrder.nextStep(response);

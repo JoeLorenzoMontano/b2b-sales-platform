@@ -54,7 +54,8 @@ public class OrderNotificationCommandHandler : IRequestHandler<OrderNotification
                     Note =
                         $"Order placed by a store owner ('{impersonatingEmployee.Email}'. ID = {impersonatingEmployee.Id}) impersonating the customer.",
                     DisplayToCustomer = false,
-                    OrderId = request.Order.Id
+                    OrderId = request.Order.Id,
+                    CreatedOnUtc = DateTime.UtcNow
                 });
                 
                 // Log additional debug info
@@ -64,7 +65,8 @@ public class OrderNotificationCommandHandler : IRequestHandler<OrderNotification
                 await _orderService.InsertOrderNote(new OrderNote {
                     Note = "Order placed",
                     DisplayToCustomer = false,
-                    OrderId = request.Order.Id
+                    OrderId = request.Order.Id,
+                    CreatedOnUtc = DateTime.UtcNow
                 });
                 
             // Add the customer's order note if provided

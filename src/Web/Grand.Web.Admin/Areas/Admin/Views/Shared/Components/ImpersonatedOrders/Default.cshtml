@@ -1,0 +1,91 @@
+@inject AdminAreaSettings adminAreaSettings
+
+<div id="impersonated-orders-grid"></div>
+
+<script>
+    $(document).ready(function () {
+        $("#impersonated-orders-grid").kendoGrid({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "@Html.Raw(Url.Action("RecentImpersonatedOrdersList", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        dataType: "json",
+                        data: addAntiForgeryToken
+                    }
+                },
+                schema: {
+                    data: "Data",
+                    total: "Total",
+                    errors: "Errors"
+                },
+                error: function(e) {
+                    display_kendoui_grid_error(e);
+                    // Cancel the changes
+                    this.cancelChanges();
+                },
+                pageSize: 5,
+                serverPaging: true,
+                serverFiltering: true,
+                serverSorting: true
+            },
+            autoBind: true,
+            pageable: {
+                refresh: true,
+                pageSizes: [5, 10, 20]
+            },
+            editable: {
+                confirmation: false,
+                mode: "inline"
+            },
+            scrollable: false,
+            columns: [{
+                field: "OrderNumber",
+                title: "@Loc["Admin.Customers.Customers.Orders.ID"]",
+                width: 70,
+                template: '<a class="k-link" href="@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/#=Id#">#=OrderNumber#</a>'
+            }, {
+                field: "CustomerEmail",
+                title: "@Loc["Admin.Orders.Fields.Customer"]",
+                width: 200,
+                template: '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/#=CustomerId#">#=CustomerFullName# (#=CustomerEmail#)</a>'                        
+            }, {
+                field: "OrderStatus",
+                title: "@Loc["Admin.Customers.Customers.Orders.OrderStatus"]",
+                width: 130,
+                template: '<h4><span class="label label-' +
+                        '# if(OrderStatusId == 10) {#warning #} #' +
+                        '# if(OrderStatusId == 20) {#info #} #' +
+                        '# if(OrderStatusId == 25) {#info #} #' +
+                        '# if(OrderStatusId == 30) {#success #} #' +
+                        '# if(OrderStatusId == 40) {#danger #} #' +
+                        '">#=OrderStatus#</span></h4>'
+            }, {
+                field: "PaymentStatus",
+                title: "@Loc["Admin.Customers.Customers.Orders.PaymentStatus"]",
+                width: 140
+            }, {
+                field: "ShippingStatus",
+                title: "@Loc["Admin.Customers.Customers.Orders.ShippingStatus"]",
+                width: 140
+            },
+            @if (!adminAreaSettings.HideStoreColumn)
+            {
+                <text>
+                {
+                    field: "StoreName",
+                    title: "@Loc["Admin.Customers.Customers.Orders.Store"]",
+                    width: 120
+                },
+                </text>
+            }
+            {
+                field: "CreatedOn",
+                title: "@Loc["Admin.Customers.Customers.Orders.CreatedOn"]",
+                width: 140,
+                type: "date",
+                format: "{0:G}"
+            }]
+        });
+    });
+</script>

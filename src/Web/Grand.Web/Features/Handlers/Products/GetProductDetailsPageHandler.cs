@@ -314,17 +314,17 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
                 
                 foreach (var associatedProduct in associatedProducts)
                 {
-                    // Create a temporary ShoppingCartItem to pass the warehouse ID to associated products
-                    ShoppingCartItem tempCartItem = null;
-                    if (associatedProduct.UseMultipleWarehouses && !string.IsNullOrEmpty(warehouseId))
-                    {
-                        tempCartItem = new ShoppingCartItem
-                        {
-                            WarehouseId = warehouseId
-                        };
-                    }
+                    //// Create a temporary ShoppingCartItem to pass the warehouse ID to associated products
+                    //ShoppingCartItem tempCartItem = null;
+                    //if (associatedProduct.UseMultipleWarehouses && !string.IsNullOrEmpty(warehouseId))
+                    //{
+                    //    tempCartItem = new ShoppingCartItem
+                    //    {
+                    //        WarehouseId = warehouseId
+                    //    };
+                    //}
                     
-                    var associatedModel = await PrepareProductDetailsModel(store, associatedProduct, tempCartItem, true);
+                    var associatedModel = await PrepareProductDetailsModel(store, associatedProduct, null, true);
                     model.AssociatedProducts.Add(associatedModel);
                 }
             }

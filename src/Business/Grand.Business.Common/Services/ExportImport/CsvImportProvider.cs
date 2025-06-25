@@ -34,8 +34,9 @@ namespace Grand.Business.Common.Services.ExportImport
                     return result;
 
                 // Parse header columns
-                var headers = ParseCsvLine(headerLine);
-                
+                //var headers = ParseCsvLine(headerLine);
+                var headers = headerLine.Split(',');
+
                 // Create a mapping of header indexes
                 var activeIndex = Array.IndexOf(headers, "Active");
                 var companyIndex = Array.IndexOf(headers, "Company");
@@ -56,7 +57,8 @@ namespace Grand.Business.Common.Services.ExportImport
                     if (string.IsNullOrWhiteSpace(line))
                         continue;
 
-                    var values = ParseCsvLine(line);
+                    //var values = ParseCsvLine(line);
+                    var values = headerLine.Split(',');
                     
                     // Skip if not enough values
                     if (values.Length < 1)

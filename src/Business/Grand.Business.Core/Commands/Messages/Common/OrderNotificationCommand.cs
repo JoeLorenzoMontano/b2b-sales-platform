@@ -8,4 +8,5 @@ public class OrderNotificationCommand : IRequest
 {
     public Order Order { get; set; }
     public IWorkContext WorkContext { get; set; }
+    public string OrderNote { get; set; }
 }

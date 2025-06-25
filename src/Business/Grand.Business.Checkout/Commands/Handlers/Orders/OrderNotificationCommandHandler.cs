@@ -66,6 +66,25 @@ public class OrderNotificationCommandHandler : IRequestHandler<OrderNotification
                     DisplayToCustomer = false,
                     OrderId = request.Order.Id
                 });
+                
+            // Add the customer's order note if provided
+            if (!string.IsNullOrWhiteSpace(request.OrderNote))
+            {
+                _logger.LogWarning($"CUSTOMER_NOTE_DEBUG: About to insert customer note for order {request.Order.Id}");
+                _logger.LogWarning($"CUSTOMER_NOTE_DEBUG: Note content: {request.OrderNote}");
+                
+                var customerNote = new OrderNote {
+                    Note = request.OrderNote,
+                    DisplayToCustomer = true,
+                    CreatedByCustomer = true,
+                    OrderId = request.Order.Id,
+                    CreatedOnUtc = DateTime.UtcNow
+                };
+                
+                await _orderService.InsertOrderNote(customerNote);
+                
+                _logger.LogWarning($"CUSTOMER_NOTE_DEBUG: Customer note added for order {request.Order.Id} with ID: {customerNote.Id}");
+            }
 
             //send email notifications
             await _messageProviderService.SendOrderPlacedStoreOwnerMessage(request.Order, request.WorkContext.CurrentCustomer,

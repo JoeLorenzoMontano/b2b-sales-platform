@@ -291,12 +291,18 @@ public class OrderService : IOrderService
     }
 
     /// <summary>
-    ///     Deletes an order note
+    ///     Inserts an order note
     /// </summary>
     /// <param name="orderNote">The order note</param>
     public virtual async Task InsertOrderNote(OrderNote orderNote)
     {
         ArgumentNullException.ThrowIfNull(orderNote);
+
+        // Make sure CreatedOnUtc is set
+        if (orderNote.CreatedOnUtc == default)
+        {
+            orderNote.CreatedOnUtc = DateTime.UtcNow;
+        }
 
         await _orderNoteRepository.InsertAsync(orderNote);
 

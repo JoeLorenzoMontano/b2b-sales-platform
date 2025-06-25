@@ -197,32 +197,14 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
                 await _orderService.UpdateOrder(result.PlacedOrder);
             }
             
-            // Add order note if provided during checkout
-            if (!string.IsNullOrWhiteSpace(details.OrderNote))
-            {
-                try 
-                {
-                    var orderNote = new OrderNote
-                    {
-                        OrderId = result.PlacedOrder.Id,
-                        Note = details.OrderNote,
-                        DisplayToCustomer = true,
-                        CreatedByCustomer = true,
-                        CreatedOnUtc = DateTime.UtcNow
-                    };
-                    await _orderService.InsertOrderNote(orderNote);
-                    
-                    // Log that we've created an order note from checkout
-                    _logger.LogInformation($"Created order note during checkout for order {result.PlacedOrder.Id}");
-                }
-                catch (Exception ex)
-                {
-                    // Log error but don't fail the entire order process
-                    _logger.LogError(ex, $"Error creating order note for order {result.PlacedOrder.Id}: {ex.Message}");
-                }
-            }
+            // We'll pass the order note to the OrderNotificationCommand instead of creating it here
+            // This allows the note to be properly handled alongside the standard "Order placed" note
             
-            await _mediator.Send(new OrderNotificationCommand { Order = result.PlacedOrder, WorkContext = _contextAccessor.WorkContext }, cancellationToken);
+            await _mediator.Send(new OrderNotificationCommand { 
+                Order = result.PlacedOrder, 
+                WorkContext = _contextAccessor.WorkContext,
+                OrderNote = details.OrderNote 
+            }, cancellationToken);
 
                 //check order status
                 await _mediator.Send(new CheckOrderStatusCommand { Order = result.PlacedOrder }, cancellationToken);

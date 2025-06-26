@@ -14,4 +14,5 @@ public class GetProductDetailsAttributeChange : IRequest<ProductDetailsAttribute
     public Store Store { get; set; }
     public Product Product { get; set; }
     public ProductModel Model { get; set; }
+    public int Quantity { get; set; }
 }

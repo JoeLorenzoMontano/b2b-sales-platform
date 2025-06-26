@@ -689,10 +689,25 @@ public class CheckoutController : BasePublicController
         {
             //Get order note from request
             string orderNote = null;
-            var form = await HttpContext.Request.ReadFormAsync();
-            if (form.ContainsKey("orderNote"))
+            var contentType = HttpContext.Request.ContentType;
+            
+            if (!string.IsNullOrEmpty(contentType) && contentType.Contains("multipart/form-data"))
             {
-                orderNote = form["orderNote"].ToString();
+                var form = await HttpContext.Request.ReadFormAsync();
+                if (form.ContainsKey("orderNote"))
+                {
+                    orderNote = form["orderNote"].ToString();
+                }
+            }
+            else if (!string.IsNullOrEmpty(contentType) && contentType.Contains("application/json"))
+            {
+                _logger.LogWarning("Incorrect Content-Type: application/json");
+                return Json(new { error = 1, message = "Invalid content type. Expected multipart/form-data." });
+            }
+            else
+            {
+                // Handle case where no form data is sent (empty FormData becomes application/json)
+                _logger.LogWarning($"Unexpected Content-Type: {contentType}");
             }
             //validation
             var cart = await _shoppingCartService.GetShoppingCart(_contextAccessor.StoreContext.CurrentStore.Id,

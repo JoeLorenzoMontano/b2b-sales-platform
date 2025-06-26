@@ -727,17 +727,18 @@ var vmorder = new Vue({
                         // Create form data for order submission
                         var formData = new FormData();
                         // Add order note if provided
-                        if (vmorder.orderNote) {
-                            formData.append('orderNote', vmorder.orderNote);
+                        if (vmorder.orderNote && vmorder.orderNote.trim() !== '') {
+                            formData.append('orderNote', vmorder.orderNote.trim());
+                            console.log('Adding order note:', vmorder.orderNote.trim());
                         }
+                        
+                        // Always append at least one field to ensure multipart/form-data is sent
+                        formData.append('_dummy', '1');
                         
                         axios({
                             url: this.saveUrl,
                             method: 'post',
                             data: formData,
-                            headers: {
-                                'Content-Type': 'multipart/form-data'
-                            },
                             showLoader: false
                         }).then(function (response) {
                             vmorder.vConfirmOrder.nextStep(response);

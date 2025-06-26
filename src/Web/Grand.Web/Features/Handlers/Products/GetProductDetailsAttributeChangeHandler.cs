@@ -90,12 +90,19 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             request.Product.ProductTypeId != ProductType.Auction)
         {
             //we do not calculate price of "customer enters price" option is enabled
+            // Get quantity from the request, default to 1 if not specified
+            int quantity = 1;
+            if (request.Quantity > 0)
+            {
+                quantity = request.Quantity;
+            }
+            
             var unitprice = await _pricingService.GetUnitPrice(request.Product,
                 request.Customer,
                 request.Store,
                 request.Currency,
                 ShoppingCartType.ShoppingCart,
-                1, customAttributes, default,
+                quantity, customAttributes, default,
                 rentalStartDate, rentalEndDate,
                 true);
                 

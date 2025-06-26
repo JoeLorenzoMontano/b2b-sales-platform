@@ -199,6 +199,13 @@
                 attrchange: function @(attributeChangeHandlerFuncName)() {
                     var form = document.getElementById('@($"product-details-form-{Model.Id}")');
                     var data = new FormData(form);
+                    
+                    // Add quantity to form data if it's not already included
+                    var qtyInput = document.querySelector('#EnteredQuantity_@Model.Id');
+                    if (qtyInput && !data.has('EnteredQuantity')) {
+                        data.append('EnteredQuantity', qtyInput.value);
+                    }
+                    
                     axios({
                         url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
                         data: data,
@@ -300,9 +307,9 @@
                                     quantitySelect.selectedIndex = 0;
                                 }
                                 
-                                // Force a change event to ensure all listeners update
-                                var event = new Event('change');
-                                quantitySelect.dispatchEvent(event);
+                                // Skip triggering an event to prevent infinite update loops
+                                // Instead, mark the element as programmatically updated
+                                quantitySelect.setAttribute('data-programmatic-update', 'true');
                             }
                             
                             // Show or hide the sample notification
@@ -397,8 +404,7 @@
                                             sampleIndicator.style.visibility = 'visible';
                                             sampleIndicator.style.opacity = '1';
                                             
-                                            // Log that the indicator should be visible for debugging
-                                            console.log('Sample indicator should be visible for product ' + '@Model.Id');
+                                            // Removed debug logging
                                         } else {
                                             sampleIndicator.style.display = 'none';
                                             sampleIndicator.style.visibility = 'hidden';
@@ -476,7 +482,16 @@
         });
 
         document.addEventListener("DOMContentLoaded", function () {
-            standardProductAttributes_@(Model.Id).attrchange();
+            // Initialize once on page load, but don't trigger an immediate attribute change
+            // which can cause a cascade of requests
+            if (standardProductAttributes_@(Model.Id).ProductAttributes) {
+                // Only trigger attrchange if not already triggered by input elements
+                var form = document.getElementById('@($"product-details-form-{Model.Id}")');
+                if (form && !form.hasAttribute('data-attr-initialized')) {
+                    form.setAttribute('data-attr-initialized', 'true');
+                    standardProductAttributes_@(Model.Id).attrchange();
+                }
+            }
         });
     </script>
 }

@@ -341,12 +341,20 @@ public class ProductController : BasePublicController
         if (product == null)
             return new JsonResult("");
 
+        // Get quantity from the request
+        int quantity = 1;
+        if (Request.Form.ContainsKey("EnteredQuantity") && int.TryParse(Request.Form["EnteredQuantity"], out int parsedQuantity))
+        {
+            quantity = parsedQuantity;
+        }
+
         var modelProduct = await _mediator.Send(new GetProductDetailsAttributeChange {
             Currency = _contextAccessor.WorkContext.WorkingCurrency,
             Customer = _contextAccessor.WorkContext.CurrentCustomer,
             Store = _contextAccessor.StoreContext.CurrentStore,
             Model = model,
-            Product = product
+            Product = product,
+            Quantity = quantity
         });
 
         // Properly serialize SelectListItem objects into simpler JSON objects

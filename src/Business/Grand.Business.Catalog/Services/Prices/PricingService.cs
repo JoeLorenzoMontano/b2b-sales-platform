@@ -276,11 +276,16 @@ public class PricingService : IPricingService
             var combination = product.FindProductAttributeCombination(attributes);
             if (combination != null)
             {
-                if (combination.OverriddenPrice.HasValue)
+                // If the combination allows samples and quantity is 1, set price to 0
+                if (combination.AllowSample && quantity == 1)
+                {
+                    finalPrice = 0;
+                }
+                else if (combination.OverriddenPrice.HasValue)
                     finalPrice =
                         await _currencyService.ConvertFromPrimaryStoreCurrency(combination.OverriddenPrice.Value,
                             currency);
-                if (combination.TierPrices.Any())
+                if (combination.TierPrices.Any() && !(combination.AllowSample && quantity == 1))
                 {
                     var storeId = store.Id;
                     var actualTierPrices = combination.TierPrices

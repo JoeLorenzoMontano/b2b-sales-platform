@@ -98,7 +98,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
             ShippingAddressString = order?.ShippingAddress != null ? 
                 $"{order.ShippingAddress.Address1}, {order.ShippingAddress.ZipPostalCode}" : "",
             ShippingCity = order?.ShippingAddress?.City ?? "",
-            ShippingStateProvince = order?.ShippingAddress?.StateProvinceId ?? "",
+            ShippingStateProvince = await GetStateProvinceName(order?.ShippingAddress?.CountryId, order?.ShippingAddress?.StateProvinceId) ?? "",
             TrackingNumber = shipment.TrackingNumber,
             TotalWeight = shipment.TotalWeight.HasValue ? $"{shipment.TotalWeight:F2} [{baseWeightIn}]" : "",
             ShippedDate = shipment.ShippedDateUtc.HasValue
@@ -600,6 +600,20 @@ public class ShipmentViewModelService : IShipmentViewModelService
         }
 
         return (true, string.Empty);
+    }
+
+    // Helper method to get state province name from IDs
+    private async Task<string> GetStateProvinceName(string countryId, string stateProvinceId)
+    {
+        if (string.IsNullOrEmpty(countryId) || string.IsNullOrEmpty(stateProvinceId))
+            return "";
+        
+        var country = await _countryService.GetCountryById(countryId);
+        if (country == null)
+            return stateProvinceId; // Fallback to ID if country not found
+        
+        var stateProvince = country.StateProvinces.FirstOrDefault(sp => sp.Id == stateProvinceId);
+        return stateProvince?.Name ?? stateProvinceId; // Return name or ID as fallback
     }
 
     public virtual async Task<(Shipment shipment, double? totalWeight)> PrepareShipment(Order order,

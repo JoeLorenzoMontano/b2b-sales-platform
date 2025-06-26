@@ -12,6 +12,7 @@ using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Media;
 using Grand.Infrastructure;
+using System.Linq;
 using Grand.Web.Commands.Models.Products;
 using Grand.Web.Common.Controllers;
 using Grand.Web.Common.Extensions;
@@ -390,7 +391,20 @@ public class ProductController : BasePublicController
         if (product == null)
             return new JsonResult("");
 
-        var stock = stockQuantityService.FormatStockMessage(product, model.WarehouseId, new List<CustomAttribute>());
+        // Check if we have product attributes in request to pass them
+        List<CustomAttribute> attributes = new List<CustomAttribute>();
+        if (model.Attributes != null && model.Attributes.Any())
+        {
+            // Convert the attributes from the model - they are a different type
+            attributes = model.Attributes.Select(attr => new CustomAttribute
+            {
+                Key = attr.Key,
+                Value = attr.Value
+            }).ToList();
+        }
+        
+        // Get stock message with attributes if available
+        var stock = stockQuantityService.FormatStockMessage(product, model.WarehouseId, attributes);
         return Json(new {
             stockAvailability = string.Format(_translationService.GetResource(stock.resource), stock.arg0)
         });

@@ -491,10 +491,14 @@
         document.addEventListener("DOMContentLoaded", function () {
             if (!productInitialized_@(Model.Id)) {
                 productInitialized_@(Model.Id) = true;
-                // Only initialize once
-                if (standardProductAttributes_@(Model.Id).ProductAttributes) {
-                    standardProductAttributes_@(Model.Id).attrchange();
-                }
+                
+                // Add a very short delay to ensure all components are loaded
+                setTimeout(function() {
+                    // Only initialize once
+                    if (standardProductAttributes_@(Model.Id).ProductAttributes) {
+                        standardProductAttributes_@(Model.Id).attrchange();
+                    }
+                }, 50);
             }
         });
     </script>

@@ -22,18 +22,23 @@
     <script asp-location="Footer" asp-order="300">
         // Universal warehouse change handler that works with both attribute and non-attribute products
         function warehouse_change_handler() {
-            if (@(Model.ProductAttributes.Any().ToString().ToLower())) {
-                // For products with attributes, use the form-based approach
-                // This will ensure all attributes are included
-                var form = document.getElementById('@($"product-details-form-{Model.Id}")');
-                var data = new FormData(form);
-                
-                // Send the same request the attribute change handler would
-                axios({
-                    url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
-                    data: data,
-                    method: 'post',
-                    params: { product: '@Model.Id' },
+            // Always use the form-based approach to ensure all attributes are included if present
+            var form = document.getElementById('@($"product-details-form-{Model.Id}")');
+            var data = new FormData(form);
+            
+            // Ensure warehouse ID is included
+            var warehouseId = document.getElementById('WarehouseId').value;
+            if (data.has('WarehouseId')) {
+                data.delete('WarehouseId');
+            }
+            data.append('WarehouseId', warehouseId);
+            
+            // Send the attribute change request which handles both attributes and warehouse changes
+            axios({
+                url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
+                data: data,
+                method: 'post',
+                params: { product: '@Model.Id' },
                 }).then(function (response) {
                     // Update stock availability from the response
                     if (response.data.stockAvailability) {
@@ -63,22 +68,6 @@
                         }
                     }
                 });
-            } else {
-                // For products without attributes, use the simpler approach
-                var data = new FormData();
-                data.append('warehouseId', document.getElementById('WarehouseId').value);
-                data.append('productId', '@Model.Id');
-                axios({
-                    url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
-                    data: data,
-                    method: 'post',
-                }).then(function (response) {
-                    if (response.data.stockAvailability) {
-                        if (document.getElementById('stock-availability-value-@Model.Id')) {
-                            document.getElementById('stock-availability-value-@Model.Id').innerText = response.data.stockAvailability;
-                        }
-                    }
-                });
             }
         }
         
@@ -86,8 +75,11 @@
             document.getElementById('WarehouseId').addEventListener('change', function () {
                 warehouse_change_handler();
             });
-            // Initial load
-            warehouse_change_handler();
+            
+            // Initial load - wait a moment to ensure all attributes are initialized
+            setTimeout(function() {
+                warehouse_change_handler();
+            }, 100);
         });
     </script>
 }

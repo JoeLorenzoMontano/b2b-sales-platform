@@ -200,9 +200,15 @@
                     var form = document.getElementById('@($"product-details-form-{Model.Id}")');
                     var data = new FormData(form);
                     
-                    // Add quantity to form data if it's not already included
+                    // Always include the most current quantity value in the form data
+                    // Overwrite any existing EnteredQuantity to ensure the latest value is used
                     var qtyInput = document.querySelector('#EnteredQuantity_@Model.Id');
-                    if (qtyInput && !data.has('EnteredQuantity')) {
+                    if (qtyInput) {
+                        // Remove existing EnteredQuantity entry if it exists
+                        if (data.has('EnteredQuantity')) {
+                            data.delete('EnteredQuantity');
+                        }
+                        // Add the current quantity value
                         data.append('EnteredQuantity', qtyInput.value);
                     }
                     
@@ -307,9 +313,8 @@
                                     quantitySelect.selectedIndex = 0;
                                 }
                                 
-                                // Skip triggering an event to prevent infinite update loops
-                                // Instead, mark the element as programmatically updated
-                                quantitySelect.setAttribute('data-programmatic-update', 'true');
+                                // We'll skip triggering an additional attribute change here
+                                // to prevent recursion/infinite loops
                             }
                             
                             // Show or hide the sample notification
@@ -481,14 +486,13 @@
             }
         });
 
+        // Use a simple flag variable to prevent multiple initializations
+        var productInitialized_@(Model.Id) = false;
         document.addEventListener("DOMContentLoaded", function () {
-            // Initialize once on page load, but don't trigger an immediate attribute change
-            // which can cause a cascade of requests
-            if (standardProductAttributes_@(Model.Id).ProductAttributes) {
-                // Only trigger attrchange if not already triggered by input elements
-                var form = document.getElementById('@($"product-details-form-{Model.Id}")');
-                if (form && !form.hasAttribute('data-attr-initialized')) {
-                    form.setAttribute('data-attr-initialized', 'true');
+            if (!productInitialized_@(Model.Id)) {
+                productInitialized_@(Model.Id) = true;
+                // Only initialize once
+                if (standardProductAttributes_@(Model.Id).ProductAttributes) {
                     standardProductAttributes_@(Model.Id).attrchange();
                 }
             }

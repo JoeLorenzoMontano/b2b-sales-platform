@@ -201,6 +201,13 @@ public interface ICustomerService
     /// </summary>
     /// <param name="customer">Customer</param>
     Task UpdateCustomerInAdminPanel(Customer customer);
+    
+    /// <summary>
+    /// Update just the DefaultImpersonatedByEmployeeId field for a customer
+    /// </summary>
+    /// <param name="customerId">Customer identifier</param>
+    /// <param name="defaultImpersonatedByEmployeeId">Default impersonated by employee identifier</param>
+    Task UpdateCustomerDefaultImpersonatedByEmployeeId(string customerId, string defaultImpersonatedByEmployeeId);
 
     /// <summary>
     ///     Reset data required for checkout

@@ -44,8 +44,13 @@ public class CustomerModel : BaseEntityModel
 
     [GrandResourceDisplayName("Admin.Customers.Customers.Fields.SeId")]
     public string SeId { get; set; }
-
+    
+    [GrandResourceDisplayName("Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId")]
+    public string DefaultImpersonatedByEmployeeId { get; set; }
+    
     public IList<SelectListItem> AvailableSalesEmployees { get; set; } = new List<SelectListItem>();
+    
+    public IList<SelectListItem> AvailableEmployees { get; set; } = new List<SelectListItem>();
 
     [GrandResourceDisplayName("Admin.Customers.Customers.Fields.StaffStore")]
     public string StaffStoreId { get; set; }

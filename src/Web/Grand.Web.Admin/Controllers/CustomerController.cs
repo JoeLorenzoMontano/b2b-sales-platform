@@ -299,12 +299,44 @@ public class CustomerController : BaseAdminController
 
         if (!customer.GetUserFieldFromEntity<bool>(SystemCustomerFieldNames.TwoFactorEnabled) && model.TwoFactorEnabled)
             Warning(_translationService.GetResource("Admin.Customers.Customers.CannotTwoFactorEnabled"));
+            
+        // Debug - log all form values
+        System.Diagnostics.Debug.WriteLine("Form values:");
+        foreach (var key in Request.Form.Keys)
+        {
+            System.Diagnostics.Debug.WriteLine($"{key}: {Request.Form[key]}");
+        }
+        
+        // Get DefaultImpersonatedByEmployeeId from form directly
+        string defaultImpersonatedByEmployeeId = Request.Form["DefaultImpersonatedByEmployeeId"];
+        System.Diagnostics.Debug.WriteLine($"DefaultImpersonatedByEmployeeId from form: {defaultImpersonatedByEmployeeId}");
+        
+        // Apply it directly to the model in case it's not binding properly
+        model.DefaultImpersonatedByEmployeeId = defaultImpersonatedByEmployeeId;
+        
+        // Check if DefaultImpersonatedByEmployeeId is in the model
+        System.Diagnostics.Debug.WriteLine($"DefaultImpersonatedByEmployeeId in model after manual setting: {model.DefaultImpersonatedByEmployeeId}");
 
         if (ModelState.IsValid)
             try
             {
                 model.Attributes = await ParseCustomCustomerAttributes(model.SelectedAttributes);
+                
+                // Debug - before update
+                System.Diagnostics.Debug.WriteLine($"Before update - Customer DefaultImpersonatedByEmployeeId: {customer.DefaultImpersonatedByEmployeeId}");
+                System.Diagnostics.Debug.WriteLine($"Before update - Model DefaultImpersonatedByEmployeeId: {model.DefaultImpersonatedByEmployeeId}");
+                
                 customer = await _customerViewModelService.UpdateCustomerModel(customer, model);
+                
+                // Direct update of the DefaultImpersonatedByEmployeeId field to ensure it gets saved
+                await _customerService.UpdateCustomerDefaultImpersonatedByEmployeeId(customer.Id, model.DefaultImpersonatedByEmployeeId);
+                
+                // Update the customer object for consistency
+                customer.DefaultImpersonatedByEmployeeId = model.DefaultImpersonatedByEmployeeId;
+                
+                // Debug - after update
+                System.Diagnostics.Debug.WriteLine($"After update - Customer DefaultImpersonatedByEmployeeId: {customer.DefaultImpersonatedByEmployeeId}");
+                
                 //change password
                 if (!string.IsNullOrWhiteSpace(model.Password))
                 {
@@ -327,6 +359,8 @@ public class CustomerController : BaseAdminController
             catch (Exception exc)
             {
                 Error(exc.Message);
+                // Debug - log exception details
+                System.Diagnostics.Debug.WriteLine($"Exception when updating customer: {exc}");
             }
 
         //If we got this far, something failed, redisplay form
@@ -715,6 +749,8 @@ public class CustomerController : BaseAdminController
     public async Task<IActionResult> ImpersonatedOrderList(string customerId, DataSourceRequest command,
         [FromServices] IOrderViewModelService orderViewModelService, [FromServices] IOrderService orderService)
     {
+        System.Diagnostics.Debug.WriteLine($"ImpersonatedOrderList called for customerId: {customerId}");
+        
         if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
             return Json(new DataSourceResult {
                 Data = null,
@@ -733,6 +769,9 @@ public class CustomerController : BaseAdminController
 
         var (orderModels, totalCount) =
             await orderViewModelService.PrepareOrderModel(model, command.Page, command.PageSize);
+            
+        System.Diagnostics.Debug.WriteLine($"Found {totalCount} impersonated orders for customer ID {customerId}");
+        
         var gridModel = new DataSourceResult {
             Data = orderModels.ToList(),
             Total = totalCount
@@ -1072,6 +1111,34 @@ public class CustomerController : BaseAdminController
         }
 
         return RedirectToAction("List");
+    }
+
+    #endregion
+
+    #region Customer Search Autocomplete
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    public async Task<IActionResult> CustomerSearchAutoComplete(string term)
+    {
+        System.Diagnostics.Debug.WriteLine($"CustomerSearchAutoComplete called with term: {term}");
+        
+        const int searchTermMinimumLength = 3;
+        if (string.IsNullOrWhiteSpace(term) || term.Length < searchTermMinimumLength)
+            return Json(new List<object>());
+
+        var customers = await _customerService.GetAllCustomers(
+            email: term,
+            pageSize: 15);
+            
+        System.Diagnostics.Debug.WriteLine($"Found {customers.Count()} customers matching the term '{term}'");
+
+        var result = customers.Select(c => new
+        {
+            id = c.Id,
+            label = $"{c.Email} - {c.GetFullName()}"
+        }).ToList();
+
+        return Json(result);
     }
 
     #endregion

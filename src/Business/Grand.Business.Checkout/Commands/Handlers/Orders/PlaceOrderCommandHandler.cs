@@ -196,6 +196,17 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
                 
                 await _orderService.UpdateOrder(result.PlacedOrder);
             }
+            // If not impersonated but the customer has a default impersonator set, use that
+            else if (!string.IsNullOrEmpty(details.Customer.DefaultImpersonatedByEmployeeId))
+            {
+                // Set the default impersonation ID on the order
+                result.PlacedOrder.ImpersonatedByEmployeeId = details.Customer.DefaultImpersonatedByEmployeeId;
+                
+                // Log the default impersonation usage
+                _logger.LogInformation($"Order {result.PlacedOrder.Id} created with default impersonation ID: {details.Customer.DefaultImpersonatedByEmployeeId}");
+                
+                await _orderService.UpdateOrder(result.PlacedOrder);
+            }
             
             // We'll pass the order note to the OrderNotificationCommand instead of creating it here
             // This allows the note to be properly handled alongside the standard "Order placed" note

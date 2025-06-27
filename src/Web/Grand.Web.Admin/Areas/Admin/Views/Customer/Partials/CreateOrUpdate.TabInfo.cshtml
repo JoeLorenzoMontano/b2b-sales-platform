@@ -197,6 +197,14 @@
         <span asp-validation-for="SeId"></span>
     </div>
 </div>
+<div class="form-group">
+    <admin-label asp-for="DefaultImpersonatedByEmployeeId" asp-postfix="true"/>
+    <div class="col-md-9 col-sm-9">
+        <admin-select asp-for="DefaultImpersonatedByEmployeeId" asp-items="Model.AvailableEmployees"/>
+        <span asp-validation-for="DefaultImpersonatedByEmployeeId"></span>
+        <span class="hint">@Loc["Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId.Hint"]</span>
+    </div>
+</div>
 @if (Model.GenderEnabled)
 {
     <div class="form-group">

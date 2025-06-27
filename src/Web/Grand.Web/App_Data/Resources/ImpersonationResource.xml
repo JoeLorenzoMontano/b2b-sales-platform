@@ -6,4 +6,13 @@
   <Resource Name="Admin.Customers.Customers.ImpersonatedOrders" Area="Admin">
     <Value>Orders Created Via Impersonation</Value>
   </Resource>
+  <Resource Name="Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId" Area="Admin">
+    <Value>Default Representative</Value>
+  </Resource>
+  <Resource Name="Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId.None" Area="Admin">
+    <Value>None</Value>
+  </Resource>
+  <Resource Name="Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId.Hint" Area="Admin">
+    <Value>Select the default representative who will be automatically recorded as the impersonator when orders are placed for this customer.</Value>
+  </Resource>
 </Language>

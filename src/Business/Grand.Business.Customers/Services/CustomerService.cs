@@ -489,11 +489,25 @@ public class CustomerService : ICustomerService
             .Set(x => x.SeId, customer.SeId)
             .Set(x => x.OwnerId, customer.OwnerId)
             .Set(x => x.StaffStoreId, customer.StaffStoreId)
+            .Set(x => x.DefaultImpersonatedByEmployeeId, customer.DefaultImpersonatedByEmployeeId)
             .Set(x => x.Attributes, customer.Attributes);
 
         await _customerRepository.UpdateOneAsync(x => x.Id == customer.Id, update);
         //event notification
         await _mediator.EntityUpdated(customer);
+    }
+    
+    /// <summary>
+    /// Update just the DefaultImpersonatedByEmployeeId field for a customer
+    /// </summary>
+    public virtual async Task UpdateCustomerDefaultImpersonatedByEmployeeId(string customerId, string defaultImpersonatedByEmployeeId)
+    {
+        ArgumentNullException.ThrowIfNullOrEmpty(customerId);
+        
+        var update = UpdateBuilder<Customer>.Create()
+            .Set(x => x.DefaultImpersonatedByEmployeeId, defaultImpersonatedByEmployeeId);
+            
+        await _customerRepository.UpdateOneAsync(x => x.Id == customerId, update);
     }
 
 

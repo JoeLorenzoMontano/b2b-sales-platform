@@ -188,6 +188,7 @@ public class CustomerViewModelService : ICustomerViewModelService
                 model.VendorId = customer.VendorId;
                 model.StaffStoreId = customer.StaffStoreId;
                 model.SeId = customer.SeId;
+                model.DefaultImpersonatedByEmployeeId = customer.DefaultImpersonatedByEmployeeId;
                 model.AdminComment = customer.AdminComment;
                 model.IsTaxExempt = customer.IsTaxExempt;
                 model.FreeShipping = customer.FreeShipping;
@@ -272,6 +273,9 @@ public class CustomerViewModelService : ICustomerViewModelService
 
         //employees
         await PrepareSalesEmployeeModel(model);
+        
+        //available employees for impersonation
+        await PrepareAvailableEmployeesModel(model);
 
         //customer attributes
         await PrepareCustomerAttributeModel(model, customer);
@@ -378,6 +382,7 @@ public class CustomerViewModelService : ICustomerViewModelService
             VendorId = model.VendorId,
             StaffStoreId = model.StaffStoreId,
             SeId = model.SeId,
+            DefaultImpersonatedByEmployeeId = model.DefaultImpersonatedByEmployeeId,
             AdminComment = model.AdminComment,
             IsTaxExempt = model.IsTaxExempt,
             FreeShipping = model.FreeShipping,
@@ -487,6 +492,10 @@ public class CustomerViewModelService : ICustomerViewModelService
         customer.FreeShipping = model.FreeShipping;
         customer.Active = model.Active;
         customer.Attributes = model.Attributes;
+        
+        // Save DefaultImpersonatedByEmployeeId directly to the customer entity
+        // This field was not being updated properly before
+        customer.DefaultImpersonatedByEmployeeId = model.DefaultImpersonatedByEmployeeId;
 
         if (!model.TwoFactorEnabled)
             await _customerService.UpdateUserField(customer, SystemCustomerFieldNames.TwoFactorEnabled,
@@ -1295,6 +1304,41 @@ public class CustomerViewModelService : ICustomerViewModelService
                 Text = employee.Name,
                 Value = employee.Id
             });
+    }
+
+    protected virtual async Task PrepareAvailableEmployeesModel(CustomerModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        
+        // Populate employee dropdown for DefaultImpersonatedByEmployeeId
+        model.AvailableEmployees.Add(new SelectListItem {
+            Text = _translationService.GetResource("Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId.None") ?? "None",
+            Value = ""
+        });
+        
+        // Get all employees (using customer service to get staff customers)
+        var staffGroup = await _groupService.GetCustomerGroupBySystemName(SystemCustomerGroupNames.Staff);
+        if (staffGroup != null)
+        {
+            var staffCustomers = await _customerService.GetAllCustomers(
+                customerGroupIds: new[] { staffGroup.Id },
+                pageSize: 500); // Reasonable limit
+                
+            foreach (var employee in staffCustomers)
+            {
+                var firstName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.FirstName);
+                var lastName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.LastName);
+                var employeeName = $"{firstName} {lastName}";
+                
+                if (string.IsNullOrWhiteSpace(employeeName.Trim()))
+                    employeeName = employee.Email;
+                    
+                model.AvailableEmployees.Add(new SelectListItem {
+                    Text = employeeName,
+                    Value = employee.Id
+                });
+            }
+        }
     }
 
 

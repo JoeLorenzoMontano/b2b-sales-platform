@@ -219,24 +219,197 @@
         <label class="control-label">@Model.CustomerIp</label>
     </div>
 </div>
-@if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
-{
-    <div class="form-group">
-        <admin-label asp-for="ImpersonatedByEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label bg-warning text-dark p-1 rounded">
-                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
-                {
-                    <a href="@Url.Action("Edit", "Customer", new { id = Model.ImpersonatedByEmployeeId })">@Model.ImpersonatedByEmployeeName</a>
-                }
-                else
-                {
-                    <span>@Model.ImpersonatedByEmployeeId</span>
-                }
-            </label>
+<!-- Impersonation section - both for viewing and editing -->
+<div class="form-group">
+    <admin-label asp-for="ImpersonatedByEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
+    <div class="col-9 col-md-9 col-sm-9">
+        @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
+        {
+            <div class="d-flex align-items-center">
+                <label class="control-label bg-warning text-dark p-1 rounded mr-2">
+                    @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
+                    {
+                        <a href="@Url.Action("Edit", "Customer", new { id = Model.ImpersonatedByEmployeeId })">@Model.ImpersonatedByEmployeeName</a>
+                    }
+                    else
+                    {
+                        <span>@Model.ImpersonatedByEmployeeId</span>
+                    }
+                </label>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnChangeImpersonation">
+                    <i class="fa fa-pencil"></i> Change
+                </button>
+            </div>
+        }
+        else
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnChangeImpersonation">
+                <i class="fa fa-user-plus"></i> Assign Impersonated Employee
+            </button>
+        }
+        
+        <div id="impersonationSelector" style="display: none; margin-top: 10px;">
+            <div class="form-horizontal">
+                <div class="form-body">
+                    <div class="form-group">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <input type="text" id="impersonatedEmployeeIdSearch" class="form-control" placeholder="Search employee/customer..." />
+                                <div class="input-group-append">
+                                    <button type="button" id="searchImpersonatedEmployee" class="btn btn-info">
+                                        <i class="fa fa-search"></i> Search
+                                    </button>
+                                </div>
+                            </div>
+                            <select name="impersonatedEmployeeId" class="form-control mt-2" id="impersonatedEmployeeIdSelect">
+                                <option value="">@Loc["Admin.Common.Select"]</option>
+                                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId) && !string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
+                                {
+                                    <option value="@Model.ImpersonatedByEmployeeId" selected="selected">@Model.ImpersonatedByEmployeeName</option>
+                                }
+                            </select>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-success" id="submitImpersonatedEmployee">@Loc["Admin.Common.Save"]</button>
+                                <button type="button" class="btn btn-sm btn-secondary" id="cancelImpersonatedEmployee">@Loc["Admin.Common.Cancel"]</button>
+                                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
+                                {
+                                    <button type="button" class="btn btn-sm btn-danger" id="removeImpersonatedEmployee">@Loc["Admin.Common.Remove"]</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+        
+        <script>
+            $(document).ready(function() {
+                // Toggle the impersonation selector
+                $("#btnChangeImpersonation").click(function() {
+                    $("#impersonationSelector").toggle();
+                });
+                
+                // Cancel button hides the selector
+                $("#cancelImpersonatedEmployee").click(function() {
+                    $("#impersonationSelector").hide();
+                });
+                
+                // Customer search functionality
+                $("#searchImpersonatedEmployee").click(function() {
+                    var searchTerm = $("#impersonatedEmployeeIdSearch").val();
+                    if (!searchTerm || searchTerm.trim() === '') {
+                        alert("Please enter a search term");
+                        return;
+                    }
+                    
+                    // Show loading indicator
+                    $(this).html('<i class="fa fa-spinner fa-spin"></i> Searching...');
+                    $(this).prop('disabled', true);
+                    
+                    // Make AJAX call to search customers
+                    $.ajax({
+                        url: '@Url.Action("CustomerSearchAutoComplete", "Customer", new { area = "Admin" })',
+                        type: 'GET',
+                        data: {
+                            term: searchTerm
+                        },
+                        success: function(data) {
+                            // Reset search button
+                            $("#searchImpersonatedEmployee").html('<i class="fa fa-search"></i> Search');
+                            $("#searchImpersonatedEmployee").prop('disabled', false);
+                            
+                            // Clear previous options except for the default one and the currently selected one
+                            var $select = $("#impersonatedEmployeeIdSelect");
+                            var selectedValue = $select.val();
+                            $select.find('option').not(':first').not('[value="' + selectedValue + '"]').remove();
+                            
+                            // Add new options from search results
+                            if (data && data.length > 0) {
+                                $.each(data, function(index, item) {
+                                    // Skip if this item is already the selected one
+                                    if (item.id !== selectedValue) {
+                                        $select.append(new Option(item.label, item.id));
+                                    }
+                                });
+                            } else {
+                                alert("No customers found matching your search criteria");
+                            }
+                        },
+                        error: function() {
+                            // Reset search button
+                            $("#searchImpersonatedEmployee").html('<i class="fa fa-search"></i> Search');
+                            $("#searchImpersonatedEmployee").prop('disabled', false);
+                            alert("Error searching for customers. Please try again.");
+                        }
+                    });
+                });
+                
+                // Allow searching by pressing Enter key
+                $("#impersonatedEmployeeIdSearch").keypress(function(e) {
+                    if (e.which === 13) { // Enter key
+                        e.preventDefault();
+                        $("#searchImpersonatedEmployee").click();
+                    }
+                });
+                
+                // Handle save button click
+                $("#submitImpersonatedEmployee").click(function() {
+                    var orderId = '@Model.Id';
+                    var impersonatedEmployeeId = $("#impersonatedEmployeeIdSelect").val();
+                    
+                    $.ajax({
+                        url: '@Url.Action("SaveImpersonatedEmployee", "Order", new { area = "Admin" })',
+                        type: 'POST',
+                        data: {
+                            id: orderId,
+                            impersonatedEmployeeId: impersonatedEmployeeId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(result) {
+                            if (result.success) {
+                                // Reload the page to show updated information
+                                location.reload();
+                            } else {
+                                alert(result.message || "Error saving impersonated employee");
+                            }
+                        },
+                        error: function() {
+                            alert("Error saving impersonated employee. Please try again.");
+                        }
+                    });
+                });
+                
+                // Handle remove button click
+                $("#removeImpersonatedEmployee").click(function() {
+                    if (confirm("Are you sure you want to remove the impersonated employee?")) {
+                        var orderId = '@Model.Id';
+                        
+                        $.ajax({
+                            url: '@Url.Action("SaveImpersonatedEmployee", "Order", new { area = "Admin" })',
+                            type: 'POST',
+                            data: {
+                                id: orderId,
+                                impersonatedEmployeeId: "", // Empty string to remove
+                                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                            },
+                            success: function(result) {
+                                if (result.success) {
+                                    // Reload the page to show updated information
+                                    location.reload();
+                                } else {
+                                    alert(result.message || "Error removing impersonated employee");
+                                }
+                            },
+                            error: function() {
+                                alert("Error removing impersonated employee. Please try again.");
+                            }
+                        });
+                    }
+                });
+            });
+        </script>
     </div>
-}
+</div>
 @if (!string.IsNullOrEmpty(Model.VatNumber))
 {
     <div class="form-group">

@@ -24,15 +24,14 @@
                     // Cancel the changes
                     this.cancelChanges();
                 },
-                pageSize: 5,
+                pageSize: @(adminAreaSettings.DefaultGridPageSize),
                 serverPaging: true,
                 serverFiltering: true,
                 serverSorting: true
             },
-            autoBind: true,
             pageable: {
                 refresh: true,
-                pageSizes: [5, 10, 20]
+                pageSizes: [@(adminAreaSettings.GridPageSizes)]
             },
             editable: {
                 confirmation: false,

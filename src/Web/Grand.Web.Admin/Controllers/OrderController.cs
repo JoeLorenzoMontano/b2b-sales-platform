@@ -182,6 +182,29 @@ public class OrderController(
     
     [PermissionAuthorizeAction(PermissionActionName.List)]
     [HttpPost]
+    public async Task<IActionResult> UnpaidOrdersList(DataSourceRequest command, OrderListModel model)
+    {
+        System.Console.WriteLine("[DEBUG] UnpaidOrdersList action called");
+        
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+
+        // Filter specifically for orders with Pending payment status
+        // This will be handled by the PrepareUnpaidOrderModel method
+        model.PaymentStatusId = 0;
+
+        var (orderModels, totalCount) =
+            await orderViewModelService.PrepareUnpaidOrderModel(model, command.Page, command.PageSize);
+
+        var gridModel = new DataSourceResult {
+            Data = orderModels.ToList(),
+            Total = totalCount
+        };
+        return Json(gridModel);
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
     public async Task<IActionResult> FulfillmentOrderList(DataSourceRequest command, OrderListModel model,
         [FromServices] ICustomerService customerService)
     {
@@ -761,6 +784,49 @@ public class OrderController(
             
             // Return error for AJAX
             return Json(new { success = false, message = $"Error saving sales employee: {ex.Message}" });
+        }
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveImpersonatedEmployee(string id, string impersonatedEmployeeId)
+    {
+        try 
+        {
+            var order = await orderService.GetOrderById(id);
+            if (order == null || await CheckSalesManager(order))
+            {
+                // No order found with the specified id
+                return Json(new { success = false, message = "Order not found" });
+            }
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            {
+                return Json(new { success = false, message = "Access denied" });
+            }
+
+            // Update impersonated employee
+            order.ImpersonatedByEmployeeId = impersonatedEmployeeId;
+            await orderService.UpdateOrder(order);
+
+            // Add a note
+            await orderService.InsertOrderNote(new OrderNote {
+                Note = string.IsNullOrEmpty(impersonatedEmployeeId) ? 
+                    "Impersonated employee has been removed from this order." :
+                    $"Impersonated employee has been assigned to this order. Employee ID: {impersonatedEmployeeId}",
+                DisplayToCustomer = false,
+                OrderId = order.Id
+            });
+            
+            // Return success response for AJAX
+            return Json(new { success = true, message = "Impersonated employee has been updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            // Return error for AJAX
+            return Json(new { success = false, message = $"Error saving impersonated employee: {ex.Message}" });
         }
     }
 

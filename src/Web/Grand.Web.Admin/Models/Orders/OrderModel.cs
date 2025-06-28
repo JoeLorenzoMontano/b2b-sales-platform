@@ -246,6 +246,9 @@ public class OrderModel : BaseEntityModel
     [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.DisplayToCustomer")]
     public bool AddOrderNoteDisplayToCustomer { get; set; }
 
+    [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.IncludeOnInvoice")]
+    public bool AddOrderNoteIncludeOnInvoice { get; set; }
+
     [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.Note")]
 
     public string AddOrderNoteMessage { get; set; }
@@ -354,6 +357,9 @@ public class OrderModel : BaseEntityModel
 
         [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.CreatedByCustomer")]
         public bool CreatedByCustomer { get; set; }
+
+        [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.IncludeOnInvoice")]
+        public bool IncludeOnInvoice { get; set; }
     }
 
     public class UploadLicenseModel : BaseModel

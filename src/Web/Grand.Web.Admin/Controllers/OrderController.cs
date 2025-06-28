@@ -1523,7 +1523,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     public async Task<IActionResult> OrderNoteAdd(string orderId, string downloadId, bool displayToCustomer,
-        string message)
+        bool includeOnInvoice, string message)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -1531,7 +1531,7 @@ public class OrderController(
 
         if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
             order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { Result = false });
-        await orderViewModelService.InsertOrderNote(order, downloadId, displayToCustomer, message);
+        await orderViewModelService.InsertOrderNote(order, downloadId, displayToCustomer, includeOnInvoice, message);
 
         return Json(new { Result = true });
     }

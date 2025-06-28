@@ -1053,6 +1053,7 @@ public class OrderViewModelService : IOrderViewModelService
                 DownloadId = string.IsNullOrEmpty(orderNote.DownloadId) ? "" : orderNote.DownloadId,
                 DownloadGuid = download?.DownloadGuid ?? Guid.Empty,
                 DisplayToCustomer = orderNote.DisplayToCustomer,
+                IncludeOnInvoice = orderNote.IncludeOnInvoice,
                 Note = orderNote.Note,
                 CreatedOn = _dateTimeService.ConvertToUserTime(orderNote.CreatedOnUtc, DateTimeKind.Utc),
                 CreatedByCustomer = orderNote.CreatedByCustomer
@@ -1063,10 +1064,11 @@ public class OrderViewModelService : IOrderViewModelService
     }
 
     public virtual async Task InsertOrderNote(Order order, string downloadId, bool displayToCustomer,
-        string message)
+        bool includeOnInvoice, string message)
     {
         var orderNote = new OrderNote {
             DisplayToCustomer = displayToCustomer,
+            IncludeOnInvoice = includeOnInvoice,
             Note = message,
             DownloadId = downloadId,
             OrderId = order.Id

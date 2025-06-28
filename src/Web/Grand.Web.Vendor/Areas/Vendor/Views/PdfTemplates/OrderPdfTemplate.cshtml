@@ -1,5 +1,6 @@
 @using Grand.Business.Core.Interfaces.Catalog.Products
 @using Grand.Business.Core.Interfaces.Checkout.GiftVouchers
+@using Grand.Business.Core.Interfaces.Checkout.Orders
 @using Grand.Business.Core.Interfaces.Checkout.Payments
 @using Grand.Business.Core.Interfaces.Common.Directory
 @using Grand.Business.Core.Interfaces.Common.Localization
@@ -15,6 +16,7 @@
 @inject ITranslationService _translationService
 @inject IPaymentService _paymentService
 @inject IGiftVoucherService _giftVoucherService
+@inject IOrderService _orderService
 @{
     var logoPicture = await _pictureService.GetPictureById(_pdfSettings.LogoPictureId);
     var logoExists = logoPicture != null;
@@ -307,6 +309,23 @@
                     </b>
 
                 </div>
+            </div>
+        }
+
+        var orderNotes = await _orderService.GetOrderNotes(order.Id);
+        var invoiceNotes = orderNotes.Where(n => n.IncludeOnInvoice).OrderBy(n => n.CreatedOnUtc);
+        
+        if (invoiceNotes.Any())
+        {
+            <div class="summary" style="margin-top: 20px;">
+                <h4>@(_translationService.GetResource("PDFInvoice.OrderNotes", order.CustomerLanguageId))</h4>
+                @foreach (var note in invoiceNotes)
+                {
+                    <div style="margin-bottom: 10px;">
+                        <strong>@note.CreatedOnUtc.ToString("yyyy-MM-dd HH:mm"):</strong><br/>
+                        @Html.Raw(note.Note)
+                    </div>
+                }
             </div>
         }
 

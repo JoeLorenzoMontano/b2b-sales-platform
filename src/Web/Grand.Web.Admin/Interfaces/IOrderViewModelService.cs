@@ -23,7 +23,7 @@ public interface IOrderViewModelService
 
     Task<OrderAddressModel> PrepareOrderAddressModel(Order order, Address address);
     Task<IList<OrderModel.OrderNote>> PrepareOrderNotes(Order order);
-    Task InsertOrderNote(Order order, string downloadId, bool displayToCustomer, string message);
+    Task InsertOrderNote(Order order, string downloadId, bool displayToCustomer, bool includeOnInvoice, string message);
     Task DeleteOrderNote(Order order, string id);
 
     Task<Address> UpdateOrderAddress(Order order, Address address, OrderAddressModel model,

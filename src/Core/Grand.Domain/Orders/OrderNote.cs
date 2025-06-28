@@ -29,4 +29,9 @@ public class OrderNote : BaseEntity
     ///     Gets or sets value indicating whether this order note was create by customer
     /// </summary>
     public bool CreatedByCustomer { get; set; }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether this note should be included on invoices
+    /// </summary>
+    public bool IncludeOnInvoice { get; set; }
 }

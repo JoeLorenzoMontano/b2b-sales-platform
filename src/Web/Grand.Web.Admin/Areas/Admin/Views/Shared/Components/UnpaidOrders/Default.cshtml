@@ -1,0 +1,216 @@
+@inject AdminAreaSettings adminAreaSettings
+
+<div id="unpaid-orders-grid"></div>
+
+<style>
+    /* Badge styling for payment status */
+    .payment-status-badge {
+        font-size: 0.9rem;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    
+    .payment-status-pending {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .payment-status-authorized {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .payment-status-partially {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    /* Order link styling */
+    .order-link {
+        background-color: #0e8a76;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .order-link:hover {
+        background-color: #0b6d5f !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transform: translateY(-1px);
+        color: white !important;
+        text-decoration: none;
+    }
+</style>
+
+<script>
+    $(document).ready(function () {
+        
+        var valueOrDashTemplate = function(fieldName) {
+            return function(dataItem) {
+                if (dataItem[fieldName]) {
+                    return dataItem[fieldName];
+                }
+                return "--";
+            };
+        };
+        
+        var dateTemplate = function(fieldName) {
+            return function(dataItem) {
+                if (dataItem[fieldName]) {
+                    var date = new Date(dataItem[fieldName]);
+                    return kendo.toString(date, "MM/dd/yyyy hh:mm tt");
+                }
+                return "";
+            };
+        };
+        
+        var paymentStatusTemplate = function(dataItem) {
+            var status = dataItem.PaymentStatus;
+            var cssClass = '';
+            
+            if (status === 'Pending') {
+                cssClass = 'payment-status-pending';
+            } else if (status === 'Authorized') {
+                cssClass = 'payment-status-authorized';
+            } else if (status === 'Partially Paid') {
+                cssClass = 'payment-status-partially';
+            }
+            
+            return '<span class="payment-status-badge ' + cssClass + '">' + status + '</span>';
+        };
+
+        // Initialize the grid
+        $("#unpaid-orders-grid").kendoGrid({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "@Html.Raw(Url.Action("UnpaidOrdersList", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        dataType: "json",
+                        data: additionalData
+                    }
+                },
+                schema: {
+                    data: "Data",
+                    total: "Total",
+                    errors: "Errors",
+                    model: {
+                        fields: {
+                            Id: { type: "string" },
+                            OrderNumber: { type: "string" },
+                            CustomerEmail: { type: "string" },
+                            CustomerFullName: { type: "string" },
+                            OrderTotal: { type: "number" },
+                            PaymentStatus: { type: "string" },
+                            PaymentMethod: { type: "string" },
+                            CreatedOn: { type: "date" },
+                            OrderStatus: { type: "string" }
+                        }
+                    }
+                },
+                error: function(e) {
+                    display_kendoui_grid_error(e);
+                    this.cancelChanges();
+                },
+                pageSize: 10,
+                serverPaging: true,
+                serverFiltering: true,
+                serverSorting: true
+            },
+            pageable: {
+                refresh: true,
+                pageSizes: [10,20,50]
+            },
+            scrollable: false,
+            columns: [
+                {
+                    field: "OrderNumber",
+                    title: "Order #",
+                    width: 120,
+                    template: function(dataItem) {
+                        return '<a href="@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/' + dataItem.Id + '" class="order-link" title="View order details">' + 
+                                '<i class="fa fa-shopping-cart mr-1"></i>' + dataItem.OrderNumber + '</a>';
+                    }
+                },
+                {
+                    field: "CustomerEmail",
+                    title: "Customer",
+                    width: 200,
+                    template: function(dataItem) {
+                        if (dataItem.CustomerFullName && dataItem.CustomerEmail) {
+                            return dataItem.CustomerFullName + '<br/><small>' + dataItem.CustomerEmail + '</small>';
+                        } else if (dataItem.CustomerFullName) {
+                            return dataItem.CustomerFullName;
+                        } else if (dataItem.CustomerEmail) {
+                            return dataItem.CustomerEmail;
+                        } else {
+                            return '--';
+                        }
+                    }
+                },
+                {
+                    field: "OrderTotal",
+                    title: "Total",
+                    width: 100,
+                    template: function(dataItem) {
+                        if (dataItem.OrderTotal) {
+                            return '$' + dataItem.OrderTotal;
+                        }
+                        return "$0.00";
+                    },
+                    headerAttributes: { style: "text-align:center" },
+                    attributes: { style: "text-align:center" }
+                },
+                {
+                    field: "PaymentStatus",
+                    title: "Payment Status",
+                    width: 130,
+                    template: paymentStatusTemplate,
+                    headerAttributes: { style: "text-align:center" },
+                    attributes: { style: "text-align:center" }
+                },
+                {
+                    field: "PaymentMethod",
+                    title: "Payment Method",
+                    width: 120,
+                    template: valueOrDashTemplate("PaymentMethod")
+                },
+                {
+                    field: "CreatedOn",
+                    title: "Created On",
+                    width: 130,
+                    template: dateTemplate("CreatedOn"),
+                    headerAttributes: { style: "text-align:center" },
+                    attributes: { style: "text-align:center" }
+                }
+            ]
+        });
+
+        function additionalData() {
+            var data = {
+                // Minimal data needed - filtering is handled server-side for Pending payment status
+                PaymentStatusId: 0,
+                OrderStatusId: 0,
+                ShippingStatusId: 0,
+                BillingEmail: "",
+                BillingLastName: "",
+                BillingCountryId: "",
+                PaymentMethodSystemName: "",
+                OrderGuid: "",
+                GoDirectlyToNumber: "",
+                OrderTag: ""
+            };
+            addAntiForgeryToken(data);
+            return data;
+        }
+    });
+</script>

@@ -14,11 +14,12 @@ public class ImpersonatedOrdersViewComponent : BaseAdminViewComponent
         _permissionService = permissionService;
     }
 
-    public async Task<IViewComponentResult> InvokeAsync()
+    public async Task<IViewComponentResult> InvokeAsync(string customerId)
     {
         if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
             return Content("");
 
+        ViewBag.CustomerId = customerId;
         return View();
     }
 }

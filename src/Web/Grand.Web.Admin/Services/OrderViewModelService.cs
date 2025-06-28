@@ -338,6 +338,90 @@ public class OrderViewModelService : IOrderViewModelService
         return (items, orders.TotalCount);
     }
 
+    public virtual async Task<(IEnumerable<OrderModel> orderModels, int totalCount)> PrepareUnpaidOrderModel(
+        OrderListModel model, int pageIndex, int pageSize)
+    {
+        DateTime? startDateValue = model.StartDate == null
+            ? null
+            : _dateTimeService.ConvertToUtcTime(model.StartDate.Value, _dateTimeService.CurrentTimeZone);
+
+        DateTime? endDateValue = model.EndDate == null
+            ? null
+            : _dateTimeService.ConvertToUtcTime(model.EndDate.Value, _dateTimeService.CurrentTimeZone).AddDays(1);
+
+        int? orderStatus = model.OrderStatusId > 0 ? model.OrderStatusId : null;
+        var shippingStatus = model.ShippingStatusId.HasValue ? (ShippingStatus?)model.ShippingStatusId : null;
+
+        var filterByProductId = "";
+        var product = await _productService.GetProductById(model.ProductId);
+        if (product != null)
+            filterByProductId = model.ProductId;
+
+        var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
+
+        // Load orders with Pending payment status specifically
+        var orders = await _orderService.SearchOrders(
+            model.StoreId,
+            model.VendorId,
+            model.CustomerId,
+            filterByProductId,
+            warehouseId: model.WarehouseId,
+            salesEmployeeId: salesEmployeeId,
+            impersonatedByEmployeeId: model.ImpersonatedByEmployeeId,
+            paymentMethodSystemName: model.PaymentMethodSystemName,
+            createdFromUtc: startDateValue,
+            createdToUtc: endDateValue,
+            os: orderStatus,
+            ps: PaymentStatus.Pending, // Filter specifically for Pending payment status
+            ss: shippingStatus,
+            billingEmail: model.BillingEmail,
+            billingLastName: model.BillingLastName,
+            billingCountryId: model.BillingCountryId,
+            orderGuid: model.OrderGuid,
+            orderCode: model.GoDirectlyToNumber,
+            pageIndex: pageIndex - 1,
+            pageSize: pageSize,
+            orderTagId: model.OrderTag);
+
+        // Debug logging
+        System.Console.WriteLine($"[DEBUG] Pending orders found: {orders.TotalCount}");
+
+        // No additional filtering needed since we already filtered at the service level
+        var pagedUnpaidOrders = orders;
+
+        var primaryStoreCurrency = await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId);
+        if (primaryStoreCurrency == null)
+            throw new Exception("Cannot load primary store currency");
+
+        var status = await _orderStatusService.GetAll();
+        var items = new List<OrderModel>();
+        foreach (var x in pagedUnpaidOrders)
+        {
+            var store = await _storeService.GetStoreById(x.StoreId);
+            var orderTotal = _priceFormatter.FormatPrice(x.OrderTotal,
+                await _currencyService.GetCurrencyByCode(x.CustomerCurrencyCode));
+            items.Add(new OrderModel {
+                Id = x.Id,
+                OrderNumber = x.OrderNumber,
+                Code = x.Code,
+                StoreName = store != null ? store.Shortcut : "Unknown",
+                OrderTotal = orderTotal,
+                OrderTotalValue = x.OrderTotal,
+                CurrencyCode = x.CustomerCurrencyCode,
+                OrderStatus = status.FirstOrDefault(y => y.StatusId == x.OrderStatusId)?.Name,
+                OrderStatusId = x.OrderStatusId,
+                PaymentStatus = _enumTranslationService.GetTranslationEnum(x.PaymentStatusId),
+                PaymentMethod = x.PaymentMethodSystemName,
+                ShippingStatus = _enumTranslationService.GetTranslationEnum(x.ShippingStatusId),
+                CustomerEmail = x.BillingAddress?.Email,
+                CustomerId = x.CustomerId,
+                CustomerFullName = $"{x.BillingAddress?.FirstName} {x.BillingAddress?.LastName}",
+                CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc)
+            });
+        }
+
+        return (items, orders.TotalCount);
+    }
 
     public virtual async Task PrepareOrderDetailsModel(OrderModel model, Order order)
     {

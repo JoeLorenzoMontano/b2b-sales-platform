@@ -12,6 +12,9 @@ public interface IOrderViewModelService
     Task<(IEnumerable<OrderModel> orderModels, int totalCount)> PrepareOrderModel(OrderListModel model, int pageIndex,
         int pageSize);
 
+    Task<(IEnumerable<OrderModel> orderModels, int totalCount)> PrepareUnpaidOrderModel(OrderListModel model, int pageIndex,
+        int pageSize);
+
     Task PrepareOrderDetailsModel(OrderModel model, Order order);
     Task<OrderModel.AddOrderProductModel> PrepareAddOrderProductModel(Order order);
 

@@ -6,6 +6,8 @@
 @using Grand.Business.Core.Interfaces.Common.Localization
 @using Grand.Business.Core.Interfaces.Common.Stores
 @using Grand.Business.Core.Interfaces.Storage
+@using Grand.Business.Core.Interfaces.Customers
+@using Grand.Domain.Customers
 @using Grand.Domain.Tax
 @model (IList<Order>, string)
 @inject IProductService _productService
@@ -17,6 +19,7 @@
 @inject IPaymentService _paymentService
 @inject IGiftVoucherService _giftVoucherService
 @inject IOrderService _orderService
+@inject ICustomerService _customerService
 @{
     var logoPicture = await _pictureService.GetPictureById(_pdfSettings.LogoPictureId);
     var logoExists = logoPicture != null;
@@ -157,6 +160,18 @@
                         var paymentMethodStr = paymentMethod != null ? paymentMethod.FriendlyName : order.PaymentMethodSystemName;
                         <b>@(string.Format(_translationService.GetResource("PDFInvoice.PaymentMethod", order.CustomerLanguageId), paymentMethodStr))</b>
                         <br/>
+                        
+                        @if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+                        {
+                            var impersonatingCustomer = await _customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+                            if (impersonatingCustomer != null)
+                            {
+                                var salesRepName = !string.IsNullOrEmpty(impersonatingCustomer.GetFullName()) ? impersonatingCustomer.GetFullName() : impersonatingCustomer.Email;
+                                <b>@(string.Format(_translationService.GetResource("pdfinvoice.salesrep", order.CustomerLanguageId), salesRepName))</b>
+                                <br/>
+                            }
+                        }
+                        
                         @await Component.InvokeAsync("Widget", new { widgetZone = "pdf_payment_method_below", additionalData = order.Id })
                     }
                 </td>

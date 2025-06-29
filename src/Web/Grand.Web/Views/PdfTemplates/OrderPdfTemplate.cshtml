@@ -220,13 +220,28 @@
                         }
                     </td>
                     <td>
-                        @if (priceIncludesTax)
+                        @{
+                            var discountAmount = priceIncludesTax ? item.DiscountAmountInclTax : item.DiscountAmountExclTax;
+                            var originalPrice = priceIncludesTax ? item.UnitPriceWithoutDiscInclTax : item.UnitPriceWithoutDiscExclTax;
+                            var currentPrice = priceIncludesTax ? item.UnitPriceInclTax : item.UnitPriceExclTax;
+                            var hasDiscount = discountAmount > 0 || originalPrice != currentPrice;
+                        }
+                        @if (hasDiscount)
                         {
-                            @item.UnitPriceInclTax.ToString("N2")
+                            <span style="text-decoration: line-through; color: #999;">
+                                @originalPrice.ToString("N2")
+                            </span><br/>
+                            <strong>
+                                @currentPrice.ToString("N2")
+                            </strong><br/>
+                            <small style="color: green;">
+                                @(string.Format(_translationService.GetResource("PDFInvoice.YouSaved", order.CustomerLanguageId) ?? "Saved: {0}", 
+                                (originalPrice - currentPrice).ToString("N2")))
+                            </small>
                         }
                         else
                         {
-                            @item.UnitPriceExclTax.ToString("N2")
+                            @currentPrice.ToString("N2")
                         }
                     </td>
                     <td>@item.Quantity</td>

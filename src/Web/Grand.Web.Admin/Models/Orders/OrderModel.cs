@@ -214,6 +214,9 @@ public class OrderModel : BaseEntityModel
     [GrandResourceDisplayName("Admin.Orders.Fulfillment.TargetDeliveryDate")]
     public DateTime? TargetDeliveryDate { get; set; }
 
+    [GrandResourceDisplayName("Admin.Orders.Fulfillment.RequestedShipmentDate")]
+    public DateTime? RequestedShipmentDate { get; set; }
+
     public string ShippingAdditionDescription { get; set; }
     public string ShippingAddressGoogleMapsUrl { get; set; }
     public bool CanAddNewShipments { get; set; }

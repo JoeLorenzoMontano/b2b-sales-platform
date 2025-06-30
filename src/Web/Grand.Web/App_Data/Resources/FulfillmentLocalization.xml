@@ -8,6 +8,7 @@
   <Resource Name="Admin.Orders.Fulfillment.Completed">Completed</Resource>
   <Resource Name="Admin.Orders.Fulfillment.CreateShipment">Create Shipment</Resource>
   <Resource Name="Admin.Orders.Fulfillment.NoItemsSelected">Please select at least one item to create a shipment.</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.RequestedShipmentDate">Requested Shipment Date</Resource>
   <Resource Name="Admin.Orders.Fulfillment.TargetDeliveryDate">Target Delivery Date</Resource>
   <Resource Name="Catalog.AllProducts">All Products</Resource>
   <Resource Name="Catalog.Products.NoData">No products found.</Resource>

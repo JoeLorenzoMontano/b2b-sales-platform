@@ -390,16 +390,12 @@
                     title: "Customer",
                     width: 200,
                     template: function(dataItem) {
-                        // Handle different format possibilities
-                        if (dataItem.CustomerFullName && dataItem.CustomerEmail) {
-                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + 
-                                dataItem.CustomerFullName + ' (' + dataItem.CustomerEmail + ')</a>';
-                        } else if (dataItem.CustomerFullName) {
-                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + 
-                                dataItem.CustomerFullName + '</a>';
-                        } else if (dataItem.CustomerEmail) {
-                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + 
-                                dataItem.CustomerEmail + '</a>';
+                        if (dataItem.CustomerFullName) {
+                            var customerDisplay = kendo.htmlEncode(dataItem.CustomerFullName);
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + kendo.htmlEncode(dataItem.CustomerCompany) + '</small>';
+                            }
+                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
                         } else {
                             return '--';
                         }

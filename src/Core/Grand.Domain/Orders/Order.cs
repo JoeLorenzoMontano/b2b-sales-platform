@@ -299,6 +299,11 @@ public class Order : BaseEntity
     public DateTime? TargetDeliveryDate { get; set; }
     
     /// <summary>
+    ///     Gets or sets the requested shipment date
+    /// </summary>
+    public DateTime? RequestedShipmentDate { get; set; }
+    
+    /// <summary>
     ///     Gets or sets the ID of the employee who created this order via impersonation
     /// </summary>
     public string ImpersonatedByEmployeeId { get; set; }

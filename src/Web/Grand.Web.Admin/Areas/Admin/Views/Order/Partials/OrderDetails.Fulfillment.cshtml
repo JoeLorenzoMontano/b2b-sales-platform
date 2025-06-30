@@ -90,10 +90,14 @@
         <div class="card-footer">
             <div class="form-group row">
                 <div class="col-md-4">
+                    <label class="control-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]</label>
+                    <input type="date" id="requested-shipment-date" class="form-control" value="@(Model.RequestedShipmentDate.HasValue ? Model.RequestedShipmentDate.Value.ToString("yyyy-MM-dd") : "")" />
+                </div>
+                <div class="col-md-4">
                     <label class="control-label">@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]</label>
                     <input type="date" id="target-delivery-date" class="form-control" value="@(Model.TargetDeliveryDate.HasValue ? Model.TargetDeliveryDate.Value.ToString("yyyy-MM-dd") : "")" />
                 </div>
-                <div class="col-md-8 mt-4">
+                <div class="col-md-4 mt-4">
                     <button type="button" id="create-shipment" class="btn btn-success" disabled>@Loc["Admin.Orders.Fulfillment.CreateShipment"]</button>
                 </div>
             </div>
@@ -144,6 +148,30 @@ $(document).ready(function() {
     // Individual checkbox change
     $(".packed-item-checkbox").change(function() {
         checkAllItemsSelected();
+    });
+    
+    // Save requested shipment date when changed
+    $("#requested-shipment-date").change(function() {
+        var requestedDate = $(this).val();
+        
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@Html.Raw(Url.Action("SaveRequestedShipmentDate", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+            data: addAntiForgeryToken({ 
+                date: requestedDate
+            }),
+            success: function(data) {
+                if (data.success) {
+                    // Display a success notification without reloading the page
+                    if (typeof displayGrandeNotification === 'function') {
+                        displayGrandeNotification("Requested shipment date saved successfully", "success", 5000);
+                    }
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            }
+        });
     });
     
     // Save target delivery date when changed

@@ -93,6 +93,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
             CustomerId = order?.CustomerId ?? "",
             CustomerEmail = order?.CustomerEmail ?? "",
             CustomerFullName = order != null ? $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}" : "",
+            CustomerCompany = order?.BillingAddress?.Company ?? "",
             OrderTotal = order != null ? (decimal)order.OrderTotal : 0,
             SalesEmployeeName = "",
             ShippingAddressString = order?.ShippingAddress != null ? 

@@ -21,6 +21,7 @@ public class ShipmentModel : BaseEntityModel
     public string CustomerId { get; set; }
     public string CustomerEmail { get; set; }
     public string CustomerFullName { get; set; }
+    public string CustomerCompany { get; set; }
 
     // Order information
     public decimal OrderTotal { get; set; }

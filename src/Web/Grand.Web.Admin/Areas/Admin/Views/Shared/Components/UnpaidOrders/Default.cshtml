@@ -147,11 +147,11 @@
                     width: 200,
                     template: function(dataItem) {
                         if (dataItem.CustomerFullName) {
-                            var customerDisplay = dataItem.CustomerFullName;
+                            var customerDisplay = kendo.htmlEncode(dataItem.CustomerFullName);
                             if (dataItem.CustomerCompany) {
-                                customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                                customerDisplay += '<br/><small>' + kendo.htmlEncode(dataItem.CustomerCompany) + '</small>';
                             }
-                            return customerDisplay;
+                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
                         } else {
                             return '--';
                         }

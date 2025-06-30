@@ -1356,6 +1356,50 @@ public class OrderController(
         return Json(new { success = true });
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpGet]
+    public async Task<IActionResult> GetRequestedShipmentDate(string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { success = false });
+
+        if (order.RequestedShipmentDate.HasValue)
+        {
+            string formattedDate = order.RequestedShipmentDate.Value.ToString("yyyy-MM-dd");
+            return Json(new { success = true, value = formattedDate });
+        }
+        return Json(new { success = false });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SaveRequestedShipmentDate(string orderId, string date)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { success = false });
+
+        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+        {
+            order.RequestedShipmentDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+        }
+        else
+        {
+            order.RequestedShipmentDate = null;
+        }
+        
+        await orderService.UpdateOrder(order);
+        
+        return Json(new { success = true });
+    }
+
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
     public async Task<IActionResult> CreateFulfillmentShipment(string orderId, string orderItemIds, string quantities, string targetDeliveryDate,
@@ -1413,8 +1457,7 @@ public class OrderController(
                 TrackingNumber = "",
                 TotalWeight = null,
                 ShippedDateUtc = null,
-                // Use the saved target delivery date directly from order to ensure consistency
-                DeliveryDateUtc = order.TargetDeliveryDate,
+                DeliveryDateUtc = null,
                 AdminComment = "Created from Fulfillment Queue",
                 CreatedOnUtc = DateTime.UtcNow
             };

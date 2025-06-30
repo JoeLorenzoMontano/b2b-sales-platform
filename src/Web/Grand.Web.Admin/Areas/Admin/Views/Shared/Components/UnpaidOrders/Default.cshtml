@@ -146,12 +146,12 @@
                     title: "Customer",
                     width: 200,
                     template: function(dataItem) {
-                        if (dataItem.CustomerFullName && dataItem.CustomerEmail) {
-                            return dataItem.CustomerFullName + '<br/><small>' + dataItem.CustomerEmail + '</small>';
-                        } else if (dataItem.CustomerFullName) {
-                            return dataItem.CustomerFullName;
-                        } else if (dataItem.CustomerEmail) {
-                            return dataItem.CustomerEmail;
+                        if (dataItem.CustomerFullName) {
+                            var customerDisplay = dataItem.CustomerFullName;
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                            }
+                            return customerDisplay;
                         } else {
                             return '--';
                         }

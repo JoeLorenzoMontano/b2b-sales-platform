@@ -64,7 +64,13 @@
                         field: "CustomerEmail",
                         title: "@Loc["Admin.Orders.Fields.Customer"]",
                         width: 200,
-                        template: '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/#=CustomerId#">#=CustomerFullName# (#=CustomerEmail#)</a>'                        
+                        template: function(dataItem) {
+                            var customerDisplay = dataItem.CustomerFullName;
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                            }
+                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
+                        }                        
                     },
                     {
                         field: "CustomerGroups",

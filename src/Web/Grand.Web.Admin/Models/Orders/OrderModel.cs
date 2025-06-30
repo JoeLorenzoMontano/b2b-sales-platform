@@ -40,6 +40,8 @@ public class OrderModel : BaseEntityModel
 
     public string CustomerFullName { get; set; }
     
+    public string CustomerCompany { get; set; }
+    
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomerGroups")]
     public string CustomerGroups { get; set; }
 

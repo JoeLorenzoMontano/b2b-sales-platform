@@ -331,6 +331,7 @@ public class OrderViewModelService : IOrderViewModelService
                 CustomerEmail = x.BillingAddress?.Email,
                 CustomerId = x.CustomerId,
                 CustomerFullName = $"{x.BillingAddress?.FirstName} {x.BillingAddress?.LastName}",
+                CustomerCompany = x.BillingAddress?.Company,
                 CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc)
             });
         }
@@ -416,6 +417,7 @@ public class OrderViewModelService : IOrderViewModelService
                 CustomerEmail = x.BillingAddress?.Email,
                 CustomerId = x.CustomerId,
                 CustomerFullName = $"{x.BillingAddress?.FirstName} {x.BillingAddress?.LastName}",
+                CustomerCompany = x.BillingAddress?.Company,
                 CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc)
             });
         }

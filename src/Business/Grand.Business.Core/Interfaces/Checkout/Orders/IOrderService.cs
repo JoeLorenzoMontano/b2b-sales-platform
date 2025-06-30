@@ -136,6 +136,11 @@ public interface IOrderService
     /// <param name="orderNote">The order note</param>
     Task InsertOrderNote(OrderNote orderNote);
 
+    /// <summary>
+    ///     Update an order note
+    /// </summary>
+    /// <param name="orderNote">The order note</param>
+    Task UpdateOrderNote(OrderNote orderNote);
 
     /// <summary>
     ///     Get order notes for order

@@ -310,6 +310,20 @@ public class OrderService : IOrderService
         await _mediator.EntityInserted(orderNote);
     }
 
+    /// <summary>
+    ///     Updates an order note
+    /// </summary>
+    /// <param name="orderNote">The order note</param>
+    public virtual async Task UpdateOrderNote(OrderNote orderNote)
+    {
+        ArgumentNullException.ThrowIfNull(orderNote);
+
+        await _orderNoteRepository.UpdateAsync(orderNote);
+
+        //event notification
+        await _mediator.EntityUpdated(orderNote);
+    }
+
     public virtual async Task<IList<OrderNote>> GetOrderNotes(string orderId)
     {
         var query = from orderNote in _orderNoteRepository.Table

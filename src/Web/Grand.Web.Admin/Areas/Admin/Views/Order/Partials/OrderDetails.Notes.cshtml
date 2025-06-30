@@ -93,14 +93,14 @@
                     width: 100,
                     headerAttributes: { style: "text-align:center" },
                     attributes: { style: "text-align:center" },
-                    template: '# if(DisplayToCustomer) {# <i class="fa fa-check" aria-hidden="true" style="color:green"></i> #} else {# <i class="fa fa-times" aria-hidden="true" style="color:red"></i> #} #'
+                    template: '<input type="checkbox" class="order-note-checkbox" data-field="displayToCustomer" data-id="#=Id#" #= DisplayToCustomer ? "checked" : "" # />'
                 }, {
                     field: "IncludeOnInvoice",
                     title: "@Loc["Admin.Orders.OrderNotes.Fields.IncludeOnInvoice"]",
                     width: 100,
                     headerAttributes: { style: "text-align:center" },
                     attributes: { style: "text-align:center" },
-                    template: '# if(IncludeOnInvoice) {# <i class="fa fa-check" aria-hidden="true" style="color:green"></i> #} else {# <i class="fa fa-times" aria-hidden="true" style="color:red"></i> #} #'
+                    template: '<input type="checkbox" class="order-note-checkbox" data-field="includeOnInvoice" data-id="#=Id#" #= IncludeOnInvoice ? "checked" : "" # />'
                 }, {
                     command: { name: "destroy", text: "@Loc["Admin.Common.Delete"]" },
                     title: "@Loc["Admin.Common.Delete"]",
@@ -220,5 +220,64 @@
                 }
             });
         });
+
+        // Handle checkbox changes for order notes
+        $(document).on('change', '.order-note-checkbox', function() {
+            var checkbox = $(this);
+            var noteId = checkbox.data('id');
+            var field = checkbox.data('field');
+            var isChecked = checkbox.is(':checked');
+            
+            // Disable checkbox while updating
+            checkbox.prop('disabled', true);
+            
+            var postData = {
+                id: noteId,
+                orderId: '@Model.Id'
+            };
+            
+            if (field === 'displayToCustomer') {
+                postData.displayToCustomer = isChecked;
+            } else if (field === 'includeOnInvoice') {
+                postData.includeOnInvoice = isChecked;
+            }
+            
+            addAntiForgeryToken(postData);
+            
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "@(Url.Action("OrderNoteUpdate", "Order", new { area = Constants.AreaAdmin }))",
+                data: postData,
+                success: function (data) {
+                    // Re-enable checkbox
+                    checkbox.prop('disabled', false);
+                    if (data.Result) {
+                        // Show success feedback with a brief highlight
+                        checkbox.closest('td').addClass('highlight-success');
+                        setTimeout(function() {
+                            checkbox.closest('td').removeClass('highlight-success');
+                        }, 1000);
+                    } else {
+                        // Revert checkbox state on failure
+                        checkbox.prop('checked', !isChecked);
+                        alert('Failed to update order note.');
+                    }
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    // Revert checkbox state on error
+                    checkbox.prop('checked', !isChecked);
+                    checkbox.prop('disabled', false);
+                    alert('Failed to update order note.');
+                }
+            });
+        });
     });
 </script>
+
+<style>
+    .highlight-success {
+        background-color: #d4edda !important;
+        transition: background-color 0.3s ease;
+    }
+</style>

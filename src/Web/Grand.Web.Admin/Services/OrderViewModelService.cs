@@ -1101,6 +1101,21 @@ public class OrderViewModelService : IOrderViewModelService
         }
     }
 
+    public virtual async Task UpdateOrderNote(Order order, string id, bool? displayToCustomer, bool? includeOnInvoice)
+    {
+        var orderNote = (await _orderService.GetOrderNotes(order.Id)).FirstOrDefault(on => on.Id == id);
+        if (orderNote == null)
+            throw new ArgumentException("No order note found with the specified id");
+
+        if (displayToCustomer.HasValue)
+            orderNote.DisplayToCustomer = displayToCustomer.Value;
+        
+        if (includeOnInvoice.HasValue)
+            orderNote.IncludeOnInvoice = includeOnInvoice.Value;
+
+        await _orderService.UpdateOrderNote(orderNote);
+    }
+
     public virtual async Task<Address> UpdateOrderAddress(Order order, Address address, OrderAddressModel model,
         List<CustomAttribute> customAttributes)
     {

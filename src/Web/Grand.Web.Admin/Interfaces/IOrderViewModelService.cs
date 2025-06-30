@@ -25,6 +25,7 @@ public interface IOrderViewModelService
     Task<IList<OrderModel.OrderNote>> PrepareOrderNotes(Order order);
     Task InsertOrderNote(Order order, string downloadId, bool displayToCustomer, bool includeOnInvoice, string message);
     Task DeleteOrderNote(Order order, string id);
+    Task UpdateOrderNote(Order order, string id, bool? displayToCustomer, bool? includeOnInvoice);
 
     Task<Address> UpdateOrderAddress(Order order, Address address, OrderAddressModel model,
         List<CustomAttribute> customAttributes);

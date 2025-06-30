@@ -1552,6 +1552,22 @@ public class OrderController(
         return new JsonResult("");
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> OrderNoteUpdate(string id, string orderId, bool? displayToCustomer, bool? includeOnInvoice)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { Result = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { Result = false });
+
+        await orderViewModelService.UpdateOrderNote(order, id, displayToCustomer, includeOnInvoice);
+
+        return Json(new { Result = true });
+    }
+
     #endregion
     
     #region Impersonated Orders

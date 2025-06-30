@@ -166,9 +166,28 @@
                             var impersonatingCustomer = await _customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
                             if (impersonatingCustomer != null)
                             {
-                                var salesRepName = !string.IsNullOrEmpty(impersonatingCustomer.GetFullName()) ? impersonatingCustomer.GetFullName() : impersonatingCustomer.Email;
-                                <b>@(string.Format(_translationService.GetResource("pdfinvoice.salesrep", order.CustomerLanguageId), salesRepName))</b>
-                                <br/>
+                                var salesRepName = impersonatingCustomer.GetFullName();
+                                var salesRepEmail = impersonatingCustomer.Email;
+                                var salesRepDisplay = "";
+                                
+                                if (!string.IsNullOrEmpty(salesRepName) && !string.IsNullOrEmpty(salesRepEmail))
+                                {
+                                    salesRepDisplay = $"{salesRepName} ({salesRepEmail})";
+                                }
+                                else if (!string.IsNullOrEmpty(salesRepName))
+                                {
+                                    salesRepDisplay = salesRepName;
+                                }
+                                else if (!string.IsNullOrEmpty(salesRepEmail))
+                                {
+                                    salesRepDisplay = salesRepEmail;
+                                }
+                                
+                                if (!string.IsNullOrEmpty(salesRepDisplay))
+                                {
+                                    <b>@(string.Format(_translationService.GetResource("pdfinvoice.salesrep", order.CustomerLanguageId), salesRepDisplay))</b>
+                                    <br/>
+                                }
                             }
                         }
                         

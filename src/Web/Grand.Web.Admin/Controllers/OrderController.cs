@@ -277,11 +277,12 @@ public class OrderController(
                         // Add impersonated employee name if available, otherwise blank
                         if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
                         {
-                            var impersonatedEmployee = await _salesEmployeeService.GetSalesEmployeeById(order.ImpersonatedByEmployeeId);
-                            if (impersonatedEmployee != null)
+                            // The impersonating user is a Customer entity, not a SalesEmployee
+                            var impersonatingCustomer = await customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+                            if (impersonatingCustomer != null)
                             {
-                                orderModel.SalesEmployeeId = impersonatedEmployee.Id;
-                                orderModel.SalesEmployeeName = impersonatedEmployee.Name;
+                                orderModel.SalesEmployeeId = impersonatingCustomer.Id;
+                                orderModel.SalesEmployeeName = impersonatingCustomer.Email; // Using email as it's always available
                             }
                         }
                         

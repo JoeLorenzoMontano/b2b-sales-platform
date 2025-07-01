@@ -250,7 +250,8 @@ public class OrderController(
                             UpdatedOn = order.UpdatedOnUtc,
                             StoreName = order.StoreId,
                             ShippingAddressString = order.ShippingAddress?.Address1,
-                            TargetDeliveryDate = order.TargetDeliveryDate
+                            TargetDeliveryDate = order.TargetDeliveryDate,
+                            RequestedShipmentDate = order.RequestedShipmentDate
                         };
 
                         // Get customer groups that are not system groups
@@ -273,14 +274,14 @@ public class OrderController(
                             }
                         }
 
-                        // Add sales employee name if available
-                        if (!string.IsNullOrEmpty(order.SeId))
+                        // Add impersonated employee name if available, otherwise blank
+                        if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
                         {
-                            var salesEmployee = await _salesEmployeeService.GetSalesEmployeeById(order.SeId);
-                            if (salesEmployee != null)
+                            var impersonatedEmployee = await _salesEmployeeService.GetSalesEmployeeById(order.ImpersonatedByEmployeeId);
+                            if (impersonatedEmployee != null)
                             {
-                                orderModel.SalesEmployeeId = salesEmployee.Id;
-                                orderModel.SalesEmployeeName = salesEmployee.Name;
+                                orderModel.SalesEmployeeId = impersonatedEmployee.Id;
+                                orderModel.SalesEmployeeName = impersonatedEmployee.Name;
                             }
                         }
                         

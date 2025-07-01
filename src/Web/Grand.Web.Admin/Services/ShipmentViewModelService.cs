@@ -162,7 +162,9 @@ public class ShipmentViewModelService : IShipmentViewModelService
                         QuantityOrdered = qtyOrdered,
                         QuantityInThisShipment = qtyInThisShipment,
                         QuantityInAllShipments = qtyInAllShipments,
-                        QuantityToAdd = maxQtyToAdd
+                        QuantityToAdd = maxQtyToAdd,
+                        UnitPrice = (decimal)orderItem.UnitPriceInclTax,
+                        ProductTotal = (decimal)orderItem.UnitPriceInclTax * (decimal)qtyInThisShipment
                     };
 
                     model.Items.Add(shipmentItemModel);

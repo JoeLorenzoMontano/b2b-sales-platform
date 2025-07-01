@@ -116,6 +116,10 @@ public class ShipmentModel : BaseEntityModel
 
         public bool AllowToChooseWarehouse { get; set; }
 
+        // Price information for grid display
+        public decimal UnitPrice { get; set; }
+        public decimal ProductTotal { get; set; }
+
         //used before a shipment is created
         public List<WarehouseInfo> AvailableWarehouses { get; set; } = new();
         public string WarehouseId { get; set; }

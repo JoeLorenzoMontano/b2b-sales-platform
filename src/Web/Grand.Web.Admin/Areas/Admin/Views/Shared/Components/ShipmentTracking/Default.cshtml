@@ -582,7 +582,7 @@
                         headerAttributes: { style: "background-color: #3f51b5; color: white;" }
                     },
                     {
-                        field: "QuantityToAdd",
+                        field: "QuantityInThisShipment",
                         title: "Quantity",
                         width: 100,
                         headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" },
@@ -597,11 +597,11 @@
                         attributes: { style: "text-align:center" }
                     },
                     {
-                        field: "UnitPrice",
+                        field: "ProductTotal",
                         title: "Product Total",
                         template: function(dataItem) {
-                            if (dataItem.UnitPrice) {
-                                return '$' + dataItem.UnitPrice;
+                            if (dataItem.ProductTotal) {
+                                return '$' + dataItem.ProductTotal.toFixed(2);
                             }
                             return "$0.00";
                         },

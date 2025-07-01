@@ -51,4 +51,5 @@ public class PlaceOrderContainer
     public double RedeemedLoyaltyPointsAmount { get; set; }
     public double OrderTotal { get; set; }
     public string OrderNote { get; set; }
+    public DateTime? RequestedShipmentDate { get; set; }
 }

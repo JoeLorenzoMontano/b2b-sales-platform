@@ -687,8 +687,9 @@ public class CheckoutController : BasePublicController
     {
         try
         {
-            //Get order note from request
+            //Get order note and requested shipment date from request
             string orderNote = null;
+            DateTime? requestedShipmentDate = null;
             var contentType = HttpContext.Request.ContentType;
             
             if (!string.IsNullOrEmpty(contentType) && contentType.Contains("multipart/form-data"))
@@ -697,6 +698,10 @@ public class CheckoutController : BasePublicController
                 if (form.ContainsKey("orderNote"))
                 {
                     orderNote = form["orderNote"].ToString();
+                }
+                if (form.ContainsKey("requestedShipmentDate") && DateTime.TryParse(form["requestedShipmentDate"].ToString(), out var parsedDate))
+                {
+                    requestedShipmentDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
                 }
             }
             else if (!string.IsNullOrEmpty(contentType) && contentType.Contains("application/json"))
@@ -727,6 +732,10 @@ public class CheckoutController : BasePublicController
             if (!string.IsNullOrWhiteSpace(orderNote))
             {
                 placeOrderCommand.OrderNote = orderNote;
+            }
+            if (requestedShipmentDate.HasValue)
+            {
+                placeOrderCommand.RequestedShipmentDate = requestedShipmentDate;
             }
             var placeOrderResult = await _mediator.Send(placeOrderCommand);
             if (placeOrderResult.Success)

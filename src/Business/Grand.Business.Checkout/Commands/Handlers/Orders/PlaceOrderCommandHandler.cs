@@ -149,6 +149,13 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
                 details.OrderNote = command.OrderNote;
                 _logger.LogDebug($"Order note set from command: {command.OrderNote}");
             }
+            
+            //set requested shipment date from command if provided
+            if (command.RequestedShipmentDate.HasValue)
+            {
+                details.RequestedShipmentDate = command.RequestedShipmentDate;
+                _logger.LogDebug($"Requested shipment date set from command: {command.RequestedShipmentDate}");
+            }
 
             //event notification
             await _mediator.PlaceOrderDetailsEvent(result, details);
@@ -1000,7 +1007,8 @@ public class PlaceOrderCommandHandler : IRequestHandler<PlaceOrderCommand, Place
             IsRecurring = details.IsRecurring,
             RecurringCycleLength = details.RecurringCycleLength,
             RecurringCyclePeriodId = details.RecurringCyclePeriodId,
-            RecurringTotalCycles = details.RecurringTotalCycles
+            RecurringTotalCycles = details.RecurringTotalCycles,
+            RequestedShipmentDate = details.RequestedShipmentDate
         };
 
         foreach (var item in details.Taxes) order.OrderTaxes.Add(item);

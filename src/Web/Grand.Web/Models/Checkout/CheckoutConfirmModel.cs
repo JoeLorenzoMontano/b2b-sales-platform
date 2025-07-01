@@ -8,6 +8,7 @@ public class CheckoutConfirmModel : BaseModel
     public bool TermsOfServiceOnOrderConfirmPage { get; set; }
     public string MinOrderTotalWarning { get; set; }
     public string OrderNote { get; set; }
+    public DateTime? RequestedShipmentDate { get; set; }
 
     public IList<string> Warnings { get; set; } = new List<string>();
     public OrderReviewDataModel OrderReviewData { get; set; } = new();

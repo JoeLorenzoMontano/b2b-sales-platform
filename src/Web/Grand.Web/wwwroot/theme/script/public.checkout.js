@@ -44,6 +44,8 @@ var vmorder = new Vue({
             ConfirmWarnings: null,
             // order note
             orderNote: "",
+            // requested shipment date
+            requestedShipmentDate: "",
             // terms of service
             terms: false,
             acceptTerms: false,
@@ -730,6 +732,11 @@ var vmorder = new Vue({
                         if (vmorder.orderNote && vmorder.orderNote.trim() !== '') {
                             formData.append('orderNote', vmorder.orderNote.trim());
                             console.log('Adding order note:', vmorder.orderNote.trim());
+                        }
+                        // Add requested shipment date if provided
+                        if (vmorder.requestedShipmentDate && vmorder.requestedShipmentDate.trim() !== '') {
+                            formData.append('requestedShipmentDate', vmorder.requestedShipmentDate.trim());
+                            console.log('Adding requested shipment date:', vmorder.requestedShipmentDate.trim());
                         }
                         
                         // Always append at least one field to ensure multipart/form-data is sent

@@ -6,4 +6,5 @@ namespace Grand.Business.Core.Commands.Checkout.Orders;
 public class PlaceOrderCommand : IRequest<PlaceOrderResult>
 {
     public string OrderNote { get; set; }
+    public DateTime? RequestedShipmentDate { get; set; }
 }

@@ -104,8 +104,8 @@
                         width: 200,
                     },
                     {
-                        field: "TargetDeliveryDate",
-                        title: "@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]",
+                        field: "RequestedShipmentDate",
+                        title: "@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]",
                         width: 150,
                         type: "date",
                         format: "{0:yyyy-MM-dd}", // Use consistent date format
@@ -113,8 +113,8 @@
                         attributes: { style: "text-align:center" },
                         // Add one day to compensate for timezone conversion issue with business dates
                         template: function(dataItem) {
-                            if (dataItem.TargetDeliveryDate) {
-                                var date = new Date(dataItem.TargetDeliveryDate);
+                            if (dataItem.RequestedShipmentDate) {
+                                var date = new Date(dataItem.RequestedShipmentDate);
                                 date.setDate(date.getDate() + 1); // Add one day to fix display
                                 return kendo.toString(date, "yyyy-MM-dd");
                             }
@@ -228,10 +228,10 @@
                     // Create a new control panel each time
                     var panel = $('<div class="fulfillment-control-panel row mt-3 mb-3" data-order-id="' + orderId + '"></div>');
                         
-                    // Create the target delivery date picker
+                    // Create the requested shipment date picker
                     var dateSection = $('<div class="col-md-6 form-group row"></div>');
-                    dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]:</label>');
-                    dateSection.append('<div class="col-sm-8"><input type="date" id="targetDate_' + orderId + '" class="form-control target-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
+                    dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]:</label>');
+                    dateSection.append('<div class="col-sm-8"><input type="date" id="requestedShipmentDate_' + orderId + '" class="form-control requested-shipment-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
                     panel.append(dateSection);
                     
                     // Create the action buttons
@@ -243,20 +243,20 @@
                     // Add the panel after the grid
                     gridElement.after(panel);
                         
-                    // Load existing target date if available
+                    // Load existing requested shipment date if available
                     $.ajax({
-                        url: "@Url.Action("GetTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin })",
+                        url: "@Url.Action("GetRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin })",
                         type: "GET",
                         data: { orderId: orderId },
                         success: function(response) {
                             if (response && response.success && response.value) {
-                                $("#targetDate_" + orderId).val(response.value);
+                                $("#requestedShipmentDate_" + orderId).val(response.value);
                             }
                         }
                     });
                         
                     // Wire up the date picker to save date changes immediately
-                    $("#targetDate_" + orderId).off("change").on("change", function() {
+                    $("#requestedShipmentDate_" + orderId).off("change").on("change", function() {
                         var newDate = $(this).val();
                         // Add anti-forgery token
                         var data = {
@@ -266,7 +266,7 @@
                         addAntiForgeryToken(data);
                         
                         $.ajax({
-                            url: "@Html.Raw(Url.Action("SaveTargetDeliveryDate", "Order", new { area = Constants.AreaAdmin }))",
+                            url: "@Html.Raw(Url.Action("SaveRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin }))",
                             type: "POST",
                             data: data,
                             success: function(response) {
@@ -344,14 +344,14 @@
                             return;
                         }
                         
-                        var targetDate = $("#targetDate_" + orderId).val();
+                        var requestedShipmentDate = $("#requestedShipmentDate_" + orderId).val();
                         
                         // Call API to create shipment
                         var shipmentData = {
                             orderId: orderId,
                             orderItemIds: selectedItems.join(','),
                             quantities: JSON.stringify(shipQtyMap),
-                            targetDeliveryDate: targetDate
+                            requestedShipmentDate: requestedShipmentDate
                         };
                         addAntiForgeryToken(shipmentData);
                         

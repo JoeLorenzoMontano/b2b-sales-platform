@@ -20,64 +20,97 @@
         </table>
     </div>
     <script asp-location="Footer" asp-order="300">
-        // Universal warehouse change handler that works with both attribute and non-attribute products
+        // Dual-endpoint warehouse change handler - calls both warehouse and attribute endpoints for maximum compatibility
         function warehouse_change_handler() {
-            // Always use the form-based approach to ensure all attributes are included if present
+            console.log('warehouse_change_handler called for product @Model.Id');
             var form = document.getElementById('@($"product-details-form-{Model.Id}")');
+            if (!form) {
+                console.log('ERROR: Could not find form with id: product-details-form-@Model.Id');
+                return;
+            }
             var data = new FormData(form);
             
             // Ensure warehouse ID is included
             var warehouseId = document.getElementById('WarehouseId').value;
+            console.log('Selected warehouse ID:', warehouseId);
             if (data.has('WarehouseId')) {
                 data.delete('WarehouseId');
             }
             data.append('WarehouseId', warehouseId);
             
-            // Send the attribute change request which handles both attributes and warehouse changes
+            // First call: Dedicated warehouse change endpoint for inventory-specific updates
+            console.log('Making warehouse endpoint call...');
             axios({
-                url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
+                url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product", new { productId = Model.Id }))',
                 data: data,
                 method: 'post',
                 params: { product: '@Model.Id' },
-                }).then(function (response) {
-                    // Update stock availability from the response
-                    if (response.data.stockAvailability) {
+                }).then(function (warehouseResponse) {
+                    console.log('Warehouse endpoint response:', warehouseResponse.data);
+                    // Update stock availability from warehouse-specific response
+                    if (warehouseResponse.data.stockAvailability) {
                         if (document.getElementById('stock-availability-value-@Model.Id')) {
-                            document.getElementById('stock-availability-value-@Model.Id').innerText = response.data.stockAvailability;
+                            document.getElementById('stock-availability-value-@Model.Id').innerText = warehouseResponse.data.stockAvailability;
                         }
                     }
                     
-                    // Also update other fields that might depend on warehouse + attributes
-                    if (response.data.price) {
+                    // Second call: Comprehensive attribute change endpoint for price/UI updates
+                    console.log('Making attribute endpoint call...');
+                    return axios({
+                        url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
+                        data: data,
+                        method: 'post',
+                        params: { product: '@Model.Id' },
+                    });
+                }).then(function (attributeResponse) {
+                    console.log('Attribute endpoint response:', attributeResponse.data);
+                    // Update comprehensive data from attribute response (price, out-of-stock, etc.)
+                    if (attributeResponse.data.stockAvailability) {
+                        if (document.getElementById('stock-availability-value-@Model.Id')) {
+                            document.getElementById('stock-availability-value-@Model.Id').innerText = attributeResponse.data.stockAvailability;
+                        }
+                    }
+                    
+                    if (attributeResponse.data.price) {
                         if (document.querySelector('.price-value-@Model.Id .actual-price'))
-                            document.querySelector('.price-value-@Model.Id .actual-price').innerText = response.data.price;
+                            document.querySelector('.price-value-@Model.Id .actual-price').innerText = attributeResponse.data.price;
                         else
-                            document.querySelector('.price-value-@Model.Id').innerText = response.data.price;
+                            document.querySelector('.price-value-@Model.Id').innerText = attributeResponse.data.price;
                     }
                     
                     // Handle out of stock subscription
-                    if (response.data.outOfStockSubscription) {
+                    if (attributeResponse.data.outOfStockSubscription) {
                         var element = document.querySelector('#out-of-stock-subscribe-@Model.Id');
                         if (element)
                             element.style.display = "block";
                     }
-                    if (response.data.outOfStockSubscription == false) {
+                    if (attributeResponse.data.outOfStockSubscription == false) {
                         var element = document.querySelector('#out-of-stock-subscribe-@Model.Id');
                         if (element) {
                             element.style.display = "none";
                         }
                     }
+                }).catch(function (error) {
+                    console.log('Warehouse change error:', error);
                 });
-            }
         }
         
         document.addEventListener("DOMContentLoaded", function () {
-            document.getElementById('WarehouseId').addEventListener('change', function () {
-                warehouse_change_handler();
-            });
+            console.log('Warehouse script loaded for product @Model.Id');
+            var warehouseSelect = document.getElementById('WarehouseId');
+            if (warehouseSelect) {
+                console.log('Found warehouse select element');
+                warehouseSelect.addEventListener('change', function () {
+                    console.log('Warehouse changed to:', this.value);
+                    warehouse_change_handler();
+                });
+            } else {
+                console.log('ERROR: Could not find WarehouseId element');
+            }
             
             // Initial load - wait a moment to ensure all attributes are initialized
             setTimeout(function() {
+                console.log('Initial warehouse change call');
                 warehouse_change_handler();
             }, 100);
         });

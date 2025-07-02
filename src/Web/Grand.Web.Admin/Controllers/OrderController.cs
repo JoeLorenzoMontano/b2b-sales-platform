@@ -51,6 +51,14 @@ public class OrderController(
                && contextAccessor.WorkContext.CurrentCustomer.SeId != order.SeId;
     }
 
+    protected virtual string GetCustomerDisplayName(Order order)
+    {
+        var customerName = $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}".Trim();
+        if (string.IsNullOrEmpty(customerName))
+            customerName = order.BillingAddress?.Email ?? "Guest";
+        return customerName;
+    }
+
     #endregion
 
     #region Fields
@@ -300,7 +308,7 @@ public class OrderController(
                             PaymentStatus = order.PaymentStatusId.ToString(),
                             ShippingStatus = order.ShippingStatusId.ToString(),
                             CustomerEmail = order.BillingAddress?.Email,
-                            CustomerFullName = $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}",
+                            CustomerFullName = GetCustomerDisplayName(order),
                             CustomerId = order.CustomerId,
                             OrderTotal = order.OrderTotal.ToString("C"),
                             CreatedOn = order.CreatedOnUtc,
@@ -412,7 +420,7 @@ public class OrderController(
                             PaymentStatus = order.PaymentStatusId.ToString(),
                             ShippingStatus = order.ShippingStatusId.ToString(),
                             CustomerEmail = order.BillingAddress?.Email,
-                            CustomerFullName = $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}",
+                            CustomerFullName = GetCustomerDisplayName(order),
                             CustomerId = order.CustomerId,
                             OrderTotal = order.OrderTotal.ToString("C"),
                             CreatedOn = order.CreatedOnUtc,

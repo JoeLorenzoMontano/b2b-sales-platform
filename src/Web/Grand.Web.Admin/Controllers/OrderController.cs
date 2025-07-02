@@ -228,10 +228,10 @@ public class OrderController(
             {
                 try
                 {
-                    // Check if any item has OpenQty > 0
+                    // Check if any item has OpenQty > 0 AND order is verified
                     bool hasUnfulfilledItems = order.OrderItems.Any(item => item.OpenQty > 0);
                     
-                    if (hasUnfulfilledItems)
+                    if (hasUnfulfilledItems && order.IsVerifiedOrder)
                     {
                         // Get the model for this order
                         var orderModel = new OrderModel
@@ -309,6 +309,102 @@ public class OrderController(
         {
             // Log the error to help with debugging
             System.Diagnostics.Debug.WriteLine($"Error in FulfillmentOrderList: {ex.Message}");
+            
+            // Return an empty result instead of an error
+            return Json(new DataSourceResult
+            {
+                Data = new List<OrderModel>(),
+                Total = 0
+            });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> IncomingOrdersList(DataSourceRequest command, OrderListModel model,
+        [FromServices] ICustomerService customerService)
+    {
+        try
+        {
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+                model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+            
+            // Get orders that are not verified yet
+            var orders = await orderService.SearchOrders(
+                storeId: model.StoreId,
+                pageIndex: 0,
+                pageSize: 50, // Show more incoming orders since they need verification
+                createdFromUtc: DateTime.UtcNow.AddDays(-7) // Get orders from the last 7 days
+            );
+            
+            var incomingOrders = new List<OrderModel>();
+            
+            foreach (var order in orders)
+            {
+                try
+                {
+                    // Only include orders that are not verified yet
+                    if (!order.IsVerifiedOrder)
+                    {
+                        var orderModel = new OrderModel
+                        {
+                            Id = order.Id,
+                            OrderNumber = order.OrderNumber,
+                            OrderStatusId = order.OrderStatusId,
+                            OrderStatus = ((OrderStatusSystem)order.OrderStatusId).ToString(),
+                            PaymentStatus = order.PaymentStatusId.ToString(),
+                            ShippingStatus = order.ShippingStatusId.ToString(),
+                            CustomerEmail = order.BillingAddress?.Email,
+                            CustomerFullName = $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}",
+                            CustomerId = order.CustomerId,
+                            OrderTotal = order.OrderTotal.ToString("C"),
+                            CreatedOn = order.CreatedOnUtc,
+                            CustomerCompany = order.BillingAddress?.Company
+                        };
+                        
+                        // Add sales employee information if available
+                        if (!string.IsNullOrEmpty(order.SeId))
+                        {
+                            var salesEmployee = await customerService.GetCustomerById(order.SeId);
+                            if (salesEmployee != null)
+                            {
+                                orderModel.SalesEmployeeId = salesEmployee.Id;
+                                orderModel.SalesEmployeeName = salesEmployee.Email;
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+                        {
+                            var impersonatingCustomer = await customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+                            if (impersonatingCustomer != null)
+                            {
+                                orderModel.SalesEmployeeId = impersonatingCustomer.Id;
+                                orderModel.SalesEmployeeName = impersonatingCustomer.Email;
+                            }
+                        }
+                        
+                        incomingOrders.Add(orderModel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but continue to next order
+                    System.Diagnostics.Debug.WriteLine($"Error processing order {order.Id}: {ex.Message}");
+                    continue;
+                }
+            }
+            
+            var gridModel = new DataSourceResult
+            {
+                Data = incomingOrders,
+                Total = incomingOrders.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            // Log the error to help with debugging
+            System.Diagnostics.Debug.WriteLine($"Error in IncomingOrdersList: {ex.Message}");
             
             // Return an empty result instead of an error
             return Json(new DataSourceResult
@@ -485,6 +581,48 @@ public class OrderController(
             //error
             Error(exc, false);
             return RedirectToAction("Edit", "Order", new { id });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> VerifyOrder(string orderId)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new { success = false, message = "Order not found" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            {
+                if (await CheckSalesManager(order))
+                    return Json(new { success = false, message = "Access denied" });
+            }
+
+            if (order.IsVerifiedOrder)
+                return Json(new { success = false, message = "Order is already verified" });
+
+            // Update the order verification status
+            order.IsVerifiedOrder = true;
+            order.UpdatedOnUtc = DateTime.UtcNow;
+            await orderService.UpdateOrder(order);
+
+            // Add order note
+            var orderNote = new OrderNote
+            {
+                Note = "Order verified by employee and moved to fulfillment queue",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            };
+            await orderService.InsertOrderNote(orderNote);
+
+            return Json(new { success = true, message = "Order verified successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error verifying order: {ex.Message}" });
         }
     }
 

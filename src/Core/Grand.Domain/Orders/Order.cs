@@ -264,6 +264,11 @@ public class Order : BaseEntity
     public bool IsRecurring { get; set; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether the order has been verified by an employee
+    /// </summary>
+    public bool IsVerifiedOrder { get; set; }
+
+    /// <summary>
     ///     Gets or sets the cycle length
     /// </summary>
     public int RecurringCycleLength { get; set; }

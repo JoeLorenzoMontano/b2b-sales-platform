@@ -1,0 +1,169 @@
+@inject AdminAreaSettings adminAreaSettings
+
+<div id="incoming-orders-grid"></div>
+
+<style>
+    .incoming-orders-grid .k-grid-header .k-header {
+        background-color: #ff9800; /* Orange theme for incoming orders */
+        color: white !important;
+    }
+    .incoming-orders-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .verify-order-btn {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .verify-order-btn:hover {
+        background-color: #45a049;
+    }
+    .verify-order-btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    $(document).ready(function () {
+        $("#incoming-orders-grid").kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Html.Raw(Url.Action("IncomingOrdersList", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            dataType: "json",
+                            data: additionalData
+                        }
+                    },
+                    schema: {
+                        data: "Data",
+                        total: "Total",
+                        errors: "Errors"
+                    },
+                    error: function(e) {
+                        display_kendoui_grid_error(e);
+                        // Cancel the changes
+                        this.cancelChanges();
+                    },
+                    pageSize: 10,
+                    serverPaging: false,
+                    serverFiltering: false,
+                    serverSorting: false
+                },
+                pageable: {
+                    refresh: true,
+                    pageSizes: [10,20,50]
+                },
+                scrollable: false,
+                columns: [
+                    {
+                        field: "OrderNumber",
+                        title: "@Loc["Admin.Orders.Fields.Id"]",
+                        width: 100,
+                        template: '<a class="k-link" href="Admin/Order/Edit/#=Id#">#=OrderNumber#</a>',
+                    },
+                    {
+                        field: "CustomerEmail",
+                        title: "@Loc["Admin.Orders.Fields.Customer"]",
+                        width: 200,
+                        template: function(dataItem) {
+                            var customerDisplay = dataItem.CustomerFullName;
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                            }
+                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
+                        }                        
+                    },
+                    {
+                        field: "CustomerGroups",
+                        title: "@Loc["Admin.Orders.Fields.CustomerGroups"]",
+                        width: 150
+                    },
+                    {
+                        field: "OrderStatus",
+                        title: "@Loc["Admin.Orders.Fields.OrderStatus"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "OrderTotal",
+                        title: "@Loc["Admin.Orders.Fields.OrderTotal"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "PaymentStatus",
+                        title: "@Loc["Admin.Orders.Fields.PaymentStatus"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "CreatedOn",
+                        title: "@Loc["Admin.Orders.Fields.CreatedOn"]",
+                        width: 120,
+                        type: "date",
+                        format: "{0:G}",
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        title: "Actions",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                        template: function(dataItem) {
+                            return '<button class="verify-order-btn" onclick="verifyOrder(\'' + dataItem.Id + '\')">Verify Order</button>';
+                        }
+                    }
+                ]
+            });
+
+        function additionalData() {
+            var data = {
+                // Filter for unverified orders only
+            };
+            addAntiForgeryToken(data);
+            return data;
+        }
+    });
+
+    function verifyOrder(orderId) {
+        if (confirm('Are you sure you want to verify this order? Once verified, it will be moved to the Fulfillment Queue.')) {
+            $.ajax({
+                url: '@Html.Raw(Url.Action("VerifyOrder", "Order", new { area = Constants.AreaAdmin }))',
+                type: 'POST',
+                data: {
+                    orderId: orderId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(result) {
+                    if (result.success) {
+                        // Refresh the grid to remove the verified order
+                        $('#incoming-orders-grid').data('kendoGrid').dataSource.read();
+                        
+                        // Show success message
+                        displaySuccessNotification('Order verified successfully');
+                        
+                        // Optionally refresh the fulfillment queue if it exists on the same page
+                        if ($('#fulfillment-queue-grid').length > 0) {
+                            $('#fulfillment-queue-grid').data('kendoGrid').dataSource.read();
+                        }
+                    } else {
+                        displayErrorNotification(result.message || 'Failed to verify order');
+                    }
+                },
+                error: function() {
+                    displayErrorNotification('Error occurred while verifying order');
+                }
+            });
+        }
+    }
+</script>

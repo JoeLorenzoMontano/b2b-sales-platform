@@ -120,7 +120,7 @@
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
                         template: function(dataItem) {
-                            return '<button class="verify-order-btn" onclick="verifyOrder(\'' + dataItem.Id + '\')">Verify Order</button>';
+                            return '<button class="verify-order-btn" id="verify-btn-' + dataItem.Id + '" onclick="verifyOrder(\'' + dataItem.Id + '\')">Verify Order</button>';
                         }
                     }
                 ]
@@ -137,6 +137,10 @@
 
     function verifyOrder(orderId) {
         if (confirm('Are you sure you want to verify this order? Once verified, it will be moved to the Fulfillment Queue.')) {
+            // Disable the button and show loading state
+            var button = $('#verify-btn-' + orderId);
+            button.prop('disabled', true).text('Verifying...');
+            
             $.ajax({
                 url: '@Html.Raw(Url.Action("VerifyOrder", "Order", new { area = Constants.AreaAdmin }))',
                 type: 'POST',
@@ -146,22 +150,52 @@
                 },
                 success: function(result) {
                     if (result.success) {
-                        // Refresh the grid to remove the verified order
-                        $('#incoming-orders-grid').data('kendoGrid').dataSource.read();
+                        // Show success message first
+                        displaySuccessNotification('Order verified successfully and moved to Fulfillment Queue');
                         
-                        // Show success message
-                        displaySuccessNotification('Order verified successfully');
-                        
-                        // Optionally refresh the fulfillment queue if it exists on the same page
-                        if ($('#fulfillment-queue-grid').length > 0) {
-                            $('#fulfillment-queue-grid').data('kendoGrid').dataSource.read();
+                        // Refresh the incoming orders grid to remove the verified order
+                        var incomingGrid = $('#incoming-orders-grid').data('kendoGrid');
+                        if (incomingGrid) {
+                            incomingGrid.dataSource.read();
                         }
+                        
+                        // Force refresh the fulfillment queue grid with a slight delay to ensure order is processed
+                        setTimeout(function() {
+                            var fulfillmentGrid = $('#fulfillment-queue-grid').data('kendoGrid');
+                            if (fulfillmentGrid) {
+                                fulfillmentGrid.dataSource.read();
+                                console.log('Fulfillment Queue grid refreshed after order verification');
+                            } else {
+                                // Try alternative selector if the first one doesn't work
+                                var altGrid = $('[id*="fulfillment"]').data('kendoGrid');
+                                if (altGrid) {
+                                    altGrid.dataSource.read();
+                                    console.log('Fulfillment Queue grid refreshed using alternative selector');
+                                }
+                            }
+                        }, 500); // 500ms delay to ensure server processing is complete
+                        
+                        // Also try to refresh any other order-related grids on the page
+                        $('[id*="order"][id*="grid"]').each(function() {
+                            var grid = $(this).data('kendoGrid');
+                            if (grid && this.id !== 'incoming-orders-grid') {
+                                grid.dataSource.read();
+                            }
+                        });
+                        
                     } else {
                         displayErrorNotification(result.message || 'Failed to verify order');
                     }
                 },
                 error: function() {
                     displayErrorNotification('Error occurred while verifying order');
+                    // Re-enable the button on error
+                    var button = $('#verify-btn-' + orderId);
+                    button.prop('disabled', false).text('Verify Order');
+                },
+                complete: function() {
+                    // This runs whether success or error
+                    console.log('Order verification request completed for order: ' + orderId);
                 }
             });
         }

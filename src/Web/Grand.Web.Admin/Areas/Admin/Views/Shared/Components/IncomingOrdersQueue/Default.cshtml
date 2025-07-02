@@ -26,6 +26,16 @@
         background-color: #cccccc;
         cursor: not-allowed;
     }
+    .highlight-success {
+        background-color: #d4edda !important;
+        border: 2px solid #28a745 !important;
+        transition: all 0.3s ease;
+    }
+    .highlight-error {
+        background-color: #f8d7da !important;
+        border: 2px solid #dc3545 !important;
+        transition: all 0.3s ease;
+    }
 </style>
 
 <script>
@@ -150,8 +160,13 @@
                 },
                 success: function(result) {
                     if (result.success) {
-                        // Show success message first
-                        displaySuccessNotification('Order verified successfully and moved to Fulfillment Queue');
+                        // Add visual success feedback to the row
+                        var button = $('#verify-btn-' + orderId);
+                        var row = button.closest('tr');
+                        row.addClass('highlight-success');
+                        
+                        // Show success message using alert (standard GrandNode2 pattern)
+                        alert('Order verified successfully and moved to Fulfillment Queue');
                         
                         // Refresh the incoming orders grid to remove the verified order
                         var incomingGrid = $('#incoming-orders-grid').data('kendoGrid');
@@ -184,13 +199,31 @@
                         });
                         
                     } else {
-                        displayErrorNotification(result.message || 'Failed to verify order');
+                        // Add visual error feedback
+                        var button = $('#verify-btn-' + orderId);
+                        var row = button.closest('tr');
+                        row.addClass('highlight-error');
+                        setTimeout(function() {
+                            row.removeClass('highlight-error');
+                        }, 3000);
+                        
+                        // Re-enable the button on failure
+                        button.prop('disabled', false).text('Verify Order');
+                        
+                        alert(result.message || 'Failed to verify order');
                     }
                 },
                 error: function() {
-                    displayErrorNotification('Error occurred while verifying order');
-                    // Re-enable the button on error
+                    // Add visual error feedback
                     var button = $('#verify-btn-' + orderId);
+                    var row = button.closest('tr');
+                    row.addClass('highlight-error');
+                    setTimeout(function() {
+                        row.removeClass('highlight-error');
+                    }, 3000);
+                    
+                    alert('Error occurred while verifying order');
+                    // Re-enable the button on error
                     button.prop('disabled', false).text('Verify Order');
                 },
                 complete: function() {

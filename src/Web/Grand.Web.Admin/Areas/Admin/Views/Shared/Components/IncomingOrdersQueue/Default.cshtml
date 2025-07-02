@@ -10,6 +10,13 @@
     .incoming-orders-grid .k-grid-header .k-header a.k-link {
         color: white !important;
     }
+    .incoming-order-details-grid .k-grid-header .k-header {
+        background-color: #ff9800; /* Orange theme for incoming orders detail */
+        color: white !important;
+    }
+    .incoming-order-details-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
     .verify-order-btn {
         background-color: #4caf50;
         color: white;
@@ -70,6 +77,7 @@
                     pageSizes: [10,20,50]
                 },
                 scrollable: false,
+                detailInit: orderItemDetailInit,
                 columns: [
                     {
                         field: "OrderNumber",
@@ -95,22 +103,8 @@
                         width: 150
                     },
                     {
-                        field: "OrderStatus",
-                        title: "@Loc["Admin.Orders.Fields.OrderStatus"]",
-                        width: 120,
-                        headerAttributes: { style: "text-align:center" },
-                        attributes: { style: "text-align:center" },
-                    },
-                    {
                         field: "OrderTotal",
                         title: "@Loc["Admin.Orders.Fields.OrderTotal"]",
-                        width: 120,
-                        headerAttributes: { style: "text-align:center" },
-                        attributes: { style: "text-align:center" },
-                    },
-                    {
-                        field: "PaymentStatus",
-                        title: "@Loc["Admin.Orders.Fields.PaymentStatus"]",
                         width: 120,
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
@@ -232,5 +226,80 @@
                 }
             });
         }
+    }
+
+    // Function to initialize the detail row with order items for informational purposes
+    function orderItemDetailInit(e) {
+        var orderId = e.data.Id;
+        
+        // Create a detail grid with order items (informational only)
+        $("<div class='incoming-order-details-grid'/>").appendTo(e.detailCell).kendoGrid({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "@Html.Raw(Url.Action("GetOrderItemsForIncoming", "Order", new { area = Constants.AreaAdmin }))?orderId=" + orderId,
+                        type: "POST",
+                        dataType: "json",
+                        data: function() {
+                            var data = {};
+                            addAntiForgeryToken(data);
+                            return data;
+                        }
+                    }
+                },
+                schema: {
+                    data: "Data",
+                    total: "Total",
+                    errors: "Errors"
+                },
+                error: function(e) {
+                    display_kendoui_grid_error(e);
+                    this.cancelChanges();
+                },
+                serverPaging: false,
+                serverFiltering: false,
+                serverSorting: false
+            },
+            scrollable: false,
+            sortable: true,
+            pageable: false,
+            columns: [
+                {
+                    field: "ProductName",
+                    title: "@Loc["Admin.Orders.Products.ProductName"]",
+                    template: '<div><a href="@Url.Action("Edit", "Product", new { area = Constants.AreaAdmin })/#=ProductId#">#:ProductName#</a>' +
+                        '# if(AttributeInfo && AttributeInfo.length > 0) {# <br /><small>#=AttributeInfo#</small> #} #</div>',
+                    width: 350,
+                    headerAttributes: { style: "background-color: #ff9800; color: white;" }
+                },
+                {
+                    field: "Sku",
+                    title: "@Loc["Admin.Orders.Products.Sku"]",
+                    width: 120,
+                    headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" }
+                },
+                {
+                    field: "Quantity",
+                    title: "@Loc["Admin.Orders.Products.Quantity"]",
+                    width: 100,
+                    headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
+                    attributes: { style: "text-align:center" }
+                },
+                {
+                    field: "UnitPriceInclTax",
+                    title: "@Loc["Admin.Orders.Products.UnitPriceInclTax"]",
+                    width: 120,
+                    headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
+                    attributes: { style: "text-align:center" }
+                },
+                {
+                    field: "SubTotal",
+                    title: "@Loc["Admin.Orders.Products.Total"]",
+                    width: 120,
+                    headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
+                    attributes: { style: "text-align:center" }
+                }
+            ]
+        });
     }
 </script>

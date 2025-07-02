@@ -117,6 +117,63 @@ public class OrderController(
             });
         }
     }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetOrderItemsForIncoming(string orderId, [FromServices] IProductService productService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new DataSourceResult { Data = new List<object>(), Total = 0 });
+                
+            // Restrict access to own orders for sales staff
+            if (await CheckSalesManager(order))
+                return Json(new { success = false, error = "Access denied" });
+                
+            // Include all order items for informational purposes (no filtering by OpenQty)
+            var items = new List<object>();
+            
+            foreach (var item in order.OrderItems)
+            {
+                // Get the product name from product service
+                var product = await productService.GetProductById(item.ProductId);
+                var productName = product != null ? product.Name : "Product #" + item.ProductId;
+                
+                // Calculate subtotal for this line item
+                var subTotal = (item.Quantity * item.UnitPriceInclTax).ToString("C");
+                
+                // Create a simple anonymous object with only the necessary properties for display
+                items.Add(new {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    ProductName = productName,
+                    Sku = item.Sku,
+                    Quantity = item.Quantity,
+                    UnitPriceInclTax = item.UnitPriceInclTax.ToString("C"),
+                    SubTotal = subTotal,
+                    AttributeInfo = item.AttributeDescription
+                });
+            }
+                
+            var gridModel = new DataSourceResult
+            {
+                Data = items,
+                Total = items.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            return Json(new DataSourceResult { 
+                Data = new List<object>(), 
+                Total = 0, 
+                Errors = $"Error loading order items: {ex.Message}" 
+            });
+        }
+    }
     
     #endregion
 

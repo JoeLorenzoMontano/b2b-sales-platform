@@ -870,7 +870,7 @@ public class CustomerController : BaseAdminController
             // Create a new order with minimal data, copying the address information
             var storeId = await _groupService.IsStaff(_contextAccessor.WorkContext.CurrentCustomer)
                 ? _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId
-                : "";
+                : _contextAccessor.StoreContext.CurrentStore.Id;
             
             var order = new Order
             {

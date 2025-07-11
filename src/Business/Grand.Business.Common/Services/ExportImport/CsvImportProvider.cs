@@ -58,7 +58,7 @@ namespace Grand.Business.Common.Services.ExportImport
                         continue;
 
                     //var values = ParseCsvLine(line);
-                    var values = headerLine.Split(',');
+                    var values = line.Split(',');
                     
                     // Skip if not enough values
                     if (values.Length < 1)

@@ -169,19 +169,19 @@
             $.ajax({
                 url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
                 type: "POST",
-                data: {
+                data: addAntiForgeryToken({
                     customerId: customerId
-                },
+                }),
                 dataType: "json",
                 success: function(addressData) {
                     if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
                         showAddressSelectionModal(customerId, addressData.addresses);
                     } else {
-                        $.notify("@Loc["Admin.Customers.Customers.Orders.StartOrder.NoAddresses"]", "error");
+                        displayGrandeNotification("Customer must have saved addresses before creating an order", "error", 5000);
                     }
                 },
-                error: function() {
-                    $.notify("@Loc["Admin.Customers.Customers.Orders.StartOrder.Error"]", "error");
+                error: function(xhr, status, error) {
+                    displayGrandeNotification("Error loading customer addresses", "error", 5000);
                 }
             });
         }
@@ -253,7 +253,7 @@
             var shippingAddressId = $('#shippingAddressSelect').val();
             
             if (!billingAddressId || !shippingAddressId) {
-                $.notify("@Loc["Admin.Customers.Customers.Orders.StartOrder.SelectBothAddresses"]", "error");
+                displayGrandeNotification("Please select both billing and shipping addresses", "error", 5000);
                 return;
             }
             
@@ -262,25 +262,25 @@
             $.ajax({
                 url: "@Html.Raw(Url.Action("StartOrder", "Customer", new { area = Constants.AreaAdmin }))",
                 type: "POST",
-                data: {
+                data: addAntiForgeryToken({
                     customerId: customerId,
                     billingAddressId: billingAddressId,
                     shippingAddressId: shippingAddressId
-                },
+                }),
                 dataType: "json",
                 success: function(data) {
                     if (data.success) {
                         $("#order-grid").data("kendoGrid").dataSource.read();
-                        $.notify("@Loc["Admin.Customers.Customers.Orders.StartOrder.Success"]", "success");
+                        displayGrandeNotification("Order created successfully", "success", 5000);
                         if (data.orderId) {
                             window.open("@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/" + data.orderId, '_blank');
                         }
                     } else {
-                        $.notify(data.message || "@Loc["Admin.Customers.Customers.Orders.StartOrder.Error"]", "error");
+                        displayGrandeNotification(data.message || "Error creating order", "error", 5000);
                     }
                 },
-                error: function() {
-                    $.notify("@Loc["Admin.Customers.Customers.Orders.StartOrder.Error"]", "error");
+                error: function(xhr, status, error) {
+                    displayGrandeNotification("Error creating order", "error", 5000);
                 }
             });
         }

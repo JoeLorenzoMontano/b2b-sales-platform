@@ -12,6 +12,9 @@ using Grand.Business.Core.Utilities.Customers;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
+using Grand.Domain.Orders;
+using Grand.Domain.Payments;
+using Grand.Domain.Shipping;
 using Grand.Domain.Tax;
 using Grand.Infrastructure;
 using Grand.SharedKernel;
@@ -809,6 +812,139 @@ public class CustomerController : BaseAdminController
         };
 
         return Json(gridModel);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetCustomerAddresses(string customerId)
+    {
+        try
+        {
+            var customer = await _customerService.GetCustomerById(customerId);
+            if (customer == null)
+                return Json(new { success = false, message = "Customer not found" });
+
+            var addresses = customer.Addresses.Select(a => new
+            {
+                id = a.Id,
+                firstName = a.FirstName,
+                lastName = a.LastName,
+                company = a.Company,
+                address1 = a.Address1,
+                address2 = a.Address2,
+                city = a.City,
+                zipPostalCode = a.ZipPostalCode
+            }).ToList();
+
+            return Json(new { success = true, addresses = addresses });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> StartOrder(string customerId, string billingAddressId, string shippingAddressId, [FromServices] IOrderService orderService)
+    {
+        try
+        {
+            if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
+                return Json(new { success = false, message = "Access denied" });
+
+            var customer = await _customerService.GetCustomerById(customerId);
+            if (customer == null)
+                return Json(new { success = false, message = "Customer not found" });
+
+            // Find the selected addresses
+            var billingAddress = customer.Addresses.FirstOrDefault(a => a.Id == billingAddressId);
+            var shippingAddress = customer.Addresses.FirstOrDefault(a => a.Id == shippingAddressId);
+
+            if (billingAddress == null)
+                return Json(new { success = false, message = "Selected billing address not found" });
+
+            if (shippingAddress == null)
+                return Json(new { success = false, message = "Selected shipping address not found" });
+
+            // Create a new order with minimal data, copying the address information
+            var storeId = await _groupService.IsStaff(_contextAccessor.WorkContext.CurrentCustomer)
+                ? _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId
+                : "";
+            
+            var order = new Order
+            {
+                OrderGuid = Guid.NewGuid(),
+                StoreId = storeId,
+                CustomerId = customerId,
+                CustomerEmail = customer.Email,
+                CustomerIp = _contextAccessor.WorkContext.CurrentCustomer.LastIpAddress ?? "",
+                OrderStatusId = 10, // Pending
+                PaymentStatusId = PaymentStatus.Pending,
+                ShippingStatusId = ShippingStatus.Pending,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                OrderTotal = 0,
+                OrderSubtotalInclTax = 0,
+                OrderSubtotalExclTax = 0,
+                OrderSubTotalDiscountInclTax = 0,
+                OrderSubTotalDiscountExclTax = 0,
+                OrderShippingInclTax = 0,
+                OrderShippingExclTax = 0,
+                PaymentMethodAdditionalFeeInclTax = 0,
+                PaymentMethodAdditionalFeeExclTax = 0,
+                OrderTax = 0,
+                OrderDiscount = 0,
+                CustomerCurrencyCode = _contextAccessor.WorkContext.WorkingCurrency.CurrencyCode,
+                CurrencyRate = _contextAccessor.WorkContext.WorkingCurrency.Rate,
+                CustomerLanguageId = _contextAccessor.WorkContext.WorkingLanguage.Id,
+                ImpersonatedByEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.Id,
+                BillingAddress = new Address
+                {
+                    FirstName = billingAddress.FirstName,
+                    LastName = billingAddress.LastName,
+                    Email = billingAddress.Email,
+                    Company = billingAddress.Company,
+                    CountryId = billingAddress.CountryId,
+                    StateProvinceId = billingAddress.StateProvinceId,
+                    City = billingAddress.City,
+                    Address1 = billingAddress.Address1,
+                    Address2 = billingAddress.Address2,
+                    ZipPostalCode = billingAddress.ZipPostalCode,
+                    PhoneNumber = billingAddress.PhoneNumber,
+                    FaxNumber = billingAddress.FaxNumber,
+                    VatNumber = billingAddress.VatNumber,
+                    Note = billingAddress.Note,
+                    Attributes = billingAddress.Attributes
+                },
+                ShippingAddress = new Address
+                {
+                    FirstName = shippingAddress.FirstName,
+                    LastName = shippingAddress.LastName,
+                    Email = shippingAddress.Email,
+                    Company = shippingAddress.Company,
+                    CountryId = shippingAddress.CountryId,
+                    StateProvinceId = shippingAddress.StateProvinceId,
+                    City = shippingAddress.City,
+                    Address1 = shippingAddress.Address1,
+                    Address2 = shippingAddress.Address2,
+                    ZipPostalCode = shippingAddress.ZipPostalCode,
+                    PhoneNumber = shippingAddress.PhoneNumber,
+                    FaxNumber = shippingAddress.FaxNumber,
+                    VatNumber = shippingAddress.VatNumber,
+                    Note = shippingAddress.Note,
+                    Attributes = shippingAddress.Attributes
+                }
+            };
+
+            await orderService.InsertOrder(order);
+
+            return Json(new { success = true, orderId = order.Id });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
     }
 
     #endregion

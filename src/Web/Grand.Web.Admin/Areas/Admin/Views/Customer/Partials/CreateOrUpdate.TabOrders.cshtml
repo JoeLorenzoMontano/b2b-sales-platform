@@ -164,6 +164,36 @@
             });
         }
 
+        function showNotification(message, type, timeout) {
+            timeout = timeout || 5000;
+            
+            // Try displayGrandeNotification first (if available)
+            if (typeof displayGrandeNotification === 'function') {
+                displayGrandeNotification(message, type, timeout);
+                return;
+            }
+            
+            // Fallback to alert for errors and warnings
+            if (type === 'error' || type === 'warning') {
+                alert(message);
+                return;
+            }
+            
+            // For success messages, create a simple toast
+            if (type === 'success') {
+                var toast = $('<div class="alert alert-success" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;">' +
+                             '<button type="button" class="close" onclick="$(this).parent().fadeOut(function(){ $(this).remove(); })">&times;</button>' +
+                             '<strong>Success!</strong> ' + message + '</div>');
+                $('body').append(toast);
+                
+                setTimeout(function() {
+                    toast.fadeOut(function() {
+                        toast.remove();
+                    });
+                }, timeout);
+            }
+        }
+
         function startOrder(customerId) {
             // First fetch customer addresses
             $.ajax({
@@ -177,11 +207,11 @@
                     if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
                         showAddressSelectionModal(customerId, addressData.addresses);
                     } else {
-                        displayGrandeNotification("Customer must have saved addresses before creating an order", "error", 5000);
+                        showNotification("Customer must have saved addresses before creating an order", "error", 5000);
                     }
                 },
                 error: function(xhr, status, error) {
-                    displayGrandeNotification("Error loading customer addresses", "error", 5000);
+                    showNotification("Error loading customer addresses", "error", 5000);
                 }
             });
         }
@@ -253,7 +283,7 @@
             var shippingAddressId = $('#shippingAddressSelect').val();
             
             if (!billingAddressId || !shippingAddressId) {
-                displayGrandeNotification("Please select both billing and shipping addresses", "error", 5000);
+                showNotification("Please select both billing and shipping addresses", "error", 5000);
                 return;
             }
             
@@ -271,16 +301,16 @@
                 success: function(data) {
                     if (data.success) {
                         $("#order-grid").data("kendoGrid").dataSource.read();
-                        displayGrandeNotification("Order created successfully", "success", 5000);
+                        showNotification("Order created successfully", "success", 5000);
                         if (data.orderId) {
                             window.open("@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/" + data.orderId, '_blank');
                         }
                     } else {
-                        displayGrandeNotification(data.message || "Error creating order", "error", 5000);
+                        showNotification(data.message || "Error creating order", "error", 5000);
                     }
                 },
                 error: function(xhr, status, error) {
-                    displayGrandeNotification("Error creating order", "error", 5000);
+                    showNotification("Error creating order", "error", 5000);
                 }
             });
         }

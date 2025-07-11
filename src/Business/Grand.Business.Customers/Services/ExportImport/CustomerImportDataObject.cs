@@ -129,60 +129,8 @@ namespace Grand.Business.Customers.Services.ExportImport
 
         private async Task UpdateCustomerAddress(Customer customer, CustomerImportDto customerDto)
         {
-            // Get existing addresses
-            var address = customer.Addresses.FirstOrDefault();
-
-            if (address == null)
-            {
-                // No existing address, add a new one
-                await AddCustomerAddress(customer, customerDto);
-                return;
-            }
-
-            // Update existing address
-            if (!string.IsNullOrEmpty(customerDto.StreetAddress))
-                address.Address1 = customerDto.StreetAddress;
-            
-            if (!string.IsNullOrEmpty(customerDto.City))
-                address.City = customerDto.City;
-            
-            if (!string.IsNullOrEmpty(customerDto.Zip))
-                address.ZipPostalCode = customerDto.Zip;
-            
-            if (!string.IsNullOrEmpty(customerDto.State))
-            {
-                // Find state/province by abbreviation
-                var country = await _countryService.GetCountryByTwoLetterIsoCode("US");
-                if (country != null)
-                {
-                    address.CountryId = country.Id;
-                    
-                    // Try to match state/province
-                    var states = await _countryService.GetStateProvincesByCountryId(country.Id);
-                    var state = states.FirstOrDefault(s => 
-                        s.Abbreviation.Equals(customerDto.State, StringComparison.OrdinalIgnoreCase));
-                    
-                    if (state != null)
-                    {
-                        address.StateProvinceId = state.Id;
-                    }
-                }
-            }
-
-            // Update first/last name from customer fields if not in address
-            if (string.IsNullOrEmpty(address.FirstName) && !string.IsNullOrEmpty(customerDto.FirstName))
-                address.FirstName = customerDto.FirstName;
-            
-            if (string.IsNullOrEmpty(address.LastName) && !string.IsNullOrEmpty(customerDto.LastName))
-                address.LastName = customerDto.LastName;
-            
-            if (string.IsNullOrEmpty(address.Company) && !string.IsNullOrEmpty(customerDto.Company))
-                address.Company = customerDto.Company;
-            
-            if (string.IsNullOrEmpty(address.PhoneNumber) && !string.IsNullOrEmpty(customerDto.Phone))
-                address.PhoneNumber = customerDto.Phone;
-
-            await _customerService.UpdateAddress(address, customer.Id);
+            // Always add a new address for existing customers to preserve existing addresses
+            await AddCustomerAddress(customer, customerDto);
         }
 
         private async Task AddCustomerAddress(Customer customer, CustomerImportDto customerDto)

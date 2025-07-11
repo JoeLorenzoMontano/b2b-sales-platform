@@ -120,22 +120,39 @@ public class GetAddressModelHandler : IRequestHandler<GetAddressModel, AddressMo
         //countries and states
         if (_addressSettings.CountryEnabled && loadCountries != null)
         {
+            // Find USA country for default selection
+            var usaCountry = loadCountries().FirstOrDefault(c => c.TwoLetterIsoCode == "US");
+            var defaultCountryId = usaCountry?.Id ?? store.DefaultCountryId;
+            
+            // Set default country for new addresses (when address is null and no country is set)
+            if (address == null && string.IsNullOrEmpty(model.CountryId))
+            {
+                model.CountryId = defaultCountryId;
+            }
+            
             model.AvailableCountries.Add(new SelectListItem
                 { Text = _translationService.GetResource("Address.SelectCountry"), Value = "" });
             foreach (var c in loadCountries())
                 model.AvailableCountries.Add(new SelectListItem {
                     Text = c.GetTranslation(x => x.Name, language?.Id),
                     Value = c.Id,
-                    Selected = !string.IsNullOrEmpty(model.CountryId)
-                        ? c.Id == model.CountryId
-                        : c.Id == store.DefaultCountryId
+                    Selected = c.Id == model.CountryId
                 });
 
             if (_addressSettings.StateProvinceEnabled)
             {
                 var states = await _countryService
-                    .GetStateProvincesByCountryId(
-                        !string.IsNullOrEmpty(model.CountryId) ? model.CountryId : store.DefaultCountryId, language?.Id);
+                    .GetStateProvincesByCountryId(model.CountryId, language?.Id);
+
+                // Set default state to Oregon for new addresses in USA
+                if (address == null && string.IsNullOrEmpty(model.StateProvinceId) && model.CountryId == defaultCountryId)
+                {
+                    var oregonState = states.FirstOrDefault(s => s.Abbreviation == "OR");
+                    if (oregonState != null)
+                    {
+                        model.StateProvinceId = oregonState.Id;
+                    }
+                }
 
                 model.AvailableStates.Add(new SelectListItem
                     { Text = _translationService.GetResource("Address.SelectState"), Value = "" });

@@ -693,6 +693,8 @@ public class OrderController(
 
     #endregion
 
+    #endregion
+
     #region Edit, delete
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
@@ -1381,7 +1383,108 @@ public class OrderController(
         return View(result);
     }
 
-    #endregion
+    #region Bulk Product Addition
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    public async Task<IActionResult> BulkAddProductsToOrder(string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return RedirectToAction("List");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) 
+            return RedirectToAction("List");
+
+        var model = await orderViewModelService.PrepareBulkAddProductsToOrderModel(order);
+        return View(model);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> BulkProductSearch(DataSourceRequest command, BulkAddProductsToOrderModel model,
+        [FromServices] IProductService productService)
+    {
+        var categoryIds = new List<string>();
+        if (!string.IsNullOrEmpty(model.SearchCategoryId))
+            categoryIds.Add(model.SearchCategoryId);
+
+        var brandIds = new List<string>();
+        if (!string.IsNullOrEmpty(model.SearchBrandId))
+            brandIds.Add(model.SearchBrandId);
+
+        var collectionIds = new List<string>();
+        if (!string.IsNullOrEmpty(model.SearchCollectionId))
+            collectionIds.Add(model.SearchCollectionId);
+
+        var products = await productService.SearchProducts(
+            categoryIds: categoryIds,
+            brandIds: brandIds,
+            collectionIds: collectionIds,
+            productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+            keywords: model.SearchProductName,
+            pageIndex: command.Page - 1,
+            pageSize: command.PageSize,
+            showHidden: true);
+
+        var gridModel = new DataSourceResult {
+            Data = products.Select(x => new OrderModel.AddOrderProductModel.ProductModel {
+                Id = x.Id,
+                Name = x.Name,
+                Sku = x.Sku,
+                ProductType = x.ProductTypeId.ToString()
+            }),
+            Total = products.TotalCount
+        };
+
+        return Json(gridModel);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> GetProductConfigurationRows(string[] productIds, string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false });
+
+        var html = await orderViewModelService.GetProductConfigurationRowsHtml(productIds, orderId);
+        return Json(new { success = true, html });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> BulkAddProductsToOrder(BulkAddProductsToOrderModel model)
+    {
+        var order = await orderService.GetOrderById(model.OrderId);
+        if (order == null || await CheckSalesManager(order))
+            return RedirectToAction("List");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) 
+            return RedirectToAction("List");
+
+        var warnings = await orderViewModelService.ProcessBulkProductAddition(model);
+        if (!warnings.Any())
+            return RedirectToAction("Edit", "Order", new { id = model.OrderId });
+
+        // If there are warnings, reload the page with errors
+        var reloadedModel = await orderViewModelService.PrepareBulkAddProductsToOrderModel(order);
+        reloadedModel.SearchProductName = model.SearchProductName;
+        reloadedModel.SearchCategoryId = model.SearchCategoryId;
+        reloadedModel.SearchBrandId = model.SearchBrandId;
+        reloadedModel.SearchCollectionId = model.SearchCollectionId;
+        reloadedModel.SearchProductTypeId = model.SearchProductTypeId;
+        
+        foreach (var warning in warnings)
+            ModelState.AddModelError("", warning);
+            
+        return View(reloadedModel);
+    }
 
     #endregion
 
@@ -1918,6 +2021,8 @@ public class OrderController(
         
         return field;
     }
+    
+    #endregion
     
     #endregion
 }

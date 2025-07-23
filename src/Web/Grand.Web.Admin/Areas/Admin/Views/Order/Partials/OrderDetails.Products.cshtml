@@ -352,4 +352,5 @@
 }
 <div class="form-actions">
     <button type="submit" id="btnAddNewProduct" name="btnAddNewProduct" onclick=" javascript:setLocation('@(Url.Action("AddProductToOrder", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin }))'); return false; " class="k-button"><i class="fa fa-plus"></i>&nbsp;@Loc["Admin.Orders.Products.AddNew"]</button>
+    <button type="submit" id="btnAddMultipleProducts" name="btnAddMultipleProducts" onclick=" javascript:setLocation('@(Url.Action("BulkAddProductsToOrder", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin }))'); return false; " class="k-button"><i class="fa fa-list"></i>&nbsp;@Loc["Admin.Orders.Products.AddMultiple"]</button>
 </div>

@@ -32,6 +32,7 @@ using Grand.Web.Common.Localization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Net;
+using System.Text;
 using ProductExtensions = Grand.Domain.Catalog.ProductExtensions;
 
 namespace Grand.Web.Admin.Services;
@@ -1270,6 +1271,257 @@ public class OrderViewModelService : IOrderViewModelService
 
         return warnings;
     }
+
+    #region Bulk Product Addition
+
+    public virtual async Task<BulkAddProductsToOrderModel> PrepareBulkAddProductsToOrderModel(Order order)
+    {
+        var model = new BulkAddProductsToOrderModel
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber
+        };
+
+        // Prepare categories
+        model.AvailableCategories.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
+        var categories = await _categoryService.GetAllCategories(showHidden: true, storeId: order.StoreId);
+        foreach (var c in categories)
+            model.AvailableCategories.Add(new SelectListItem { Text = c.GetFormattedBreadCrumb(categories), Value = c.Id });
+
+        // Prepare brands
+        model.AvailableBrands.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
+        foreach (var m in await _brandService.GetAllBrands())
+            model.AvailableBrands.Add(new SelectListItem { Text = m.Name, Value = m.Id });
+
+        // Prepare collections
+        model.AvailableCollections.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
+        foreach (var c in await _collectionService.GetAllCollections())
+            model.AvailableCollections.Add(new SelectListItem { Text = c.Name, Value = c.Id });
+
+        // Prepare product types
+        model.AvailableProductTypes.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "0" });
+        foreach (ProductType pt in Enum.GetValues(typeof(ProductType)))
+            model.AvailableProductTypes.Add(new SelectListItem
+                { Text = pt.GetTranslationEnum(_translationService, _contextAccessor.WorkContext), Value = ((int)pt).ToString() });
+
+        return model;
+    }
+
+    public virtual async Task<string> GetProductConfigurationRowsHtml(string[] productIds, string orderId)
+    {
+        var order = await _orderService.GetOrderById(orderId);
+        if (order == null)
+            return "";
+
+        var htmlBuilder = new StringBuilder();
+        
+        foreach (var productId in productIds)
+        {
+            var product = await _productService.GetProductById(productId);
+            if (product == null)
+                continue;
+
+            var rowModel = new BulkProductConfigModel
+            {
+                ProductId = productId,
+                ProductName = product.Name,
+                Sku = product.Sku,
+                Quantity = 1,
+                NeedsWarehouse = product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock,
+                HasAttributes = (await _productAttributeService.GetProductAttributeMappingsByProductId(productId)).Any()
+            };
+
+            // Get unit price
+            var (unitPrice, _, _) = await _priceCalculationService.GetUnitPrice(product, await _customerService.GetCustomerById(order.CustomerId), ShoppingCartType.ShoppingCart, 1, "", 0, null, null, null);
+            rowModel.UnitPrice = unitPrice;
+
+            // Prepare warehouses if needed
+            if (rowModel.NeedsWarehouse)
+            {
+                foreach (var warehouse in await _warehouseService.GetAllWarehouses())
+                {
+                    var stockQty = await _stockQuantityService.GetTotalStockQuantity(product, warehouseId: warehouse.Id);
+                    rowModel.AvailableWarehouses.Add(new SelectListItem
+                    {
+                        Value = warehouse.Id,
+                        Text = $"{warehouse.Name} (Stock: {stockQty})"
+                    });
+                }
+            }
+
+            // Prepare attribute combinations if needed
+            if (rowModel.HasAttributes)
+            {
+                var combinations = await _productAttributeCombinationService.GetProductAttributeCombinationsByProductId(productId);
+                foreach (var combination in combinations)
+                {
+                    var attributesInfo = await _productAttributeFormatter.FormatAttributes(product, combination.Attributes, await _customerService.GetCustomerById(order.CustomerId), "", false, true, true, false);
+                    rowModel.AttributeCombinations.Add(new AttributeCombinationModel
+                    {
+                        Id = combination.Id,
+                        AttributesInfo = attributesInfo,
+                        Sku = combination.Sku,
+                        StockQuantity = combination.StockQuantity,
+                        OverriddenPrice = combination.OverriddenPrice
+                    });
+                }
+            }
+
+            // Generate HTML row
+            htmlBuilder.AppendLine($@"
+                <tr id='product-row-{productId}'>
+                    <td>
+                        {product.Name}
+                        <input type='hidden' name='Products[{Array.IndexOf(productIds, productId)}].ProductId' value='{productId}' />
+                    </td>
+                    <td>
+                        <input type='number' name='Products[{Array.IndexOf(productIds, productId)}].Quantity' value='1' min='1' class='form-control' style='width:80px;' />
+                    </td>");
+
+            if (rowModel.NeedsWarehouse)
+            {
+                htmlBuilder.AppendLine($@"
+                    <td class='warehouse-cell'>
+                        <select name='Products[{Array.IndexOf(productIds, productId)}].WarehouseId' class='form-control'>
+                            <option value=''>Select Warehouse</option>");
+                
+                foreach (var warehouse in rowModel.AvailableWarehouses)
+                {
+                    htmlBuilder.AppendLine($"<option value='{warehouse.Value}'>{warehouse.Text}</option>");
+                }
+                
+                htmlBuilder.AppendLine(@"
+                        </select>
+                    </td>");
+            }
+            else
+            {
+                htmlBuilder.AppendLine("<td class='no-warehouse'>N/A</td>");
+            }
+
+            if (rowModel.HasAttributes)
+            {
+                htmlBuilder.AppendLine($@"
+                    <td class='attributes-cell'>
+                        <select name='Products[{Array.IndexOf(productIds, productId)}].SelectedCombinationId' class='form-control'>
+                            <option value=''>Select Combination</option>");
+
+                foreach (var combo in rowModel.AttributeCombinations)
+                {
+                    htmlBuilder.AppendLine($"<option value='{combo.Id}'>{combo.AttributesInfo}</option>");
+                }
+
+                htmlBuilder.AppendLine(@"
+                        </select>
+                    </td>");
+            }
+            else
+            {
+                htmlBuilder.AppendLine("<td class='no-attributes'>N/A</td>");
+            }
+
+            htmlBuilder.AppendLine($@"
+                    <td>
+                        <input type='number' name='Products[{Array.IndexOf(productIds, productId)}].UnitPrice' value='{rowModel.UnitPrice:F2}' step='0.01' class='form-control' style='width:100px;' />
+                    </td>
+                    <td>
+                        <button type='button' class='btn btn-sm btn-danger' onclick='removeSelectedProduct(""{productId}"")'>
+                            <i class='fa fa-trash'></i>
+                        </button>
+                    </td>
+                </tr>");
+        }
+
+        return htmlBuilder.ToString();
+    }
+
+    public virtual async Task<IList<string>> ProcessBulkProductAddition(BulkAddProductsToOrderModel model)
+    {
+        var warnings = new List<string>();
+        var order = await _orderService.GetOrderById(model.OrderId);
+        var customer = await _customerService.GetCustomerById(order.CustomerId);
+
+        foreach (var productConfig in model.Products)
+        {
+            try
+            {
+                var product = await _productService.GetProductById(productConfig.ProductId);
+                if (product == null)
+                {
+                    warnings.Add($"Product not found: {productConfig.ProductId}");
+                    continue;
+                }
+
+                // Validate quantity
+                if (productConfig.Quantity <= 0)
+                {
+                    warnings.Add($"Invalid quantity for product: {product.Name}");
+                    continue;
+                }
+
+                // Build custom attributes if combination is selected
+                var customAttributes = new List<CustomAttribute>();
+                if (!string.IsNullOrEmpty(productConfig.SelectedCombinationId))
+                {
+                    var combination = await _productAttributeCombinationService.GetProductAttributeCombinationById(productConfig.SelectedCombinationId);
+                    if (combination != null)
+                    {
+                        customAttributes.AddRange(combination.Attributes);
+                    }
+                }
+
+                // Create order item
+                var orderItem = new OrderItem
+                {
+                    OrderItemGuid = Guid.NewGuid(),
+                    ProductId = productConfig.ProductId,
+                    UnitPriceInclTax = productConfig.UnitPrice,
+                    UnitPriceExclTax = productConfig.UnitPrice, // Simplified - should calculate tax
+                    PriceInclTax = productConfig.UnitPrice * productConfig.Quantity,
+                    PriceExclTax = productConfig.UnitPrice * productConfig.Quantity,
+                    OriginalProductCost = await _priceCalculationService.GetProductCost(product, customAttributes),
+                    Quantity = (int)productConfig.Quantity,
+                    WarehouseId = productConfig.WarehouseId,
+                    Attributes = customAttributes,
+                    AttributeDescription = await _productAttributeFormatter.FormatAttributes(product, customAttributes, customer)
+                };
+
+                order.OrderItems.Add(orderItem);
+
+                // Update inventory if needed
+                if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock || 
+                    product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
+                {
+                    await _inventoryManageService.DecrementStockQuantity(product, (int)productConfig.Quantity, customAttributes, productConfig.WarehouseId);
+                }
+            }
+            catch (Exception ex)
+            {
+                warnings.Add($"Error adding product {productConfig.ProductName}: {ex.Message}");
+            }
+        }
+
+        if (!warnings.Any())
+        {
+            // Update order totals
+            var subTotalInclTax = order.OrderItems.Sum(x => x.PriceInclTax);
+            var subTotalExclTax = order.OrderItems.Sum(x => x.PriceExclTax);
+            
+            order.OrderSubtotalInclTax = subTotalInclTax;
+            order.OrderSubtotalExclTax = subTotalExclTax;
+            order.OrderTotal = subTotalInclTax + order.OrderShippingInclTax + order.PaymentMethodAdditionalFeeInclTax + order.OrderTax - order.OrderDiscount;
+
+            await _orderService.UpdateOrder(order);
+        }
+
+        return warnings;
+    }
+
+    #endregion
 
     public virtual async Task<IList<Order>> PrepareOrders(OrderListModel model)
     {

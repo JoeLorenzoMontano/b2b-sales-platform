@@ -1,0 +1,320 @@
+@model BulkAddProductsToOrderModel
+@inject AdminAreaSettings adminAreaSettings
+@{
+    ViewBag.Title = string.Format(Loc["Admin.Orders.Products.AddMultiple.Title"], Model.OrderNumber);
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="x_panel light form-fit">
+            <div class="x_title">
+                <div class="caption">
+                    <i class="fa fa-list"></i>
+                    @string.Format(Loc["Admin.Orders.Products.AddMultiple.Title"], Model.OrderNumber)
+                    <small>
+                        <i class="fa fa-arrow-circle-left"></i>
+                        @Html.ActionLink(Loc["Admin.Orders.Products.AddNew.BackToOrder"], "Edit", new { id = Model.OrderId })
+                    </small>
+                </div>
+            </div>
+            <div class="x_content form">
+                <form asp-action="BulkAddProductsToOrder" method="post">
+                    <input type="hidden" asp-for="OrderId" />
+                    
+                    <!-- Search/Filter Section -->
+                    <div class="form-horizontal">
+                        <div class="form-body">
+                            <div class="form-group popup">
+                                <admin-label class="col-sm-2 control-label" asp-for="SearchProductName"/>
+                                <div class="col-8 col-md-4 col-sm-4">
+                                    <admin-input asp-for="SearchProductName"/>
+                                </div>
+                                <div class="col-8 col-md-6 col-sm-4 mt-mobile-10">
+                                    <div class="btn-group btn-group-devided">
+                                        <button class="btn btn-success filter-submit" id="search-products" type="button">
+                                            <i class="fa fa-search"></i> @Loc["Admin.Common.Search"]
+                                        </button>
+                                        <button type="button" class="btn btn-default filter-extend-button">
+                                            <i class="fa fa-filter"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Extended Filters -->
+                            <div class="form-group extend-collapse">
+                                <admin-label asp-for="SearchCategoryId"/>
+                                <div class="col-md-9 col-sm-9">
+                                    <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories"/>
+                                </div>
+                            </div>
+                            <div class="form-group extend-collapse">
+                                <admin-label asp-for="SearchBrandId"/>
+                                <div class="col-md-9 col-sm-9">
+                                    <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
+                                </div>
+                            </div>
+                            <div class="form-group extend-collapse">
+                                <admin-label asp-for="SearchCollectionId"/>
+                                <div class="col-md-9 col-sm-9">
+                                    <admin-select asp-for="SearchCollectionId" asp-items="Model.AvailableCollections"/>
+                                </div>
+                            </div>
+                            <div class="form-group extend-collapse">
+                                <admin-label asp-for="SearchProductTypeId"/>
+                                <div class="col-md-9 col-sm-9">
+                                    <admin-select asp-for="SearchProductTypeId" asp-items="Model.AvailableProductTypes"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products Grid -->
+                    <div class="form-group">
+                        <div class="col-md-12">
+                            <div id="products-grid"></div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Products Configuration -->
+                    <div id="selected-products-section" style="display:none;">
+                        <hr />
+                        <h4>@Loc["Admin.Orders.Products.SelectedProducts"] <span class="badge badge-primary" id="selected-count">0</span></h4>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="selected-products-table">
+                                <thead>
+                                    <tr>
+                                        <th>@Loc["Admin.Catalog.Products.Fields.Name"]</th>
+                                        <th>@Loc["Admin.Orders.Products.Quantity"]</th>
+                                        <th class="warehouse-header" style="display:none;">@Loc["Admin.Orders.Products.Warehouse"]</th>
+                                        <th class="attributes-header" style="display:none;">@Loc["Admin.Catalog.Products.ProductAttributes"]</th>
+                                        <th>@Loc["Admin.Orders.Products.UnitPrice"]</th>
+                                        <th>@Loc["Admin.Common.Actions"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selected-products-tbody">
+                                    <!-- Dynamic content populated via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="add-selected-products" disabled>
+                                <i class="fa fa-plus"></i> @Loc["Admin.Orders.Products.AddSelected"]
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function() {
+        initializeBulkProductSelection();
+    });
+
+    var selectedProducts = {};
+
+    function initializeBulkProductSelection() {
+        // Initialize Kendo Grid
+        $("#products-grid").kendoGrid({
+            dataSource: {
+                type: "json",
+                transport: {
+                    read: {
+                        url: "@Html.Raw(Url.Action("BulkProductSearch", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        dataType: "json",
+                        data: addAntiForgeryToken
+                    }
+                },
+                schema: {
+                    data: "Data",
+                    total: "Total",
+                    errors: "Errors"
+                },
+                error: function(e) {
+                    displayGrandeNotification(e.errors, "error", true);
+                },
+                pageSize: @(adminAreaSettings.DefaultGridPageSize),
+                serverPaging: true,
+                serverFiltering: true
+            },
+            pageable: {
+                refresh: true,
+                pageSizes: [@(adminAreaSettings.GridPageSizes)],
+                @Html.Raw(adminAreaSettings.PagerRtl == "True" ? "messages:pagerMessages," : "")
+            },
+            scrollable: false,
+            columns: [
+                {
+                    field: "Id",
+                    headerTemplate: "<label class='mt-checkbox mt-checkbox-outline control control-checkbox'><input id='mastercheckbox' type='checkbox'/><div class='control__indicator'></div></label>",
+                    template: "<label class='mt-checkbox mt-checkbox-outline control control-checkbox'><input type='checkbox' value='#=Id#' class='checkboxGroups'/><div class='control__indicator'></div></label>",
+                    width: 50,
+                    sortable: false
+                },
+                {
+                    field: "Name",
+                    title: "@Loc["Admin.Catalog.Products.Fields.Name"]",
+                    width: 300
+                },
+                {
+                    field: "Sku",
+                    title: "@Loc["Admin.Catalog.Products.Fields.Sku"]",
+                    width: 150
+                },
+                {
+                    field: "ProductType",
+                    title: "@Loc["Admin.Catalog.Products.Fields.ProductType"]",
+                    width: 100
+                }
+            ],
+            dataBound: onDataBound
+        });
+
+        // Master checkbox handling
+        $('#products-grid').on('click', '#mastercheckbox', function() {
+            $('.checkboxGroups').prop('checked', $(this).is(':checked')).change();
+        });
+
+        // Individual checkbox handling
+        $('#products-grid').on('change', 'input[type=checkbox][class=checkboxGroups]', function() {
+            var productId = $(this).val();
+            if ($(this).is(':checked')) {
+                addProductToSelection(productId);
+            } else {
+                removeProductFromSelection(productId);
+            }
+            updateMasterCheckbox();
+            updateSelectedProductsDisplay();
+        });
+
+        // Search functionality
+        $('#search-products').click(function() {
+            var grid = $('#products-grid').data('kendoGrid');
+            grid.dataSource.read({
+                SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
+                SearchCategoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
+                SearchBrandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
+                SearchCollectionId: $('#@Html.IdFor(model => model.SearchCollectionId)').val(),
+                SearchProductTypeId: $('#@Html.IdFor(model => model.SearchProductTypeId)').val()
+            });
+        });
+
+        // Search on Enter key
+        $('#@Html.IdFor(model => model.SearchProductName)').keydown(function(event) {
+            if (event.keyCode == 13) {
+                $("#search-products").click();
+                return false;
+            }
+        });
+
+        // Filter toggle
+        $('.filter-extend-button').click(function() {
+            $('.extend-collapse').toggle();
+        });
+    }
+
+    function addProductToSelection(productId) {
+        if (!selectedProducts[productId]) {
+            selectedProducts[productId] = {
+                id: productId,
+                name: '',
+                quantity: 1,
+                warehouseId: '',
+                attributeCombinationId: '',
+                needsWarehouse: false,
+                hasAttributes: false
+            };
+        }
+    }
+
+    function removeProductFromSelection(productId) {
+        if (selectedProducts[productId]) {
+            delete selectedProducts[productId];
+            $('#product-row-' + productId).remove();
+        }
+    }
+
+    function updateMasterCheckbox() {
+        var totalCheckboxes = $('.checkboxGroups').length;
+        var checkedCheckboxes = $('.checkboxGroups:checked').length;
+        
+        if (checkedCheckboxes === 0) {
+            $('#mastercheckbox').prop('indeterminate', false).prop('checked', false);
+        } else if (checkedCheckboxes === totalCheckboxes) {
+            $('#mastercheckbox').prop('indeterminate', false).prop('checked', true);
+        } else {
+            $('#mastercheckbox').prop('indeterminate', true);
+        }
+    }
+
+    function updateSelectedProductsDisplay() {
+        var selectedCount = Object.keys(selectedProducts).length;
+        $('#selected-count').text(selectedCount);
+        
+        if (selectedCount > 0) {
+            $('#selected-products-section').show();
+            $('#add-selected-products').prop('disabled', false);
+            loadSelectedProductsConfiguration();
+        } else {
+            $('#selected-products-section').hide();
+            $('#add-selected-products').prop('disabled', true);
+        }
+    }
+
+    function loadSelectedProductsConfiguration() {
+        var productIds = Object.keys(selectedProducts);
+        
+        $.ajax({
+            url: '@Url.Action("GetProductConfigurationRows", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: addAntiForgeryToken({
+                productIds: productIds,
+                orderId: '@Model.OrderId'
+            }),
+            success: function(response) {
+                if (response.success) {
+                    $('#selected-products-tbody').html(response.html);
+                    updateTableColumns();
+                }
+            },
+            error: function() {
+                displayGrandeNotification('Error loading product configuration', 'error', true);
+            }
+        });
+    }
+
+    function updateTableColumns() {
+        var needsWarehouse = $('.warehouse-cell').length > 0;
+        var needsAttributes = $('.attributes-cell').length > 0;
+        
+        $('.warehouse-header').toggle(needsWarehouse);
+        $('.attributes-header').toggle(needsAttributes);
+    }
+
+    function onDataBound() {
+        // Restore checkbox states after grid refresh
+        $('.checkboxGroups').each(function() {
+            var productId = $(this).val();
+            if (selectedProducts[productId]) {
+                $(this).prop('checked', true);
+            }
+        });
+        updateMasterCheckbox();
+    }
+
+    function removeSelectedProduct(productId) {
+        delete selectedProducts[productId];
+        $('#product-row-' + productId).remove();
+        updateSelectedProductsDisplay();
+        
+        // Update grid checkboxes
+        $('.checkboxGroups[value="' + productId + '"]').prop('checked', false);
+        updateMasterCheckbox();
+    }
+</script>

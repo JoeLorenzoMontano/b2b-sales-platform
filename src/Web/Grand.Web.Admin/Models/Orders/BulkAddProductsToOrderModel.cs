@@ -50,7 +50,7 @@ public class BulkProductConfigModel : BaseModel
     {
         AvailableWarehouses = new List<SelectListItem>();
         AttributeCombinations = new List<AttributeCombinationModel>();
-        Attributes = new List<ProductAttributeModel>();
+        Attributes = new List<BulkProductAttributeModel>();
     }
 
     public string ProductId { get; set; }

@@ -1409,30 +1409,21 @@ public class OrderController(
         if (!string.IsNullOrEmpty(model.SearchCategoryId))
             categoryIds.Add(model.SearchCategoryId);
 
-        var brandIds = new List<string>();
-        if (!string.IsNullOrEmpty(model.SearchBrandId))
-            brandIds.Add(model.SearchBrandId);
-
-        var collectionIds = new List<string>();
-        if (!string.IsNullOrEmpty(model.SearchCollectionId))
-            collectionIds.Add(model.SearchCollectionId);
-
-        var products = await productService.SearchProducts(
-            categoryIds: categoryIds,
-            brandIds: brandIds,
-            collectionIds: collectionIds,
+        var products = (await productService.SearchProducts(categoryIds: categoryIds,
+            storeId: "",
+            brandId: model.SearchBrandId,
+            collectionId: model.SearchCollectionId,
             productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
             keywords: model.SearchProductName,
             pageIndex: command.Page - 1,
             pageSize: command.PageSize,
-            showHidden: true);
+            showHidden: true)).products;
 
         var gridModel = new DataSourceResult {
             Data = products.Select(x => new OrderModel.AddOrderProductModel.ProductModel {
                 Id = x.Id,
                 Name = x.Name,
-                Sku = x.Sku,
-                ProductType = x.ProductTypeId.ToString()
+                Sku = x.Sku
             }),
             Total = products.TotalCount
         };

@@ -33,4 +33,9 @@ public interface IOrderViewModelService
     Task<IList<string>> AddProductToOrderDetails(AddProductToOrderModel model);
     Task<IList<Order>> PrepareOrders(OrderListModel model);
     Task SaveOrderTags(Order order, string tags);
+    
+    // Bulk product addition methods
+    Task<BulkAddProductsToOrderModel> PrepareBulkAddProductsToOrderModel(Order order);
+    Task<string> GetProductConfigurationRowsHtml(string[] productIds, string orderId);
+    Task<IList<string>> ProcessBulkProductAddition(BulkAddProductsToOrderModel model);
 }

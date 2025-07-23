@@ -145,8 +145,7 @@
             },
             pageable: {
                 refresh: true,
-                pageSizes: [@(adminAreaSettings.GridPageSizes)],
-                @Html.Raw(adminAreaSettings.PagerRtl == "True" ? "messages:pagerMessages," : "")
+                pageSizes: [@(adminAreaSettings.GridPageSizes)]
             },
             scrollable: false,
             columns: [
@@ -166,11 +165,6 @@
                     field: "Sku",
                     title: "@Loc["Admin.Catalog.Products.Fields.Sku"]",
                     width: 150
-                },
-                {
-                    field: "ProductType",
-                    title: "@Loc["Admin.Catalog.Products.Fields.ProductType"]",
-                    width: 100
                 }
             ],
             dataBound: onDataBound

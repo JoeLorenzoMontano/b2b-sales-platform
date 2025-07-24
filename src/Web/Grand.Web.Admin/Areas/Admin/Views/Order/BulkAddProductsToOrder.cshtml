@@ -336,20 +336,23 @@
     }
 
     function updateWarehouseDropdown(productId, warehouses) {
+        // Try to find the specific warehouse dropdown for this product
         var warehouseSelect = $('#warehouse-' + productId);
-        console.log('Looking for warehouse dropdown with id: warehouse-' + productId);
-        console.log('Found element:', warehouseSelect.length);
         
+        // If not found by ID, find the warehouse dropdown in the same row as the attribute combination
         if (warehouseSelect.length === 0) {
-            console.log('Warehouse dropdown not found, trying alternative selectors...');
-            // Try alternative selectors
+            var combinationSelect = $('#combination-' + productId);
+            if (combinationSelect.length > 0) {
+                warehouseSelect = combinationSelect.closest('tr').find('select[name*="WarehouseId"]');
+            }
+        }
+        
+        // Last fallback - find any visible warehouse dropdown (for single product scenarios)
+        if (warehouseSelect.length === 0) {
             warehouseSelect = $('select[name*="WarehouseId"]:visible').last();
-            console.log('Alternative selector found:', warehouseSelect.length);
         }
         
         if (warehouseSelect.length === 0) return;
-        
-        console.log('Updating warehouse dropdown with', warehouses.length, 'warehouses');
         
         // Clear existing options except first (empty) option
         warehouseSelect.find('option:not(:first)').remove();
@@ -365,7 +368,5 @@
         if (warehouseSelect.data('kendoDropDownList')) {
             warehouseSelect.data('kendoDropDownList').refresh();
         }
-        
-        console.log('Warehouse dropdown updated successfully');
     }
 </script>

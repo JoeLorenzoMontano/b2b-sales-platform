@@ -326,12 +326,10 @@
             success: function(response) {
                 if (response.success && response.warehouses) {
                     updateWarehouseDropdown(productId, response.warehouses);
-                    // Show notification to confirm it's working
-                    displayGrandeNotification('Warehouse inventory updated for selected combination', 'success', true);
                 }
             },
             error: function() {
-                displayGrandeNotification('Error loading warehouse inventory', 'error', true);
+                console.log('Error loading warehouse inventory');
             }
         });
     }

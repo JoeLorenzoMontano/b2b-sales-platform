@@ -122,7 +122,6 @@
         // Initialize Kendo Grid
         $("#products-grid").kendoGrid({
             dataSource: {
-                type: "json",
                 transport: {
                     read: {
                         url: "@Html.Raw(Url.Action("BulkProductSearch", "Order", new { area = Constants.AreaAdmin }))",

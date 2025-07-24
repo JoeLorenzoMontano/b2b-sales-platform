@@ -1403,7 +1403,7 @@ public class OrderViewModelService : IOrderViewModelService
             {
                 htmlBuilder.AppendLine($@"
                     <td class='warehouse-cell'>
-                        <select name='Products[{Array.IndexOf(productIds, productId)}].WarehouseId' class='form-control'>
+                        <select id='warehouse-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].WarehouseId' class='form-control'>
                             <option value=''>Select Warehouse</option>");
                 
                 foreach (var warehouse in rowModel.AvailableWarehouses)
@@ -1424,7 +1424,7 @@ public class OrderViewModelService : IOrderViewModelService
             {
                 htmlBuilder.AppendLine($@"
                     <td class='attributes-cell'>
-                        <select name='Products[{Array.IndexOf(productIds, productId)}].SelectedCombinationId' class='form-control'>
+                        <select id='combination-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].SelectedCombinationId' class='form-control' onchange='onAttributeCombinationChange(""{productId}"", this.value)'>
                             <option value=''>Select Combination</option>");
 
                 foreach (var combo in rowModel.AttributeCombinations)
@@ -1535,6 +1535,58 @@ public class OrderViewModelService : IOrderViewModelService
         }
 
         return warnings;
+    }
+
+    public virtual async Task<IList<SelectListItem>> GetCombinationWarehouseInventory(string combinationId, string productId)
+    {
+        var warehouses = new List<SelectListItem>();
+        
+        try
+        {
+            // Get the product
+            var product = await _productService.GetProductById(productId);
+            if (product == null)
+                return warehouses;
+
+            var combination = product.ProductAttributeCombinations.FirstOrDefault(x => x.Id == combinationId);
+            if (combination == null)
+                return warehouses;
+
+            // Get warehouses that have inventory for this combination
+            foreach (var warehouseInventory in combination.WarehouseInventory)
+            {
+                var warehouse = await _warehouseService.GetWarehouseById(warehouseInventory.WarehouseId);
+                if (warehouse != null)
+                {
+                    var displayText = $"{warehouse.Name} (Stock: {warehouseInventory.StockQuantity})";
+                    warehouses.Add(new SelectListItem
+                    {
+                        Value = warehouse.Id,
+                        Text = displayText
+                    });
+                }
+            }
+
+            // If no specific warehouse inventory, fall back to general warehouses
+            if (!warehouses.Any())
+            {
+                var allWarehouses = await _warehouseService.GetAllWarehouses();
+                foreach (var warehouse in allWarehouses)
+                {
+                    warehouses.Add(new SelectListItem
+                    {
+                        Value = warehouse.Id,
+                        Text = warehouse.Name
+                    });
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Return empty list on error
+        }
+
+        return warehouses;
     }
 
     #endregion

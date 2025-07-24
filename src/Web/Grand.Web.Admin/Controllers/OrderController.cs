@@ -1477,6 +1477,22 @@ public class OrderController(
         return View(reloadedModel);
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> GetCombinationWarehouseInventory(string combinationId, string productId, string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        var warehouses = await orderViewModelService.GetCombinationWarehouseInventory(combinationId, productId);
+        return Json(new { success = true, warehouses = warehouses });
+    }
+
     #endregion
 
     #region Addresses

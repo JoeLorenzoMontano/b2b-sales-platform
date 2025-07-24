@@ -311,4 +311,47 @@
         $('.checkboxGroups[value="' + productId + '"]').prop('checked', false);
         updateMasterCheckbox();
     }
+
+    // Handle attribute combination changes
+    function onAttributeCombinationChange(productId, combinationId) {
+        if (!combinationId) return;
+        
+        $.ajax({
+            url: '@Url.Action("GetCombinationWarehouseInventory", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: addAntiForgeryToken({
+                combinationId: combinationId,
+                productId: productId,
+                orderId: '@Model.OrderId'
+            }),
+            success: function(response) {
+                if (response.success && response.warehouses) {
+                    updateWarehouseDropdown(productId, response.warehouses);
+                }
+            },
+            error: function() {
+                displayGrandeNotification('Error loading warehouse inventory', 'error', true);
+            }
+        });
+    }
+
+    function updateWarehouseDropdown(productId, warehouses) {
+        var warehouseSelect = $('#warehouse-' + productId);
+        if (warehouseSelect.length === 0) return;
+        
+        // Clear existing options except first (empty) option
+        warehouseSelect.find('option:not(:first)').remove();
+        
+        // Add new warehouse options
+        $.each(warehouses, function(index, warehouse) {
+            warehouseSelect.append($('<option></option>')
+                .attr('value', warehouse.Value)
+                .text(warehouse.Text));
+        });
+        
+        // Refresh the dropdown if using Kendo UI
+        if (warehouseSelect.data('kendoDropDownList')) {
+            warehouseSelect.data('kendoDropDownList').refresh();
+        }
+    }
 </script>

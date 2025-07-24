@@ -1,6 +1,7 @@
 ﻿using Grand.Domain.Common;
 using Grand.Domain.Orders;
 using Grand.Web.Admin.Models.Orders;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Interfaces;
 
@@ -38,4 +39,5 @@ public interface IOrderViewModelService
     Task<BulkAddProductsToOrderModel> PrepareBulkAddProductsToOrderModel(Order order);
     Task<string> GetProductConfigurationRowsHtml(string[] productIds, string orderId);
     Task<IList<string>> ProcessBulkProductAddition(BulkAddProductsToOrderModel model);
+    Task<IList<SelectListItem>> GetCombinationWarehouseInventory(string combinationId, string productId);
 }

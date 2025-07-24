@@ -346,8 +346,28 @@
             var combinationSelect = $('#combination-' + productId);
             console.log('Looking for #combination-' + productId, 'found:', combinationSelect.length);
             if (combinationSelect.length > 0) {
+                // Try different parent container approaches
                 warehouseSelect = combinationSelect.closest('tr').find('select[name*="WarehouseId"]');
-                console.log('Found warehouse select in same row:', warehouseSelect.length);
+                console.log('Found warehouse select in same tr:', warehouseSelect.length);
+                
+                if (warehouseSelect.length === 0) {
+                    warehouseSelect = combinationSelect.closest('tbody').find('select[name*="WarehouseId"]').filter(function() {
+                        return $(this).closest('tr').find('#combination-' + productId).length > 0;
+                    });
+                    console.log('Found warehouse select in same tbody row:', warehouseSelect.length);
+                }
+                
+                if (warehouseSelect.length === 0) {
+                    // Try to find by similar naming pattern
+                    var combinationName = combinationSelect.attr('name');
+                    if (combinationName) {
+                        var index = combinationName.match(/\[(\d+)\]/);
+                        if (index) {
+                            warehouseSelect = $('select[name*="Products[' + index[1] + '].WarehouseId"]');
+                            console.log('Found warehouse select by index pattern:', warehouseSelect.length);
+                        }
+                    }
+                }
             }
         }
         

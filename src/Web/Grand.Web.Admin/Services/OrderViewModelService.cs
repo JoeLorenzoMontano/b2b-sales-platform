@@ -1345,19 +1345,47 @@ public class OrderViewModelService : IOrderViewModelService
                 }
             }
 
-            // Prepare attribute combinations if needed - simplified approach
+            // Prepare attribute combinations if needed
             if (rowModel.HasAttributes)
             {
-                // For now, show message that attribute combinations will be handled in individual product flow
-                // This can be enhanced later with proper combination loading
-                rowModel.AttributeCombinations.Add(new AttributeCombinationModel
+                var orderCustomer = await _customerService.GetCustomerById(order.CustomerId);
+                foreach (var combination in product.ProductAttributeCombinations)
                 {
-                    Id = "",
-                    AttributesInfo = "Use individual product flow for complex attributes",
-                    Sku = "",
-                    StockQuantity = 0,
-                    OverriddenPrice = null
-                });
+                    var attributesInfo = await _productAttributeFormatter.FormatAttributes(product, combination.Attributes, orderCustomer);
+                    var displayText = string.IsNullOrEmpty(attributesInfo) ? "Default" : attributesInfo;
+                    
+                    // Add SKU and stock info if available
+                    if (!string.IsNullOrEmpty(combination.Sku))
+                        displayText += $" - {combination.Sku}";
+                    
+                    if (combination.StockQuantity > 0)
+                        displayText += $" (Stock: {combination.StockQuantity})";
+                    
+                    if (combination.OverriddenPrice.HasValue)
+                        displayText += $" - ${combination.OverriddenPrice.Value:F2}";
+
+                    rowModel.AttributeCombinations.Add(new AttributeCombinationModel
+                    {
+                        Id = combination.Id,
+                        AttributesInfo = displayText,
+                        Sku = combination.Sku,
+                        StockQuantity = (decimal)combination.StockQuantity,
+                        OverriddenPrice = (decimal?)combination.OverriddenPrice
+                    });
+                }
+                
+                // If no combinations exist but product has attributes, add a default option
+                if (!rowModel.AttributeCombinations.Any())
+                {
+                    rowModel.AttributeCombinations.Add(new AttributeCombinationModel
+                    {
+                        Id = "",
+                        AttributesInfo = "Default (no specific combination)",
+                        Sku = product.Sku,
+                        StockQuantity = (decimal)product.StockQuantity,
+                        OverriddenPrice = null
+                    });
+                }
             }
 
             // Generate HTML row
@@ -1452,8 +1480,21 @@ public class OrderViewModelService : IOrderViewModelService
                     continue;
                 }
 
-                // Build custom attributes if combination is selected - simplified for now
+                // Build custom attributes if combination is selected
                 var customAttributes = new List<CustomAttribute>();
+                var attributeDescription = "";
+                
+                if (!string.IsNullOrEmpty(productConfig.SelectedCombinationId))
+                {
+                    var selectedCombination = product.ProductAttributeCombinations
+                        .FirstOrDefault(c => c.Id == productConfig.SelectedCombinationId);
+                    
+                    if (selectedCombination != null)
+                    {
+                        customAttributes.AddRange(selectedCombination.Attributes);
+                        attributeDescription = await _productAttributeFormatter.FormatAttributes(product, selectedCombination.Attributes, customer);
+                    }
+                }
                 
                 // Create order item using existing pattern from AddProductToOrderDetails
                 var orderItem = new OrderItem
@@ -1468,7 +1509,7 @@ public class OrderViewModelService : IOrderViewModelService
                     Quantity = (int)productConfig.Quantity,
                     WarehouseId = productConfig.WarehouseId,
                     Attributes = customAttributes,
-                    AttributeDescription = "" // Simplified for now
+                    AttributeDescription = attributeDescription
                 };
 
                 // Use existing mediator pattern like in AddProductToOrderDetails

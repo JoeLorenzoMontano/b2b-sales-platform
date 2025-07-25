@@ -6,37 +6,19 @@
     <table class="table table-bordered table-striped table-hover">
         <tr>
             <td>
-                @foreach (var item in Model.Items)
-                {
-                    <script>
-                    $(document).ready(function() {
-                        toggleOrderItemEdit@(item.Id)(false);
-                        });
-                    </script>
-
-                    <script>
-                    function toggleOrderItemEdit@(item.Id) (editMode) {
-                        if (editMode) {
-                                $('#pnlEditPvUnitPrice@(item.Id)').show();
-                                $('#pnlEditPvQuantity@(item.Id)').show();
-                                $('#btnEditOrderItem@(item.Id)').hide();
-                                $('#btnDeleteOrderItem@(item.Id)').hide();
-                                $('#btnSaveOrderItem@(item.Id)').show();
-                                $('#btnCancel@(item.Id)').show();
-                                $('#btnCancelOrderItem@(item.Id)').hide();
-                            }
-                            else {
-                                $('#pnlEditPvUnitPrice@(item.Id)').hide();
-                                $('#pnlEditPvQuantity@(item.Id)').hide();
-                                $('#btnEditOrderItem@(item.Id)').show();
-                                $('#btnDeleteOrderItem@(item.Id)').show();
-                                $('#btnSaveOrderItem@(item.Id)').hide();
-                                $('#btnCancel@(item.Id)').hide();
-                                $('#btnCancelOrderItem@(item.Id)').show();
-                            }
-                        }
-                    </script>
-                }
+                @* Show edit fields inline and auto-save on blur *@
+                <script>
+                $(document).ready(function() {
+                    // Auto-save on blur for price and quantity fields
+                    $('input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]').on('blur', function() {
+                        var $input = $(this);
+                        var orderItemId = $input.closest('tr').find('input[name^="Items"][name$="Id"]').val();
+                        
+                        // Find and trigger the save button for this item
+                        $('#btnSaveOrderItem' + orderItemId).click();
+                    });
+                });
+                </script>
                 <table class="table table-bordered table-striped table-hover">
                     <col/>
                     <col/>
@@ -215,49 +197,31 @@
                                 </div>
                             </td>
                             <td>
-                                @switch (Model.TaxDisplayType)
-                                {
-                                    case TaxDisplayType.ExcludingTax:
-                                    {
-                                        @item.UnitPriceExclTax
-                                    }
-                                        break;
-                                    case TaxDisplayType.IncludingTax:
-                                    {
-                                        @item.UnitPriceInclTax
-                                    }
-                                        break;
-                                }
-
-                                <div id="pnlEditPvUnitPrice@(item.Id)">
-                                    <table class="order-edit">
-                                        <tr>
-                                            <td>
-                                                @Loc["Admin.Orders.Products.Edit.ExclTax"]
-                                            </td>
-                                            <td>
-                                                @*
-                                                    <input name="pvUnitPriceExclTax@(item.Id)" type="text" value="@item.UnitPriceExclTaxValue" id="pvUnitPriceExclTax@(item.Id)" class="adminInput" style="width:80px;" />
-                                                    *@
-                                                <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="adminInput" style="width:40px;"/>
-                                            </td>
-                                        </tr>
-                                    </table>
+                                <div>
+                                    <small class="text-muted">@Loc["Admin.Orders.Products.Edit.ExclTax"]</small><br/>
+                                    <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control" style="width:100%; max-width:120px;"/>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-info">
+                                        @switch (Model.TaxDisplayType)
+                                        {
+                                            case TaxDisplayType.ExcludingTax:
+                                            {
+                                                <span>Display: @item.UnitPriceExclTax</span>
+                                            }
+                                                break;
+                                            case TaxDisplayType.IncludingTax:
+                                            {
+                                                <span>Display: @item.UnitPriceInclTax</span>
+                                            }
+                                                break;
+                                        }
+                                    </small>
                                 </div>
                             </td>
                             <td>
-                                @item.Quantity
-                                <div id="pnlEditPvQuantity@(item.Id)">
-                                    <table class="order-edit">
-                                        <tr>
-                                            <td colspan="2">
-                                                @*
-                                                    <input name="pvQuantity@(item.Id)" type="text" value="@item.Quantity" id="pvQuantity@(item.Id)" class="adminInput" style="width:40px;" />
-                                                    *@
-                                                <input asp-for="@Model.Items[j].Quantity" class="adminInput" style="width:40px;"/>
-                                            </td>
-                                        </tr>
-                                    </table>
+                                <div>
+                                    <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control" style="width:100%; max-width:80px;" min="1"/>
                                 </div>
                                 @if (item.OpenQty > 0)
                                 {
@@ -317,20 +281,15 @@
 
                             <td align="center">
                                 <div class="btn-group">
-                                    <button type="submit" name="btnEditOrderItem@(item.Id)" id="btnEditOrderItem@(item.Id)" onclick="toggleOrderItemEdit@(item.Id)(true);return false; " class="k-button" title="@Loc["Admin.Common.Edit"]">
-                                        <span class="k-icon k-i-edit"></span>
-                                    </button>
                                     <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-orderItemId="@(item.Id)" id="btnDeleteOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Delete"]">
                                         <span class="k-icon k-i-delete"></span>
                                     </button>
                                     <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-orderItemId="@(item.Id)" id="btnCancelOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Cancel"]">
                                         <span class="k-icon k-i-cancel"></span>
                                     </button>
-                                    <button type="submit" name="btnSaveOrderItem@(item.Id)" asp-action="SaveOrderItem" asp-route-orderItemId="@(item.Id)" id="btnSaveOrderItem@(item.Id)" style="display:none;" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Save"]">
+                                    @* Hidden save button that gets triggered on blur *@
+                                    <button type="submit" name="btnSaveOrderItem@(item.Id)" asp-action="SaveOrderItem" asp-route-orderItemId="@(item.Id)" id="btnSaveOrderItem@(item.Id)" style="display:none;" class="k-button">
                                         <span class="k-icon k-i-save"></span>
-                                    </button>
-                                    <button type="submit" name="btnCancel@(item.Id)" id="btnCancel@(item.Id)" onclick="toggleOrderItemEdit@(item.Id)    (false);return false; " class="k-button">
-                                        <span class="k-icon k-i-cancel" title="@Loc["Admin.Common.Cancel"]"></span>
                                     </button>
                                 </div>
                             </td>

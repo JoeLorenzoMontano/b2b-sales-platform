@@ -15,6 +15,7 @@ using Grand.Domain.Common;
 using Grand.Domain.Orders;
 using Grand.Domain.Payments;
 using Grand.Domain.Shipping;
+using Grand.Domain.Tax;
 using Grand.Infrastructure;
 using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Interfaces;
@@ -1099,6 +1100,96 @@ public class OrderController(
         await SaveSelectedTabIndex(persistForTheNextRequest: true);
 
         return RedirectToAction("Edit", "Order", new { id });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> UpdateOrderItemField(string orderId, string orderItemId, string fieldType, string value, [FromServices] ICurrencyService currencyService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null || await CheckSalesManager(order))
+                return Json(new { success = false, message = "Order not found or access denied" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+                return Json(new { success = false, message = "Access denied" });
+
+            if (order.OrderStatusId == (int)OrderStatusSystem.Cancelled)
+                return Json(new { success = false, message = "Cannot edit cancelled order" });
+
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null)
+                return Json(new { success = false, message = "Order item not found" });
+
+            // Validate and parse the new value
+            if (fieldType == "quantity")
+            {
+                if (!int.TryParse(value, out var newQuantity) || newQuantity <= 0)
+                    return Json(new { success = false, message = "Quantity must be a positive number" });
+
+                if (orderItem.OpenQty != orderItem.Quantity && orderItem.IsShipEnabled)
+                    return Json(new { success = false, message = "Cannot change quantity - item partially shipped" });
+
+                if (orderItem.Quantity == newQuantity)
+                    return Json(new { success = false, message = "No change detected" });
+
+                // Update quantity
+                orderItem.Quantity = newQuantity;
+                orderItem.OpenQty = newQuantity;
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+                orderItem.DiscountAmountInclTax = 0;
+                orderItem.DiscountAmountExclTax = 0;
+            }
+            else if (fieldType == "price")
+            {
+                if (!double.TryParse(value, out var newPrice) || newPrice < 0)
+                    return Json(new { success = false, message = "Price must be a valid decimal number" });
+
+                if (Math.Abs(orderItem.UnitPriceExclTax - newPrice) < 0.01)
+                    return Json(new { success = false, message = "No change detected" });
+
+                // Update price
+                orderItem.UnitPriceExclTax = newPrice;
+                orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+                orderItem.DiscountAmountInclTax = 0;
+                orderItem.DiscountAmountExclTax = 0;
+            }
+            else
+            {
+                return Json(new { success = false, message = "Invalid field type" });
+            }
+
+            // Save the changes
+            await mediator.Send(new UpdateOrderItemCommand { Order = order, OrderItem = orderItem });
+
+            // Prepare response with updated values
+            var primaryCurrency = await currencyService.GetPrimaryStoreCurrency();
+            
+            var response = new
+            {
+                success = true,
+                message = "Saved successfully",
+                newSubTotal = fieldType == "quantity" ? 
+                    (order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ? 
+                        orderItem.PriceInclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")) :
+                        orderItem.PriceExclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US"))) : null,
+                displayValue = fieldType == "price" ? 
+                    (order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ? 
+                        orderItem.UnitPriceInclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")) :
+                        orderItem.UnitPriceExclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US"))) : null
+            };
+
+            return Json(response);
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error saving changes: {ex.Message}" });
+        }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]

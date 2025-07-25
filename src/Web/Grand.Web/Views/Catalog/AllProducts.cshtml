@@ -7,6 +7,23 @@
     pagebuilder.AddTitleParts(Loc["Catalog.AllProducts"]);
 }
 
+@section Breadcrumb
+{
+    <ol class="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+        <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <a href="@Url.RouteUrl("HomePage")" itemprop="item">
+                <b-icon icon="house-door"></b-icon>
+                <span itemprop="name">@Loc["Products.Breadcrumb.Top"]</span>
+            </a>
+            <meta itemprop="position" content="1" />
+        </li>
+        <li class="breadcrumb-item active" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <strong itemprop="name">@Loc["Catalog.AllProducts"]</strong>
+            <meta itemprop="position" content="2" />
+        </li>
+    </ol>
+}
+
 <div class="page all-products-page">
     <h1 class="h2 generalTitle">@Loc["Catalog.AllProducts"]</h1>
     

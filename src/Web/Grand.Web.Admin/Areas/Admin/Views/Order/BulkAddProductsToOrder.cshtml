@@ -23,7 +23,12 @@
                     
                     <!-- Selected Products Configuration -->
                     <div id="selected-products-section" style="display:none;">
-                        <h4>@Loc["Admin.Orders.Products.SelectedProducts"] <span class="badge badge-primary" id="selected-count">0</span></h4>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">@Loc["Admin.Orders.Products.SelectedProducts"] <span class="badge badge-primary" id="selected-count">0</span></h4>
+                            <button type="submit" class="btn btn-primary" id="add-selected-products" disabled>
+                                <i class="fa fa-plus"></i> @Loc["Admin.Orders.Products.AddSelected"]
+                            </button>
+                        </div>
                         
                         <div class="table-responsive">
                             <table class="table table-striped" id="selected-products-table">
@@ -41,12 +46,6 @@
                                     <!-- Dynamic content populated via JavaScript -->
                                 </tbody>
                             </table>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary" id="add-selected-products" disabled>
-                                <i class="fa fa-plus"></i> @Loc["Admin.Orders.Products.AddSelected"]
-                            </button>
                         </div>
                         <hr />
                     </div>
@@ -72,25 +71,25 @@
                             </div>
                             
                             <!-- Extended Filters -->
-                            <div class="form-group extend-collapse">
+                            <div class="form-group extend-collapse" style="display:none;">
                                 <admin-label asp-for="SearchCategoryId"/>
                                 <div class="col-md-9 col-sm-9">
                                     <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories"/>
                                 </div>
                             </div>
-                            <div class="form-group extend-collapse">
+                            <div class="form-group extend-collapse" style="display:none;">
                                 <admin-label asp-for="SearchBrandId"/>
                                 <div class="col-md-9 col-sm-9">
                                     <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
                                 </div>
                             </div>
-                            <div class="form-group extend-collapse">
+                            <div class="form-group extend-collapse" style="display:none;">
                                 <admin-label asp-for="SearchCollectionId"/>
                                 <div class="col-md-9 col-sm-9">
                                     <admin-select asp-for="SearchCollectionId" asp-items="Model.AvailableCollections"/>
                                 </div>
                             </div>
-                            <div class="form-group extend-collapse">
+                            <div class="form-group extend-collapse" style="display:none;">
                                 <admin-label asp-for="SearchProductTypeId"/>
                                 <div class="col-md-9 col-sm-9">
                                     <admin-select asp-for="SearchProductTypeId" asp-items="Model.AvailableProductTypes"/>
@@ -102,7 +101,7 @@
                     <!-- Products Grid -->
                     <div class="form-group">
                         <div class="col-md-12">
-                            <div id="products-grid"></div>
+                            <div id="products-grid" style="max-height: 400px; overflow-y: auto; border: 1px solid #e4e5e7; border-radius: 4px;"></div>
                         </div>
                     </div>
                 </form>

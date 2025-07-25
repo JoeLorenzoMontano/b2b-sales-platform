@@ -313,6 +313,7 @@
 
     // Handle attribute combination changes
     function onAttributeCombinationChange(productId, combinationId) {
+        console.log('onAttributeCombinationChange called with:', productId, combinationId);
         if (!combinationId) return;
         
         $.ajax({
@@ -324,34 +325,45 @@
                 orderId: '@Model.OrderId'
             }),
             success: function(response) {
+                console.log('AJAX success response:', response);
                 if (response.success && response.warehouses) {
+                    console.log('Calling updateWarehouseDropdown with warehouses:', response.warehouses);
                     updateWarehouseDropdown(productId, response.warehouses);
+                } else {
+                    console.log('Response missing success or warehouses:', response);
                 }
             },
-            error: function() {
-                console.log('Error loading warehouse inventory');
+            error: function(xhr, status, error) {
+                console.log('AJAX error:', status, error);
             }
         });
     }
 
     function updateWarehouseDropdown(productId, warehouses) {
+        console.log('updateWarehouseDropdown called for product:', productId);
+        
         // Find the attribute combination dropdown first
         var combinationSelect = $('#combination-' + productId);
+        console.log('Found combination select:', combinationSelect.length);
         var warehouseSelect = null;
         
         if (combinationSelect.length > 0) {
             // Get the form array index from the combination dropdown name
             var combinationName = combinationSelect.attr('name');
+            console.log('Combination name attribute:', combinationName);
             if (combinationName) {
                 var indexMatch = combinationName.match(/Products\[(\d+)\]/);
                 if (indexMatch) {
                     var index = indexMatch[1];
+                    console.log('Found index:', index);
                     // Find the warehouse dropdown with the same index
                     warehouseSelect = $('select[name="Products[' + index + '].WarehouseId"]');
+                    console.log('Found warehouse select by index:', warehouseSelect.length);
                     
                     // If not found, try the ID approach
                     if (warehouseSelect.length === 0) {
                         warehouseSelect = $('#warehouse-' + productId);
+                        console.log('Found warehouse select by ID:', warehouseSelect.length);
                     }
                 }
             }
@@ -360,32 +372,43 @@
         // If still not found, try fallback approaches
         if (!warehouseSelect || warehouseSelect.length === 0) {
             warehouseSelect = $('#warehouse-' + productId);
+            console.log('Fallback warehouse select:', warehouseSelect.length);
         }
         
         if (!warehouseSelect || warehouseSelect.length === 0) {
-            // Only use fallback if we really can't find the specific one
+            console.log('No warehouse dropdown found for product:', productId);
             return;
         }
         
         // Check if this warehouse dropdown actually exists and is visible
-        if (warehouseSelect.closest('td').hasClass('no-warehouse') || 
-            warehouseSelect.closest('td').text().trim() === 'N/A') {
+        var parentTd = warehouseSelect.closest('td');
+        console.log('Parent td text:', parentTd.text().trim());
+        if (parentTd.hasClass('no-warehouse') || parentTd.text().trim() === 'N/A') {
+            console.log('Product does not need warehouse selection');
             return; // This product doesn't need warehouse selection
         }
+        
+        console.log('Updating warehouse options, current count:', warehouseSelect.find('option').length);
         
         // Clear existing options except first (empty) option
         warehouseSelect.find('option:not(:first)').remove();
         
         // Add new warehouse options
         $.each(warehouses, function(index, warehouse) {
+            console.log('Adding warehouse option:', warehouse.Text);
             warehouseSelect.append($('<option></option>')
                 .attr('value', warehouse.Value)
                 .text(warehouse.Text));
         });
         
+        console.log('After update, option count:', warehouseSelect.find('option').length);
+        
         // Refresh the dropdown if using Kendo UI
         if (warehouseSelect.data('kendoDropDownList')) {
+            console.log('Refreshing Kendo dropdown');
             warehouseSelect.data('kendoDropDownList').refresh();
         }
+        
+        console.log('Warehouse dropdown update completed');
     }
 </script>

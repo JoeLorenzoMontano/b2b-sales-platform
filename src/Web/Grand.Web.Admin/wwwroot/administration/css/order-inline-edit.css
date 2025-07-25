@@ -11,6 +11,8 @@
     font-size: 13px;
     transition: all 0.2s ease;
     background-color: #fff;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .inline-edit-field:focus {

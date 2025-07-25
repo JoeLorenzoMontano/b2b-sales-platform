@@ -21,6 +21,36 @@
                 <form asp-action="BulkAddProductsToOrder" method="post">
                     <input type="hidden" asp-for="OrderId" />
                     
+                    <!-- Selected Products Configuration -->
+                    <div id="selected-products-section" style="display:none;">
+                        <h4>@Loc["Admin.Orders.Products.SelectedProducts"] <span class="badge badge-primary" id="selected-count">0</span></h4>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="selected-products-table">
+                                <thead>
+                                    <tr>
+                                        <th>@Loc["Admin.Catalog.Products.Fields.Name"]</th>
+                                        <th>@Loc["Admin.Orders.Products.Quantity"]</th>
+                                        <th class="warehouse-header" style="display:none;">@Loc["Admin.Orders.Products.Warehouse"]</th>
+                                        <th class="attributes-header" style="display:none;">@Loc["Admin.Catalog.Products.ProductAttributes"]</th>
+                                        <th>@Loc["Admin.Orders.Products.UnitPrice"]</th>
+                                        <th>@Loc["Admin.Common.Actions"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selected-products-tbody">
+                                    <!-- Dynamic content populated via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="add-selected-products" disabled>
+                                <i class="fa fa-plus"></i> @Loc["Admin.Orders.Products.AddSelected"]
+                            </button>
+                        </div>
+                        <hr />
+                    </div>
+
                     <!-- Search/Filter Section -->
                     <div class="form-horizontal">
                         <div class="form-body">
@@ -75,36 +105,6 @@
                             <div id="products-grid"></div>
                         </div>
                     </div>
-
-                    <!-- Selected Products Configuration -->
-                    <div id="selected-products-section" style="display:none;">
-                        <hr />
-                        <h4>@Loc["Admin.Orders.Products.SelectedProducts"] <span class="badge badge-primary" id="selected-count">0</span></h4>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-striped" id="selected-products-table">
-                                <thead>
-                                    <tr>
-                                        <th>@Loc["Admin.Catalog.Products.Fields.Name"]</th>
-                                        <th>@Loc["Admin.Orders.Products.Quantity"]</th>
-                                        <th class="warehouse-header" style="display:none;">@Loc["Admin.Orders.Products.Warehouse"]</th>
-                                        <th class="attributes-header" style="display:none;">@Loc["Admin.Catalog.Products.ProductAttributes"]</th>
-                                        <th>@Loc["Admin.Orders.Products.UnitPrice"]</th>
-                                        <th>@Loc["Admin.Common.Actions"]</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="selected-products-tbody">
-                                    <!-- Dynamic content populated via JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary" id="add-selected-products" disabled>
-                                <i class="fa fa-plus"></i> @Loc["Admin.Orders.Products.AddSelected"]
-                            </button>
-                        </div>
-                    </div>
                 </form>
             </div>
         </div>
@@ -113,7 +113,18 @@
 
 <script>
     $(function() {
+        console.log('BulkAddProductsToOrder.cshtml - DOM ready, initializing...');
         initializeBulkProductSelection();
+        
+        // Test function accessibility after 2 seconds
+        setTimeout(function() {
+            console.log('Testing onAttributeCombinationChange accessibility...');
+            if (typeof window.onAttributeCombinationChange === 'function') {
+                console.log('onAttributeCombinationChange is accessible globally');
+            } else {
+                console.log('ERROR: onAttributeCombinationChange is NOT accessible globally');
+            }
+        }, 2000);
     });
 
     var selectedProducts = {};
@@ -136,7 +147,7 @@
                     errors: "Errors"
                 },
                 error: function(e) {
-                    displayGrandeNotification(e.errors, "error", true);
+                    console.log('Grid error:', e.errors);
                 },
                 pageSize: @(adminAreaSettings.DefaultGridPageSize),
                 serverPaging: true,
@@ -271,13 +282,22 @@
                 orderId: '@Model.OrderId'
             }),
             success: function(response) {
+                console.log('loadSelectedProductsConfiguration response:', response);
                 if (response.success) {
                     $('#selected-products-tbody').html(response.html);
+                    console.log('HTML updated, calling updateTableColumns');
                     updateTableColumns();
+                    
+                    // Debug: Check if attribute dropdowns exist after HTML update
+                    var combinationSelects = $('[id^="combination-"]');
+                    console.log('Found combination dropdowns after HTML update:', combinationSelects.length);
+                    combinationSelects.each(function() {
+                        console.log('Dropdown ID:', this.id, 'onchange attr:', $(this).attr('onchange'));
+                    });
                 }
             },
             error: function() {
-                displayGrandeNotification('Error loading product configuration', 'error', true);
+                console.log('Error loading product configuration');
             }
         });
     }
@@ -311,6 +331,9 @@
         updateMasterCheckbox();
     }
 
+    // Make sure the function is globally accessible
+    window.onAttributeCombinationChange = onAttributeCombinationChange;
+    
     // Handle attribute combination changes
     function onAttributeCombinationChange(productId, combinationId) {
         console.log('onAttributeCombinationChange called with:', productId, combinationId);

@@ -21,6 +21,12 @@
                 <form asp-action="BulkAddProductsToOrder" method="post">
                     <input type="hidden" asp-for="OrderId" />
                     
+                    <!-- Existing Order Items Section -->
+                    <div class="mb-4">
+                        <h4>@Loc["Admin.Orders.Products.Current"] (@Model.OrderNumber)</h4>
+                        <div id="existing-order-items-grid" style="max-height: 300px; overflow-y: auto; border: 1px solid #e4e5e7; border-radius: 4px;"></div>
+                    </div>
+                    
                     <!-- Selected Products Configuration -->
                     <div id="selected-products-section" style="display:none;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -113,6 +119,7 @@
 <script>
     $(function() {
         console.log('BulkAddProductsToOrder.cshtml - DOM ready, initializing...');
+        initializeExistingOrderItemsGrid();
         initializeBulkProductSelection();
         
         // Test function accessibility after 2 seconds
@@ -127,6 +134,68 @@
     });
 
     var selectedProducts = {};
+
+    function initializeExistingOrderItemsGrid() {
+        // Initialize Kendo Grid for existing order items
+        $("#existing-order-items-grid").kendoGrid({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "@Html.Raw(Url.Action("GetOrderItemsForIncoming", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        dataType: "json",
+                        data: function() {
+                            return addAntiForgeryToken({
+                                orderId: '@Model.OrderId'
+                            });
+                        }
+                    }
+                },
+                schema: {
+                    data: "Data",
+                    total: "Total",
+                    errors: "Errors"
+                },
+                error: function(e) {
+                    console.log('Existing order items grid error:', e.errors);
+                }
+            },
+            scrollable: false,
+            sortable: false,
+            pageable: false,
+            columns: [
+                {
+                    field: "ProductName",
+                    title: "@Loc["Admin.Catalog.Products.Fields.Name"]",
+                    width: 350
+                },
+                {
+                    field: "Quantity",
+                    title: "@Loc["Admin.Orders.Products.Quantity"]",
+                    width: 100,
+                    template: "#=Quantity#"
+                },
+                {
+                    field: "UnitPriceInclTax",
+                    title: "@Loc["Admin.Orders.Products.UnitPrice"]",
+                    width: 120
+                },
+                {
+                    field: "SubTotal",
+                    title: "@Loc["Admin.Orders.Products.SubTotal"]",
+                    width: 120
+                },
+                {
+                    field: "AttributeInfo",
+                    title: "@Loc["Admin.Catalog.Products.ProductAttributes"]",
+                    encoded: false,
+                    template: function(dataItem) {
+                        return dataItem.AttributeInfo || "";
+                    }
+                }
+            ]
+        });
+    }
 
     function initializeBulkProductSelection() {
         // Initialize Kendo Grid

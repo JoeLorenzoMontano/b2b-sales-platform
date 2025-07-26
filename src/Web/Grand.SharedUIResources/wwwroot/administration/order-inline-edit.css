@@ -1,0 +1,165 @@
+/**
+ * Order Item Inline Edit Styles
+ * Styling for inline editing of order item price and quantity fields
+ */
+
+/* Base inline edit field styling */
+.inline-edit-field {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.inline-edit-field:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.inline-edit-field:hover:not(:disabled) {
+    border-color: #aaa;
+}
+
+/* Disabled state during save */
+.inline-edit-field:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.7;
+    cursor: wait;
+}
+
+/* Success state styling */
+.inline-edit-field.save-success {
+    border-color: #28a745;
+    background-color: #f8fff9;
+    animation: success-flash 1s ease;
+}
+
+@keyframes success-flash {
+    0% { background-color: #d4edda; }
+    100% { background-color: #f8fff9; }
+}
+
+/* Error state styling */
+.inline-edit-field.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5;
+}
+
+.inline-edit-field.border-danger {
+    border-color: #dc3545 !important;
+}
+
+/* Error message styling */
+.invalid-feedback {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #dc3545;
+}
+
+/* Auto-save status indicator */
+.auto-save-status {
+    margin-top: 4px;
+    text-align: center;
+    min-height: 16px;
+}
+
+.auto-save-status .fa-spinner {
+    animation: fa-spin 1s infinite linear;
+}
+
+.auto-save-status .text-success {
+    color: #28a745 !important;
+}
+
+.auto-save-status .text-muted {
+    color: #6c757d !important;
+}
+
+/* Inline edit price field specific */
+.inline-edit-price {
+    text-align: right;
+}
+
+/* Inline edit quantity field specific */
+.inline-edit-quantity {
+    text-align: center;
+}
+
+/* Remove spinner arrows from number inputs in webkit browsers */
+.inline-edit-quantity::-webkit-outer-spin-button,
+.inline-edit-quantity::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Remove spinner arrows from number inputs in Firefox */
+.inline-edit-quantity[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Display value styling */
+.text-info {
+    color: #17a2b8 !important;
+    font-size: 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .inline-edit-field {
+        font-size: 12px;
+        padding: 3px 6px;
+    }
+    
+    .auto-save-status {
+        font-size: 0.75rem;
+    }
+}
+
+/* Order table specific adjustments */
+.order-table .inline-edit-field {
+    margin-bottom: 2px;
+}
+
+.order-table td {
+    vertical-align: middle;
+}
+
+/* Loading overlay for individual fields */
+.field-loading-overlay {
+    position: relative;
+}
+
+.field-loading-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+/* Ensure proper spacing for inline elements */
+.inline-edit-field + small {
+    display: block;
+    margin-top: 2px;
+}
+
+/* Button adjustments for the simplified action column */
+.btn-group .k-button {
+    margin-right: 2px;
+}
+
+.btn-group .k-button:last-child {
+    margin-right: 0;
+}

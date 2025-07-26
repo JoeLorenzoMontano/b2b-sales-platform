@@ -262,21 +262,21 @@
                                 </td>
                             }
                             <td>
-
-                                @switch (Model.TaxDisplayType)
-                                {
-                                    case TaxDisplayType.ExcludingTax:
+                                <span class="subtotal-display" data-order-item-id="@item.Id">
+                                    @switch (Model.TaxDisplayType)
                                     {
-                                        @item.SubTotalExclTax
+                                        case TaxDisplayType.ExcludingTax:
+                                        {
+                                            @item.SubTotalExclTax
+                                        }
+                                            break;
+                                        case TaxDisplayType.IncludingTax:
+                                        {
+                                            @item.SubTotalInclTax
+                                        }
+                                            break;
                                     }
-                                        break;
-                                    case TaxDisplayType.IncludingTax:
-                                    {
-                                        @item.SubTotalInclTax
-                                    }
-                                        break;
-                                }
-
+                                </span>
                             </td>
 
                             <td align="center">
@@ -287,6 +287,12 @@
                                     <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-orderItemId="@(item.Id)" id="btnCancelOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Cancel"]">
                                         <span class="k-icon k-i-cancel"></span>
                                     </button>
+                                </div>
+                                @* Auto-save status indicator *@
+                                <div class="auto-save-status" id="save-status-@item.Id" style="display:none;">
+                                    <small class="text-muted">
+                                        <i class="fa fa-spinner fa-spin"></i> Saving...
+                                    </small>
                                     @* Hidden save button that gets triggered on blur *@
                                     <button type="submit" name="btnSaveOrderItem@(item.Id)" asp-action="SaveOrderItem" asp-route-orderItemId="@(item.Id)" id="btnSaveOrderItem@(item.Id)" style="display:none;" class="k-button">
                                         <span class="k-icon k-i-save"></span>

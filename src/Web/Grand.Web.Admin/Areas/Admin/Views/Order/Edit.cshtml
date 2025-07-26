@@ -229,13 +229,26 @@ function initializeInlineEditing() {
     $(document).on('blur', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function() {
         const $field = $(this);
         const $row = $field.closest('tr');
-        const orderItemId = $row.find('input[name^="Items"][name$="Id"]').val();
+        const $idField = $row.find('input[name^="Items"][name$="].Id"]');
+        const orderItemId = $idField.val();
         const originalValue = $field.data('original-value') || $field.attr('data-original-value');
         const newValue = $field.val().trim();
+        
+        // Debug logging
+        console.log('Field name:', $field.attr('name'));
+        console.log('ID field found:', $idField.length, 'value:', orderItemId);
+        console.log('Row HTML:', $row[0].outerHTML.substring(0, 200));
         
         // Store original value if not already stored
         if (!originalValue) {
             $field.data('original-value', newValue);
+            return;
+        }
+        
+        // Validate we have an order item ID
+        if (!orderItemId) {
+            console.error('No order item ID found for field:', $field.attr('name'));
+            showFieldError($field, 'Unable to identify order item');
             return;
         }
         

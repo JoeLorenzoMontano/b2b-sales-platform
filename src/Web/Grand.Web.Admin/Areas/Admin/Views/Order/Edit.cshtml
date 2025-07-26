@@ -229,15 +229,25 @@ function initializeInlineEditing() {
     $(document).on('blur', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function() {
         const $field = $(this);
         const $row = $field.closest('tr');
-        const $idField = $row.find('input[name^="Items"][name$="].Id"]');
-        const orderItemId = $idField.val();
+        // Extract index from field name (e.g., "Items[0].UnitPriceExclTaxValue" -> "0")
+        const fieldName = $field.attr('name');
+        const indexMatch = fieldName.match(/Items\[(\d+)\]/);
+        
+        let orderItemId = null;
+        if (indexMatch) {
+            const index = indexMatch[1];
+            // The hidden input is placed before the <tr>, so search in the whole form
+            const $idField = $(`input[name="Items[${index}].Id"]`);
+            orderItemId = $idField.val();
+            
+            // Debug logging
+            console.log('Field name:', fieldName, 'Index:', index);
+            console.log('ID field found:', $idField.length, 'value:', orderItemId);
+            console.log('ID field selector:', `input[name="Items[${index}].Id"]`);
+        }
+        
         const originalValue = $field.data('original-value') || $field.attr('data-original-value');
         const newValue = $field.val().trim();
-        
-        // Debug logging
-        console.log('Field name:', $field.attr('name'));
-        console.log('ID field found:', $idField.length, 'value:', orderItemId);
-        console.log('Row HTML:', $row[0].outerHTML.substring(0, 200));
         
         // Store original value if not already stored
         if (!originalValue) {

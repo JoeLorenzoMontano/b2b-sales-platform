@@ -1582,7 +1582,14 @@ public class OrderController(
             return Json(new { success = false, message = "Access denied" });
 
         var warehouses = await orderViewModelService.GetCombinationWarehouseInventory(combinationId, productId);
-        return Json(new { success = true, warehouses = warehouses });
+        var combinationDetails = await orderViewModelService.GetCombinationDetails(combinationId, productId);
+        
+        return Json(new { 
+            success = true, 
+            warehouses = warehouses,
+            overriddenPrice = combinationDetails.OverriddenPrice,
+            sku = combinationDetails.Sku
+        });
     }
 
     #endregion

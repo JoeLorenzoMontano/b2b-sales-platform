@@ -1330,8 +1330,22 @@ public class OrderViewModelService : IOrderViewModelService
 
             // Get unit price using existing pricing service - simplified
             var customer = await _customerService.GetCustomerById(order.CustomerId);
-            var unitPrice = await _pricingService.GetUnitPrice(product, customer, null, null, ShoppingCartType.ShoppingCart, 1, new List<CustomAttribute>(), 0, null, null, true);
-            rowModel.UnitPrice = (decimal)unitPrice.unitprice;
+            try 
+            {
+                var unitPrice = await _pricingService.GetUnitPrice(product, customer, null, null, ShoppingCartType.ShoppingCart, 1, new List<CustomAttribute>(), 0, null, null, true);
+                rowModel.UnitPrice = (decimal)unitPrice.unitprice;
+                
+                // Fallback to product price if pricing service returns 0
+                if (rowModel.UnitPrice == 0)
+                {
+                    rowModel.UnitPrice = (decimal)product.Price;
+                }
+            }
+            catch
+            {
+                // Fallback to product base price if pricing service fails
+                rowModel.UnitPrice = (decimal)product.Price;
+            }
 
             // Prepare warehouses if needed
             if (rowModel.NeedsWarehouse)
@@ -1589,6 +1603,27 @@ public class OrderViewModelService : IOrderViewModelService
         }
 
         return warehouses;
+    }
+
+    public virtual async Task<(decimal? OverriddenPrice, string Sku)> GetCombinationDetails(string combinationId, string productId)
+    {
+        try
+        {
+            // Get the product
+            var product = await _productService.GetProductById(productId);
+            if (product == null)
+                return (null, null);
+
+            var combination = product.ProductAttributeCombinations.FirstOrDefault(x => x.Id == combinationId);
+            if (combination == null)
+                return (null, null);
+
+            return ((decimal?)combination.OverriddenPrice, combination.Sku);
+        }
+        catch (Exception)
+        {
+            return (null, null);
+        }
     }
 
     #endregion

@@ -420,6 +420,11 @@
                 if (response.success && response.warehouses) {
                     console.log('Calling updateWarehouseDropdown with warehouses:', response.warehouses);
                     updateWarehouseDropdown(productId, response.warehouses);
+                    
+                    // Update unit price if combination has overridden price
+                    if (response.overriddenPrice && response.overriddenPrice > 0) {
+                        updateUnitPrice(productId, response.overriddenPrice);
+                    }
                 } else {
                     console.log('Response missing success or warehouses:', response);
                 }
@@ -501,5 +506,29 @@
         }
         
         console.log('Warehouse dropdown update completed');
+    }
+
+    function updateUnitPrice(productId, price) {
+        console.log('updateUnitPrice called for product:', productId, 'with price:', price);
+        
+        // Find the unit price input field for this product
+        var combinationSelect = $('#combination-' + productId);
+        if (combinationSelect.length > 0) {
+            // Get the form array index from the combination dropdown name
+            var combinationName = combinationSelect.attr('name');
+            if (combinationName) {
+                var indexMatch = combinationName.match(/Products\[(\d+)\]/);
+                if (indexMatch) {
+                    var index = indexMatch[1];
+                    var priceInput = $('input[name="Products[' + index + '].UnitPrice"]');
+                    if (priceInput.length > 0) {
+                        priceInput.val(price.toFixed(2));
+                        console.log('Updated unit price to:', price.toFixed(2));
+                    } else {
+                        console.log('Unit price input not found for index:', index);
+                    }
+                }
+            }
+        }
     }
 </script>

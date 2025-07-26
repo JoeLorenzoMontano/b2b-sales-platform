@@ -40,4 +40,5 @@ public interface IOrderViewModelService
     Task<string> GetProductConfigurationRowsHtml(string[] productIds, string orderId);
     Task<IList<string>> ProcessBulkProductAddition(BulkAddProductsToOrderModel model);
     Task<IList<SelectListItem>> GetCombinationWarehouseInventory(string combinationId, string productId);
+    Task<(decimal? OverriddenPrice, string Sku)> GetCombinationDetails(string combinationId, string productId);
 }

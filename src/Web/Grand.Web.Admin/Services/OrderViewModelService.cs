@@ -1328,11 +1328,14 @@ public class OrderViewModelService : IOrderViewModelService
                 HasAttributes = product.ProductAttributeMappings.Any()
             };
 
-            // Get unit price using existing pricing service - simplified
+            // Get unit price using existing pricing service with full discount context
             var customer = await _customerService.GetCustomerById(order.CustomerId);
+            var store = await _storeService.GetStoreById(order.StoreId);
+            var currency = await _currencyService.GetCurrencyById(order.CustomerCurrencyCode);
+            
             try 
             {
-                var unitPrice = await _pricingService.GetUnitPrice(product, customer, null, null, ShoppingCartType.ShoppingCart, 1, new List<CustomAttribute>(), 0, null, null, true);
+                var unitPrice = await _pricingService.GetUnitPrice(product, customer, store, currency, ShoppingCartType.ShoppingCart, 1, new List<CustomAttribute>(), 0, null, null, true);
                 rowModel.UnitPrice = (decimal)unitPrice.unitprice;
                 
                 // Fallback to product price if pricing service returns 0

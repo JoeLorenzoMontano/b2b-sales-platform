@@ -6,19 +6,6 @@
     <table class="table table-bordered table-striped table-hover">
         <tr>
             <td>
-                @* Show edit fields inline and auto-save on blur *@
-                <script>
-                $(document).ready(function() {
-                    // Auto-save on blur for price and quantity fields
-                    $('input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]').on('blur', function() {
-                        var $input = $(this);
-                        var orderItemId = $input.closest('tr').find('input[name^="Items"][name$="Id"]').val();
-                        
-                        // Find and trigger the save button for this item
-                        $('#btnSaveOrderItem' + orderItemId).click();
-                    });
-                });
-                </script>
                 <table class="table table-bordered table-striped table-hover">
                     <col/>
                     <col/>
@@ -199,7 +186,7 @@
                             <td>
                                 <div>
                                     <small class="text-muted">@Loc["Admin.Orders.Products.Edit.ExclTax"]</small><br/>
-                                    <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control" style="width:100%; max-width:120px;"/>
+                                    <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;"/>
                                 </div>
                                 <div class="mt-1">
                                     <small class="text-info">
@@ -221,7 +208,7 @@
                             </td>
                             <td>
                                 <div>
-                                    <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control" style="width:100%; max-width:80px;" min="1"/>
+                                    <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px;" min="1"/>
                                 </div>
                                 @if (item.OpenQty > 0)
                                 {

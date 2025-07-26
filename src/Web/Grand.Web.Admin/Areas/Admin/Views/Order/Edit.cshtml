@@ -142,6 +142,208 @@
 </form>
 <admin-delete-confirmation button-id="order-delete"/>
 
-@* Include inline edit styles and JavaScript *@
-<link href="~/administration/css/order-inline-edit.css" rel="stylesheet" />
-<script src="~/administration/js/order-item-inline-edit.js"></script>
+@* Inline edit styles *@
+<style>
+/* Order Item Inline Edit Styles */
+.inline-edit-field {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.inline-edit-field:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.inline-edit-field:hover:not(:disabled) {
+    border-color: #aaa;
+}
+
+.inline-edit-field:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.inline-edit-field.save-success {
+    border-color: #28a745;
+    background-color: #f8fff9;
+    animation: success-flash 1s ease;
+}
+
+@@keyframes success-flash {
+    0% { background-color: #d4edda; }
+    100% { background-color: #f8fff9; }
+}
+
+.inline-edit-field.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5;
+}
+
+.inline-edit-field.border-danger {
+    border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #dc3545;
+}
+
+.auto-save-status {
+    margin-top: 4px;
+    text-align: center;
+    min-height: 16px;
+}
+
+.auto-save-status .fa-spinner {
+    animation: fa-spin 1s infinite linear;
+}
+
+.auto-save-status .text-success {
+    color: #28a745 !important;
+}
+
+.auto-save-status .text-muted {
+    color: #6c757d !important;
+}
+</style>
+
+@* Inline edit JavaScript *@
+<script>
+$(document).ready(function() {
+    initializeInlineEditing();
+});
+
+function initializeInlineEditing() {
+    // Handle blur event for auto-save on price and quantity fields
+    $(document).on('blur', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function() {
+        const $field = $(this);
+        const $row = $field.closest('tr');
+        const orderItemId = $row.find('input[name^="Items"][name$="Id"]').val();
+        const originalValue = $field.data('original-value') || $field.attr('data-original-value');
+        const newValue = $field.val().trim();
+        
+        // Store original value if not already stored
+        if (!originalValue) {
+            $field.data('original-value', newValue);
+            return;
+        }
+        
+        // Only save if value changed and is valid
+        if (newValue !== originalValue && isValidValue(newValue, getFieldType($field))) {
+            autoSaveOrderItem(orderItemId, $field, newValue);
+        } else if (newValue === originalValue) {
+            clearFieldError($field);
+        } else if (!isValidValue(newValue, getFieldType($field))) {
+            showFieldError($field, getValidationMessage(getFieldType($field)));
+        }
+    });
+
+    // Handle focus event - clear errors and store original value
+    $(document).on('focus', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function() {
+        const $field = $(this);
+        clearFieldError($field);
+        
+        // Store original value if not already stored
+        if (!$field.data('original-value')) {
+            $field.data('original-value', $field.val());
+        }
+    });
+
+    // Prevent form submission when pressing Enter
+    $(document).on('keypress', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function(e) {
+        if (e.which === 13) {
+            $(this).blur();
+            return false;
+        }
+    });
+}
+
+function getFieldType($field) {
+    const name = $field.attr('name');
+    if (name.includes('UnitPriceExclTaxValue')) return 'price';
+    if (name.includes('Quantity')) return 'quantity';
+    return 'unknown';
+}
+
+function isValidValue(value, fieldType) {
+    if (!value || value === '') return false;
+    
+    if (fieldType === 'quantity') {
+        const num = parseInt(value);
+        return /^\d+$/.test(value) && num > 0;
+    }
+    
+    if (fieldType === 'price') {
+        const num = parseFloat(value);
+        return /^\d+(\.\d{1,2})?$/.test(value) && num >= 0;
+    }
+    
+    return false;
+}
+
+function getValidationMessage(fieldType) {
+    if (fieldType === 'quantity') {
+        return 'Quantity must be a positive whole number';
+    }
+    if (fieldType === 'price') {
+        return 'Price must be a valid decimal number (e.g., 12.34)';
+    }
+    return 'Invalid value';
+}
+
+function autoSaveOrderItem(orderItemId, $field, newValue) {
+    const $row = $field.closest('tr');
+    const $statusDiv = $row.find('#save-status-' + orderItemId);
+    
+    // Show loading state
+    $statusDiv.html('<small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small>').show();
+    $field.prop('disabled', true);
+    
+    // Trigger the hidden save button
+    const $saveButton = $('#btnSaveOrderItem' + orderItemId);
+    if ($saveButton.length) {
+        // Update the field value and trigger the existing save mechanism
+        $field.data('original-value', newValue);
+        $saveButton.click();
+        
+        // Show success after a brief delay
+        setTimeout(function() {
+            $statusDiv.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+            $field.prop('disabled', false);
+            
+            // Hide success message after 2 seconds
+            setTimeout(function() {
+                $statusDiv.hide();
+            }, 2000);
+        }, 500);
+    } else {
+        // Fallback: show error if save button not found
+        showFieldError($field, 'Save mechanism not found');
+        $field.prop('disabled', false);
+        $statusDiv.hide();
+    }
+}
+
+function showFieldError($field, message) {
+    clearFieldError($field);
+    $field.addClass('is-invalid border-danger');
+    const errorHtml = '<div class="invalid-feedback d-block">' + message + '</div>';
+    $field.after(errorHtml);
+}
+
+function clearFieldError($field) {
+    $field.removeClass('is-invalid border-danger');
+    $field.next('.invalid-feedback').remove();
+}
+</script>

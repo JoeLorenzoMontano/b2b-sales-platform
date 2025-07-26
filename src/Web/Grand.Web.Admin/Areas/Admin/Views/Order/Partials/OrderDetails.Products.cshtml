@@ -184,15 +184,22 @@
                                 </div>
                             </td>
                             <td>
+                                @{
+                                    // Only show tax-specific labels if tax is applicable
+                                    var showTaxLabels = item.UnitPriceExclTax != item.UnitPriceInclTax;
+                                }
                                 <div>
-                                    <small class="text-muted">@Loc["Admin.Orders.Products.Edit.ExclTax"]</small><br/>
+                                    @if (showTaxLabels)
+                                    {
+                                        <small class="text-muted">@Loc["Admin.Orders.Products.Edit.ExclTax"]</small><br/>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">Price:</small><br/>
+                                    }
                                     <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;"/>
                                 </div>
-                                @{
-                                    // Only show display price if it's different from the input value (tax is applicable)
-                                    var showDisplayPrice = item.UnitPriceExclTax != item.UnitPriceInclTax;
-                                }
-                                @if (showDisplayPrice)
+                                @if (showTaxLabels)
                                 {
                                     <div class="mt-1">
                                         <small class="text-info">

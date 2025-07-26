@@ -1501,7 +1501,7 @@ public class OrderController(
         if (!string.IsNullOrEmpty(model.SearchCategoryId))
             categoryIds.Add(model.SearchCategoryId);
 
-        var products = (await productService.SearchProducts(categoryIds: categoryIds,
+        var searchResult = await productService.SearchProducts(categoryIds: categoryIds,
             storeId: "",
             brandId: model.SearchBrandId,
             collectionId: model.SearchCollectionId,
@@ -1509,15 +1509,18 @@ public class OrderController(
             keywords: model.SearchProductName,
             pageIndex: command.Page - 1,
             pageSize: command.PageSize,
-            showHidden: true)).products;
+            showHidden: true);
+
+        // Filter out grouped products
+        var filteredProducts = searchResult.products.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
 
         var gridModel = new DataSourceResult {
-            Data = products.Select(x => new OrderModel.AddOrderProductModel.ProductModel {
+            Data = filteredProducts.Select(x => new OrderModel.AddOrderProductModel.ProductModel {
                 Id = x.Id,
                 Name = x.Name,
                 Sku = x.Sku
             }),
-            Total = products.TotalCount
+            Total = filteredProducts.Count
         };
 
         return Json(gridModel);

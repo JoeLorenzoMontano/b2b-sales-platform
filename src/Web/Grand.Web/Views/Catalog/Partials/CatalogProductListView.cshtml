@@ -7,10 +7,10 @@
             <b-card-img-lazy class="hover-img" :alt="Model.SecondPictureModel.AlternateText" :src="Model.SecondPictureModel.ImageUrl"></b-card-img-lazy>
         </template>
     </a>
-    <a title="@Loc["Products.QuickView"]" class="btn btn-secondary quick-view-button" data-target="ModalQuickView" :onclick="'AxiosCart.quickview_product(`@Url.RouteUrl("QuickView-Product")/' + Model.Id + '`);return false;'">
+   @*  <a title="@Loc["Products.QuickView"]" class="btn btn-secondary quick-view-button" data-target="ModalQuickView" :onclick="'AxiosCart.quickview_product(`@Url.RouteUrl("QuickView-Product")/' + Model.Id + '`);return false;'">
         <b-icon icon="search"></b-icon>
         <span>@Loc["Products.QuickView"]</span>
-    </a>
+    </a> *@
     <template v-if="Model.Flag !== null">
         <div class="product-label">
             <div class="badge badge-info">{{Model.Flag}}</div>

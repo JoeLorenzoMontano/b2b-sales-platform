@@ -64,16 +64,12 @@
                         field: "CustomerFullName",
                         title: "@Loc["Admin.Orders.Fields.Customer"]",
                         width: 200,
-                        template: function(dataItem) {
-                            if (dataItem.CustomerFullName) {
-                                var customerDisplay = kendo.htmlEncode(dataItem.CustomerFullName);
-                                if (dataItem.CustomerCompany) {
-                                    customerDisplay += '<br/><small>' + kendo.htmlEncode(dataItem.CustomerCompany) + '</small>';
-                                }
-                                return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
-                            } else {
-                                return '--';
-                            }
+                      template: function(dataItem) {
+                          var customerDisplay = dataItem.CustomerFullName;
+                          if (dataItem.CustomerCompany) {
+                              customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                          }
+                          return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
                         }                        
                     },
                     {

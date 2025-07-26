@@ -317,7 +317,8 @@ public class OrderController(
                             StoreName = order.StoreId,
                             ShippingAddressString = order.ShippingAddress?.Address1,
                             TargetDeliveryDate = order.TargetDeliveryDate,
-                            RequestedShipmentDate = order.RequestedShipmentDate
+                            RequestedShipmentDate = order.RequestedShipmentDate,
+                            CustomerCompany = order.BillingAddress?.Company
                         };
 
                         // Get customer groups that are not system groups

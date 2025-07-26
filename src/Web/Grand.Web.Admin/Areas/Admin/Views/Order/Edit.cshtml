@@ -305,34 +305,64 @@ function getValidationMessage(fieldType) {
 function autoSaveOrderItem(orderItemId, $field, newValue) {
     const $row = $field.closest('tr');
     const $statusDiv = $row.find('#save-status-' + orderItemId);
+    const orderId = $('input[name="Id"]').val();
+    const fieldType = getFieldType($field);
     
     // Show loading state
     $statusDiv.html('<small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small>').show();
     $field.prop('disabled', true);
     
-    // Trigger the hidden save button
-    const $saveButton = $('#btnSaveOrderItem' + orderItemId);
-    if ($saveButton.length) {
-        // Update the field value and trigger the existing save mechanism
-        $field.data('original-value', newValue);
-        $saveButton.click();
-        
-        // Show success after a brief delay
-        setTimeout(function() {
-            $statusDiv.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+    // Make AJAX call to update the field
+    $.ajax({
+        url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            orderItemId: orderItemId,
+            fieldType: fieldType,
+            value: newValue
+        },
+        success: function(response) {
+            if (response.success) {
+                // Update the original value data attribute
+                $field.data('original-value', newValue);
+                
+                // Show success state
+                $statusDiv.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                
+                // Update display values if provided
+                if (response.newSubTotal) {
+                    updateSubTotal(orderItemId, response.newSubTotal);
+                }
+                if (response.displayValue) {
+                    updateDisplayValue(orderItemId, fieldType, response.displayValue);
+                }
+                
+                // Clear any existing errors
+                clearFieldError($field);
+            } else {
+                // Show error message
+                showFieldError($field, response.message || 'Save failed');
+                // Revert to original value
+                $field.val($field.data('original-value'));
+            }
+        },
+        error: function(xhr, status, error) {
+            // Show generic error
+            showFieldError($field, 'Network error - please try again');
+            // Revert to original value
+            $field.val($field.data('original-value'));
+        },
+        complete: function() {
+            // Re-enable field
             $field.prop('disabled', false);
             
             // Hide success message after 2 seconds
             setTimeout(function() {
                 $statusDiv.hide();
             }, 2000);
-        }, 500);
-    } else {
-        // Fallback: show error if save button not found
-        showFieldError($field, 'Save mechanism not found');
-        $field.prop('disabled', false);
-        $statusDiv.hide();
-    }
+        }
+    });
 }
 
 function showFieldError($field, message) {
@@ -345,5 +375,19 @@ function showFieldError($field, message) {
 function clearFieldError($field) {
     $field.removeClass('is-invalid border-danger');
     $field.next('.invalid-feedback').remove();
+}
+
+function updateSubTotal(orderItemId, newSubTotal) {
+    // Find and update the subtotal display for this item
+    const $row = $('[data-order-item-id="' + orderItemId + '"]').closest('tr');
+    $row.find('.subtotal-display').text(newSubTotal);
+}
+
+function updateDisplayValue(orderItemId, fieldType, displayValue) {
+    // Update the display value shown below the input field
+    const $field = $('[name^="Items"][name$="Id"][value="' + orderItemId + '"]').closest('tr');
+    if (fieldType === 'price') {
+        $field.find('.text-info span').text('Display: ' + displayValue);
+    }
 }
 </script>

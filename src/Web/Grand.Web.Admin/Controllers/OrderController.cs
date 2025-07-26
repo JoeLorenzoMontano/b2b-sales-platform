@@ -1517,8 +1517,7 @@ public class OrderController(
         var gridModel = new DataSourceResult {
             Data = filteredProducts.Select(x => new OrderModel.AddOrderProductModel.ProductModel {
                 Id = x.Id,
-                Name = x.Name,
-                Sku = x.Sku
+                Name = x.Name
             }),
             Total = filteredProducts.Count
         };

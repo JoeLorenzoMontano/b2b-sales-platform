@@ -193,10 +193,6 @@
                                     {
                                         <small class="text-muted">@Loc["Admin.Orders.Products.Edit.ExclTax"]</small><br/>
                                     }
-                                    else
-                                    {
-                                        <small class="text-muted">Price:</small><br/>
-                                    }
                                     <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;"/>
                                 </div>
                                 @if (showTaxLabels)

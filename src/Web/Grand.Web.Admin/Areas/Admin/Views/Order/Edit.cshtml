@@ -316,12 +316,12 @@ function autoSaveOrderItem(orderItemId, $field, newValue) {
     $.ajax({
         url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
         type: 'POST',
-        data: {
+        data: addAntiForgeryToken({
             orderId: orderId,
             orderItemId: orderItemId,
             fieldType: fieldType,
             value: newValue
-        },
+        }),
         success: function(response) {
             if (response.success) {
                 // Update the original value data attribute

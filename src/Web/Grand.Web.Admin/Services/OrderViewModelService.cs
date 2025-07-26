@@ -1322,7 +1322,9 @@ public class OrderViewModelService : IOrderViewModelService
                 ProductName = product.Name,
                 Sku = product.Sku,
                 Quantity = 1,
-                NeedsWarehouse = product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock,
+                NeedsWarehouse = product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock || 
+                                (product.ProductAttributeCombinations.Any() && 
+                                 product.ProductAttributeCombinations.Any(c => c.WarehouseInventory.Any())),
                 HasAttributes = product.ProductAttributeMappings.Any()
             };
 

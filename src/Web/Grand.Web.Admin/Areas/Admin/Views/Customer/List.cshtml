@@ -54,14 +54,14 @@
                                 <div class="row align-items-end">
                                     <div class="col-md-4 col-ms-6 col-12">
                                         <div class="form-group mb-0">
-                                            <admin-label asp-for="SearchEmail" class="control-label"/>
-                                            <admin-input asp-for="SearchEmail"/>
+                                            <admin-label asp-for="SearchFirstName" class="control-label"/>
+                                            <admin-input asp-for="SearchFirstName"/>
                                         </div>
                                     </div>
                                     <div class="col-md-4 col-ms-6 col-12">
                                         <div class="form-group mb-0">
-                                            <admin-label asp-for="SearchFirstName" class="control-label"/>
-                                            <admin-input asp-for="SearchFirstName"/>
+                                            <admin-label asp-for="SearchEmail" class="control-label"/>
+                                            <admin-input asp-for="SearchEmail"/>
                                         </div>
                                     </div>
                                     <div class="col-md-4 col-sm-12 col-12">
@@ -194,11 +194,6 @@
                             attributes: { style: "text-align:center" },
                             template: "<label class='mt-checkbox mt-checkbox-outline control control-checkbox mt-NoMargin'><input type='checkbox' value='#=Id#' class='checkboxGroups'/><div class='control__indicator control__indicator_customers mt-NoMargin'></div></label>",
                             width: 40
-                        }, {
-                            field: "Email",
-                            title: "@Loc["Admin.Customers.Customers.Fields.Email"]",
-                            width: 200,
-                            template: '<a class="k-link" href="Edit/#=Id#">#=Email#</a>',
                         },
                         @if (Model.UsernamesEnabled)
                         {
@@ -213,6 +208,11 @@
                             title: "@Loc["Admin.Customers.Customers.Fields.FullName"]",
                             width: 200,
                             encoded: true,
+                        }, {
+                            field: "Email",
+                            title: "@Loc["Admin.Customers.Customers.Fields.Email"]",
+                            width: 200,
+                            template: '<a class="k-link" href="Edit/#=Id#">#=Email#</a>',
                         }, {
                             field: "CustomerGroupNames",
                             title: "@Loc["Admin.Customers.Customers.Fields.CustomerGroups"]",

@@ -24,7 +24,7 @@
                     <!-- Existing Order Items Section -->
                     <div class="mb-4">
                         <h4>@Loc["Admin.Orders.Products.Current"] (@Model.OrderNumber)</h4>
-                        <div id="existing-order-items-grid" style="max-height: 300px; overflow-y: auto; border: 1px solid #e4e5e7; border-radius: 4px;"></div>
+                        <div id="existing-order-items-grid" style="max-height: 1200px; overflow-y: auto; border: 1px solid #e4e5e7; border-radius: 4px;"></div>
                     </div>
                     
                     <!-- Selected Products Configuration -->
@@ -327,7 +327,7 @@
         if (selectedCount > 0) {
             $('#selected-products-section').show();
             $('#add-selected-products').prop('disabled', false);
-            loadSelectedProductsConfiguration();
+            loadSelectedProductsConfigurationPreservingValues();
         } else {
             $('#selected-products-section').hide();
             $('#add-selected-products').prop('disabled', true);
@@ -361,6 +361,90 @@
             },
             error: function() {
                 console.log('Error loading product configuration');
+            }
+        });
+    }
+
+    function loadSelectedProductsConfigurationPreservingValues() {
+        var selectedCount = Object.keys(selectedProducts).length;
+        
+        // If no products selected, just hide the section
+        if (selectedCount === 0) {
+            $('#selected-products-tbody').empty();
+            updateTableColumns();
+            return;
+        }
+
+        // Save current user values before rebuilding
+        var currentValues = {};
+        $('#selected-products-tbody tr[id^="product-row-"]').each(function() {
+            var $row = $(this);
+            var productId = $row.attr('id').replace('product-row-', '');
+            
+            currentValues[productId] = {
+                quantity: $row.find('input[name$=".Quantity"]').val(),
+                warehouseId: $row.find('select[name$=".WarehouseId"]').val() || '',
+                attributeCombinationId: $row.find('select[name$=".AttributeCombinationId"]').val() || '',
+                unitPrice: $row.find('input[name$=".UnitPrice"]').val()
+            };
+        });
+
+        // Get fresh HTML from server
+        var productIds = Object.keys(selectedProducts);
+        $.ajax({
+            url: '@Url.Action("GetProductConfigurationRows", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: addAntiForgeryToken({
+                productIds: productIds,
+                orderId: '@Model.OrderId'
+            }),
+            success: function(response) {
+                console.log('loadSelectedProductsConfigurationPreservingValues response:', response);
+                if (response.success) {
+                    $('#selected-products-tbody').html(response.html);
+                    
+                    // Restore preserved values for existing products
+                    $('#selected-products-tbody tr[id^="product-row-"]').each(function() {
+                        var $row = $(this);
+                        var productId = $row.attr('id').replace('product-row-', '');
+                        
+                        if (currentValues[productId]) {
+                            var values = currentValues[productId];
+                            
+                            // Restore quantity
+                            if (values.quantity) {
+                                $row.find('input[name$=".Quantity"]').val(values.quantity);
+                            }
+                            
+                            // Restore warehouse selection
+                            if (values.warehouseId) {
+                                $row.find('select[name$=".WarehouseId"]').val(values.warehouseId);
+                            }
+                            
+                            // Restore attribute combination
+                            if (values.attributeCombinationId) {
+                                $row.find('select[name$=".AttributeCombinationId"]').val(values.attributeCombinationId);
+                            }
+                            
+                            // Restore unit price
+                            if (values.unitPrice) {
+                                $row.find('input[name$=".UnitPrice"]').val(values.unitPrice);
+                            }
+                        }
+                    });
+                    
+                    updateTableColumns();
+                    
+                    // Debug: Check if attribute dropdowns exist after HTML update
+                    var combinationSelects = $('[id^="combination-"]');
+                    console.log('Found combination dropdowns after HTML update:', combinationSelects.length);
+                    combinationSelects.each(function() {
+                        console.log('Dropdown ID:', this.id, 'onchange attr:', $(this).attr('onchange'));
+                    });
+                }
+            },
+            error: function() {
+                console.log('Error loading product configuration with preserved values');
             }
         });
     }

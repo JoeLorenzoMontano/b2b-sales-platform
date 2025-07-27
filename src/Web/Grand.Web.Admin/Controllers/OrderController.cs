@@ -1175,10 +1175,9 @@ public class OrderController(
             {
                 success = true,
                 message = "Saved successfully",
-                newSubTotal = fieldType == "quantity" ? 
-                    (order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ? 
-                        orderItem.PriceInclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")) :
-                        orderItem.PriceExclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US"))) : null,
+                newSubTotal = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ? 
+                    orderItem.PriceInclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")) :
+                    orderItem.PriceExclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")),
                 displayValue = fieldType == "price" ? 
                     (order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ? 
                         orderItem.UnitPriceInclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")) :

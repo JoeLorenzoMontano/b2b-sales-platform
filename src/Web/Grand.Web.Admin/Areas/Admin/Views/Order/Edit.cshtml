@@ -402,8 +402,13 @@ function clearFieldError($field) {
 
 function updateSubTotal(orderItemId, newSubTotal) {
     // Find and update the subtotal display for this item
-    const $row = $('[data-order-item-id="' + orderItemId + '"]').closest('tr');
-    $row.find('.subtotal-display').text(newSubTotal);
+    const $subtotalElement = $('.subtotal-display[data-order-item-id="' + orderItemId + '"]');
+    if ($subtotalElement.length > 0) {
+        $subtotalElement.text(newSubTotal);
+        console.log('Updated subtotal for item', orderItemId, 'to', newSubTotal);
+    } else {
+        console.log('Could not find subtotal element for item', orderItemId);
+    }
 }
 
 function updateDisplayValue(orderItemId, fieldType, displayValue) {

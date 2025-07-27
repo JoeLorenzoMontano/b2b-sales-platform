@@ -1526,6 +1526,8 @@ public class OrderViewModelService : IOrderViewModelService
                     PriceExclTax = (double)(productConfig.UnitPrice * productConfig.Quantity),
                     OriginalProductCost = 0, // Simplified for now
                     Quantity = (int)productConfig.Quantity,
+                    OpenQty = (int)productConfig.Quantity, // Initialize OpenQty to match Quantity for new items
+                    Status = OrderItemStatus.Open, // Explicitly set status for new items
                     WarehouseId = productConfig.WarehouseId,
                     Attributes = customAttributes,
                     AttributeDescription = attributeDescription

@@ -134,6 +134,7 @@
     });
 
     var selectedProducts = {};
+    var isRestoringValues = false; // Flag to prevent warehouse updates during value restoration
 
     function initializeExistingOrderItemsGrid() {
         // Initialize Kendo Grid for existing order items
@@ -403,6 +404,9 @@
                 if (response.success) {
                     $('#selected-products-tbody').html(response.html);
                     
+                    // Set flag to prevent warehouse updates during restoration
+                    isRestoringValues = true;
+                    
                     // Restore preserved values for existing products
                     $('#selected-products-tbody tr[id^="product-row-"]').each(function() {
                         var $row = $(this);
@@ -416,14 +420,18 @@
                                 $row.find('input[name$=".Quantity"]').val(values.quantity);
                             }
                             
-                            // Restore warehouse selection
-                            if (values.warehouseId) {
-                                $row.find('select[name$=".WarehouseId"]').val(values.warehouseId);
+                            // Restore attribute combination first (without triggering change)
+                            if (values.attributeCombinationId) {
+                                var $combinationSelect = $row.find('select[name$=".AttributeCombinationId"]');
+                                $combinationSelect.val(values.attributeCombinationId);
                             }
                             
-                            // Restore attribute combination
-                            if (values.attributeCombinationId) {
-                                $row.find('select[name$=".AttributeCombinationId"]').val(values.attributeCombinationId);
+                            // Restore warehouse selection (do this after combination to avoid conflict)
+                            if (values.warehouseId) {
+                                // Use a small delay to ensure the warehouse dropdown is ready
+                                setTimeout(function() {
+                                    $row.find('select[name$=".WarehouseId"]').val(values.warehouseId);
+                                }, 50);
                             }
                             
                             // Restore unit price
@@ -432,6 +440,12 @@
                             }
                         }
                     });
+                    
+                    // Clear the restoration flag after a short delay
+                    setTimeout(function() {
+                        isRestoringValues = false;
+                        console.log('Value restoration completed, re-enabling change handlers');
+                    }, 200);
                     
                     updateTableColumns();
                     
@@ -485,6 +499,12 @@
     function onAttributeCombinationChange(productId, combinationId) {
         console.log('onAttributeCombinationChange called with:', productId, combinationId);
         if (!combinationId) return;
+        
+        // Skip processing if we're currently restoring values
+        if (isRestoringValues) {
+            console.log('Skipping onAttributeCombinationChange during value restoration');
+            return;
+        }
         
         $.ajax({
             url: '@Url.Action("GetCombinationWarehouseInventory", "Order", new { area = Constants.AreaAdmin })',
@@ -565,6 +585,10 @@
         
         console.log('Updating warehouse options, current count:', warehouseSelect.find('option').length);
         
+        // Preserve current selection
+        var currentSelection = warehouseSelect.val();
+        console.log('Current warehouse selection:', currentSelection);
+        
         // Clear existing options except first (empty) option
         warehouseSelect.find('option:not(:first)').remove();
         
@@ -575,6 +599,12 @@
                 .attr('value', warehouse.Value)
                 .text(warehouse.Text));
         });
+        
+        // Restore previous selection if it still exists in the new options
+        if (currentSelection && warehouseSelect.find('option[value="' + currentSelection + '"]').length > 0) {
+            warehouseSelect.val(currentSelection);
+            console.log('Restored warehouse selection:', currentSelection);
+        }
         
         console.log('After update, option count:', warehouseSelect.find('option').length);
         

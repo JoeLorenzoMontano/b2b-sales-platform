@@ -134,7 +134,6 @@
     });
 
     var selectedProducts = {};
-    var isRestoringValues = false; // Flag to prevent warehouse updates during value restoration
 
     function initializeExistingOrderItemsGrid() {
         // Initialize Kendo Grid for existing order items
@@ -376,91 +375,48 @@
             return;
         }
 
-        // Save current user values before rebuilding
-        var currentValues = {};
+        // Check what products are currently displayed
+        var currentProductIds = [];
         $('#selected-products-tbody tr[id^="product-row-"]').each(function() {
-            var $row = $(this);
-            var productId = $row.attr('id').replace('product-row-', '');
-            
-            currentValues[productId] = {
-                quantity: $row.find('input[name$=".Quantity"]').val(),
-                warehouseId: $row.find('select[name$=".WarehouseId"]').val() || '',
-                attributeCombinationId: $row.find('select[name$=".AttributeCombinationId"]').val() || '',
-                unitPrice: $row.find('input[name$=".UnitPrice"]').val()
-            };
+            var productId = $(this).attr('id').replace('product-row-', '');
+            currentProductIds.push(productId);
         });
 
-        // Get fresh HTML from server
-        var productIds = Object.keys(selectedProducts);
-        $.ajax({
-            url: '@Url.Action("GetProductConfigurationRows", "Order", new { area = Constants.AreaAdmin })',
-            type: 'POST',
-            data: addAntiForgeryToken({
-                productIds: productIds,
-                orderId: '@Model.OrderId'
-            }),
-            success: function(response) {
-                console.log('loadSelectedProductsConfigurationPreservingValues response:', response);
-                if (response.success) {
-                    $('#selected-products-tbody').html(response.html);
-                    
-                    // Set flag to prevent warehouse updates during restoration
-                    isRestoringValues = true;
-                    
-                    // Restore preserved values for existing products
-                    $('#selected-products-tbody tr[id^="product-row-"]').each(function() {
-                        var $row = $(this);
-                        var productId = $row.attr('id').replace('product-row-', '');
-                        
-                        if (currentValues[productId]) {
-                            var values = currentValues[productId];
-                            
-                            // Restore quantity
-                            if (values.quantity) {
-                                $row.find('input[name$=".Quantity"]').val(values.quantity);
-                            }
-                            
-                            // Restore attribute combination first (without triggering change)
-                            if (values.attributeCombinationId) {
-                                var $combinationSelect = $row.find('select[name$=".AttributeCombinationId"]');
-                                $combinationSelect.val(values.attributeCombinationId);
-                            }
-                            
-                            // Restore warehouse selection (do this after combination to avoid conflict)
-                            if (values.warehouseId) {
-                                // Use a small delay to ensure the warehouse dropdown is ready
-                                setTimeout(function() {
-                                    $row.find('select[name$=".WarehouseId"]').val(values.warehouseId);
-                                }, 50);
-                            }
-                            
-                            // Restore unit price
-                            if (values.unitPrice) {
-                                $row.find('input[name$=".UnitPrice"]').val(values.unitPrice);
-                            }
-                        }
-                    });
-                    
-                    // Clear the restoration flag after a short delay
-                    setTimeout(function() {
-                        isRestoringValues = false;
-                        console.log('Value restoration completed, re-enabling change handlers');
-                    }, 200);
-                    
-                    updateTableColumns();
-                    
-                    // Debug: Check if attribute dropdowns exist after HTML update
-                    var combinationSelects = $('[id^="combination-"]');
-                    console.log('Found combination dropdowns after HTML update:', combinationSelects.length);
-                    combinationSelects.each(function() {
-                        console.log('Dropdown ID:', this.id, 'onchange attr:', $(this).attr('onchange'));
-                    });
-                }
-            },
-            error: function() {
-                console.log('Error loading product configuration with preserved values');
-            }
+        var selectedProductIds = Object.keys(selectedProducts);
+        
+        // Find products to add and remove
+        var productsToAdd = selectedProductIds.filter(id => !currentProductIds.includes(id));
+        var productsToRemove = currentProductIds.filter(id => !selectedProductIds.includes(id));
+        
+        // Remove deselected products
+        productsToRemove.forEach(function(productId) {
+            $('#product-row-' + productId).remove();
         });
+        
+        // Add new products if any
+        if (productsToAdd.length > 0) {
+            $.ajax({
+                url: '@Url.Action("GetProductConfigurationRows", "Order", new { area = Constants.AreaAdmin })',
+                type: 'POST',
+                data: addAntiForgeryToken({
+                    productIds: productsToAdd,
+                    orderId: '@Model.OrderId'
+                }),
+                success: function(response) {
+                    console.log('Adding new products:', productsToAdd);
+                    if (response.success) {
+                        $('#selected-products-tbody').append(response.html);
+                        updateTableColumns();
+                    }
+                },
+                error: function() {
+                    console.log('Error loading new product configuration');
+                }
+            });
+        } else {
+            // Just update columns if no new products to add
+            updateTableColumns();
+        }
     }
 
     function updateTableColumns() {
@@ -499,12 +455,6 @@
     function onAttributeCombinationChange(productId, combinationId) {
         console.log('onAttributeCombinationChange called with:', productId, combinationId);
         if (!combinationId) return;
-        
-        // Skip processing if we're currently restoring values
-        if (isRestoringValues) {
-            console.log('Skipping onAttributeCombinationChange during value restoration');
-            return;
-        }
         
         $.ajax({
             url: '@Url.Action("GetCombinationWarehouseInventory", "Order", new { area = Constants.AreaAdmin })',

@@ -278,10 +278,10 @@
 
                             <td align="center">
                                 <div class="btn-group">
-                                    <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-orderItemId="@(item.Id)" id="btnDeleteOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Delete"]">
+                                    <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" id="btnDeleteOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Delete"]">
                                         <span class="k-icon k-i-delete"></span>
                                     </button>
-                                    <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-orderItemId="@(item.Id)" id="btnCancelOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Cancel"]">
+                                    <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" id="btnCancelOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Cancel"]">
                                         <span class="k-icon k-i-cancel"></span>
                                     </button>
                                 </div>

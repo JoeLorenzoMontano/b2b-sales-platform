@@ -393,6 +393,11 @@
             $('#product-row-' + productId).remove();
         });
         
+        // Renumber form fields after removal to maintain sequential indices
+        if (productsToRemove.length > 0) {
+            renumberFormFields();
+        }
+        
         // Add new products if any
         if (productsToAdd.length > 0) {
             $.ajax({
@@ -406,6 +411,7 @@
                     console.log('Adding new products:', productsToAdd);
                     if (response.success) {
                         $('#selected-products-tbody').append(response.html);
+                        renumberFormFields(); // Fix array indices after adding products
                         updateTableColumns();
                     }
                 },
@@ -417,6 +423,27 @@
             // Just update columns if no new products to add
             updateTableColumns();
         }
+    }
+
+    function renumberFormFields() {
+        // Renumber all form fields to ensure sequential array indices for model binding
+        $('#selected-products-tbody tr[id^="product-row-"]').each(function(index) {
+            var $row = $(this);
+            
+            // Update all input and select field names to use the correct index
+            $row.find('input, select').each(function() {
+                var $field = $(this);
+                var name = $field.attr('name');
+                if (name && name.startsWith('Products[')) {
+                    // Replace the index with the correct sequential index
+                    var newName = name.replace(/Products\[\d+\]/, 'Products[' + index + ']');
+                    $field.attr('name', newName);
+                    console.log('Renumbered field from', name, 'to', newName);
+                }
+            });
+        });
+        
+        console.log('Form field renumbering completed');
     }
 
     function updateTableColumns() {
@@ -441,6 +468,7 @@
     function removeSelectedProduct(productId) {
         delete selectedProducts[productId];
         $('#product-row-' + productId).remove();
+        renumberFormFields(); // Renumber after removal
         updateSelectedProductsDisplay();
         
         // Update grid checkboxes

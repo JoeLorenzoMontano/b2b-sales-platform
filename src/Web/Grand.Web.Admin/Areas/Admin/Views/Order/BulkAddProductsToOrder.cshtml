@@ -487,41 +487,18 @@
     function updateWarehouseDropdown(productId, warehouses) {
         console.log('updateWarehouseDropdown called for product:', productId);
         
-        // Find the attribute combination dropdown first
-        var combinationSelect = $('#combination-' + productId);
-        console.log('Found combination select:', combinationSelect.length);
-        var warehouseSelect = null;
-        
-        if (combinationSelect.length > 0) {
-            // Get the form array index from the combination dropdown name
-            var combinationName = combinationSelect.attr('name');
-            console.log('Combination name attribute:', combinationName);
-            if (combinationName) {
-                var indexMatch = combinationName.match(/Products\[(\d+)\]/);
-                if (indexMatch) {
-                    var index = indexMatch[1];
-                    console.log('Found index:', index);
-                    // Find the warehouse dropdown with the same index
-                    warehouseSelect = $('select[name="Products[' + index + '].WarehouseId"]');
-                    console.log('Found warehouse select by index:', warehouseSelect.length);
-                    
-                    // If not found, try the ID approach
-                    if (warehouseSelect.length === 0) {
-                        warehouseSelect = $('#warehouse-' + productId);
-                        console.log('Found warehouse select by ID:', warehouseSelect.length);
-                    }
-                }
-            }
+        // Find the warehouse dropdown specifically within the product row to avoid cross-contamination
+        var $productRow = $('#product-row-' + productId);
+        if ($productRow.length === 0) {
+            console.log('Product row not found for productId:', productId);
+            return;
         }
         
-        // If still not found, try fallback approaches
-        if (!warehouseSelect || warehouseSelect.length === 0) {
-            warehouseSelect = $('#warehouse-' + productId);
-            console.log('Fallback warehouse select:', warehouseSelect.length);
-        }
+        var warehouseSelect = $productRow.find('select[name$=".WarehouseId"]');
+        console.log('Found warehouse select in product row:', warehouseSelect.length);
         
-        if (!warehouseSelect || warehouseSelect.length === 0) {
-            console.log('No warehouse dropdown found for product:', productId);
+        if (warehouseSelect.length === 0) {
+            console.log('No warehouse dropdown found in product row for product:', productId);
             return;
         }
         
@@ -570,24 +547,19 @@
     function updateUnitPrice(productId, price) {
         console.log('updateUnitPrice called for product:', productId, 'with price:', price);
         
-        // Find the unit price input field for this product
-        var combinationSelect = $('#combination-' + productId);
-        if (combinationSelect.length > 0) {
-            // Get the form array index from the combination dropdown name
-            var combinationName = combinationSelect.attr('name');
-            if (combinationName) {
-                var indexMatch = combinationName.match(/Products\[(\d+)\]/);
-                if (indexMatch) {
-                    var index = indexMatch[1];
-                    var priceInput = $('input[name="Products[' + index + '].UnitPrice"]');
-                    if (priceInput.length > 0) {
-                        priceInput.val(price.toFixed(2));
-                        console.log('Updated unit price to:', price.toFixed(2));
-                    } else {
-                        console.log('Unit price input not found for index:', index);
-                    }
-                }
-            }
+        // Find the unit price input field specifically within the product row
+        var $productRow = $('#product-row-' + productId);
+        if ($productRow.length === 0) {
+            console.log('Product row not found for productId:', productId);
+            return;
+        }
+        
+        var priceInput = $productRow.find('input[name$=".UnitPrice"]');
+        if (priceInput.length > 0) {
+            priceInput.val(price.toFixed(2));
+            console.log('Updated unit price to:', price.toFixed(2));
+        } else {
+            console.log('Unit price input not found in product row for product:', productId);
         }
     }
 </script>

@@ -1557,7 +1557,11 @@ public class OrderController(
 
         var warnings = await orderViewModelService.ProcessBulkProductAddition(model);
         if (!warnings.Any())
+        {
+            //redirect to order details page - stay on Products tab (tab-index 3)
+            TempData["SelectedTabIndex"] = 3;
             return RedirectToAction("Edit", "Order", new { id = model.OrderId });
+        }
 
         // If there are warnings, reload the page with errors
         var reloadedModel = await orderViewModelService.PrepareBulkAddProductsToOrderModel(order);

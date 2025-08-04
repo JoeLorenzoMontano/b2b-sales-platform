@@ -1467,7 +1467,7 @@ public class OrderController(
         if (!warnings.Any())
         {
             //redirect to order details page - stay on Products tab (tab-index 3)
-            TempData["SelectedTabIndex"] = 3;
+            TempData["Grand.selected-tab-index"] = 3;
             return RedirectToAction("Edit", "Order", new { id = model.OrderId });
         }
 
@@ -1559,7 +1559,7 @@ public class OrderController(
         if (!warnings.Any())
         {
             //redirect to order details page - stay on Products tab (tab-index 3)
-            TempData["SelectedTabIndex"] = 3;
+            TempData["Grand.selected-tab-index"] = 3;
             return RedirectToAction("Edit", "Order", new { id = model.OrderId });
         }
 

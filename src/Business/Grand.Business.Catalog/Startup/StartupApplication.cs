@@ -98,6 +98,7 @@ public class StartupApplication : IStartupApplication
         serviceCollection.AddScoped<ISchemaProperty<Category>, CategorySchemaProperty>();
         serviceCollection.AddScoped<ISchemaProperty<Collection>, CollectionSchemaProperty>();
         serviceCollection.AddScoped<ISchemaProperty<Product>, ProductSchemaProperty>();
+        serviceCollection.AddScoped<ISchemaProperty<Grand.Business.Catalog.Models.ProductCombinationExportModel>, ProductCombinationSchemaProperty>();
 
         serviceCollection.AddScoped<IImportDataObject<CategoryDto>, CategoryImportDataObject>();
         serviceCollection.AddScoped<IImportDataObject<BrandDto>, BrandImportDataObject>();

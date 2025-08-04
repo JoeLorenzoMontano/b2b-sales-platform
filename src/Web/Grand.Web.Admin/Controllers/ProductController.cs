@@ -16,6 +16,8 @@ using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Catalog;
 using Grand.Web.Admin.Models.Orders;
+using Grand.Web.Admin.Services;
+using Grand.Business.Catalog.Models;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Extensions;
 using Grand.Web.Common.Filters;
@@ -1490,6 +1492,55 @@ public class ProductController : BaseAdminController
 
         var bytes = await exportManager.Export(products);
         return File(bytes, "text/xls", "products.xlsx");
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportExcelAllWithCombinations(ProductListModel model,
+        [FromServices] IExportManager<ProductCombinationExportModel> exportManager,
+        [FromServices] ProductCombinationExportService combinationExportService)
+    {
+        var products = await _productViewModelService.PrepareProducts(model);
+        try
+        {
+            var flattenedModels = await combinationExportService.TransformProductsForExport(products);
+            var bytes = await exportManager.Export(flattenedModels);
+            return File(bytes, "text/xls", "products-with-combinations.xlsx");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportExcelSelectedWithCombinations(string selectedIds,
+        [FromServices] IExportManager<ProductCombinationExportModel> exportManager,
+        [FromServices] ProductCombinationExportService combinationExportService)
+    {
+        var products = new List<Product>();
+        if (selectedIds != null)
+        {
+            var ids = selectedIds
+                .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x)
+                .ToArray();
+            products.AddRange(await _productService.GetProductsByIds(ids, true));
+        }
+
+        try
+        {
+            var flattenedModels = await combinationExportService.TransformProductsForExport(products);
+            var bytes = await exportManager.Export(flattenedModels);
+            return File(bytes, "text/xls", "products-with-combinations.xlsx");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Import)]

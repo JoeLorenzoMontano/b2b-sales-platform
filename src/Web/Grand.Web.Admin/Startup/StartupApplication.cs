@@ -54,6 +54,7 @@ public class StartupApplication : IStartupApplication
         services.AddScoped<IPictureViewModelService, PictureViewModelService>();
         services.AddScoped<IElFinderViewModelService, ElFinderViewModelService>();
         services.AddScoped<IMenuViewModelService, MenuViewModelService>();
+        services.AddScoped<ProductCombinationExportService>();
 
         services.AddScoped<IAreaViewFactory, AdminAreaViewFactory>();
     }

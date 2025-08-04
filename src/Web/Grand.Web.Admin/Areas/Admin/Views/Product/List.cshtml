@@ -31,6 +31,13 @@
                                 <li>
                                     <input type="button" id="exportexcel-selected" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.Selected"]"/>
                                 </li>
+                                <li class="divider"></li>
+                                <li>
+                                    <input type="submit" name="exportexcel-all-combinations" asp-action="ExportExcelAllWithCombinations" class="btn default" style="width: 100%;" value="Export All (with Combinations)"/>
+                                </li>
+                                <li>
+                                    <input type="button" id="exportexcel-selected-combinations" class="btn default" style="width: 100%;" value="Export Selected (with Combinations)"/>
+                                </li>
                             </ul>
                         </div>
                         <button type="button" id="importexcel" name="importexcel" class="btn default">
@@ -444,7 +451,9 @@
 
 </script>
 <form asp-area="@Constants.AreaAdmin" asp-controller="Product" asp-action="ExportExcelSelected" method="post" id="export-excel-selected-form">
-
+    <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
+</form>
+<form asp-area="@Constants.AreaAdmin" asp-controller="Product" asp-action="ExportExcelSelectedWithCombinations" method="post" id="export-excel-selected-combinations-form">
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>
 <script>
@@ -454,6 +463,14 @@
             var ids = selectedIds.join(",");
             $('#export-excel-selected-form #selectedIds').val(ids);
             $('#export-excel-selected-form').submit();
+            return false;
+        });
+        
+        $('#exportexcel-selected-combinations').click(function (e) {
+            e.preventDefault();
+            var ids = selectedIds.join(",");
+            $('#export-excel-selected-combinations-form #selectedIds').val(ids);
+            $('#export-excel-selected-combinations-form').submit();
             return false;
         });
     });

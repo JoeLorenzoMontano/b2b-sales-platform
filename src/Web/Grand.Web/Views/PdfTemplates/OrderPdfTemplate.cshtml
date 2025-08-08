@@ -2,6 +2,7 @@
 @using Grand.Business.Core.Interfaces.Checkout.GiftVouchers
 @using Grand.Business.Core.Interfaces.Checkout.Orders
 @using Grand.Business.Core.Interfaces.Checkout.Payments
+@using Grand.Business.Core.Interfaces.Checkout.Shipping
 @using Grand.Business.Core.Interfaces.Common.Directory
 @using Grand.Business.Core.Interfaces.Common.Localization
 @using Grand.Business.Core.Interfaces.Common.Stores
@@ -20,6 +21,7 @@
 @inject IGiftVoucherService _giftVoucherService
 @inject IOrderService _orderService
 @inject ICustomerService _customerService
+@inject IWarehouseService _warehouseService
 @{
     var logoPicture = await _pictureService.GetPictureById(_pdfSettings.LogoPictureId);
     var logoExists = logoPicture != null;
@@ -223,6 +225,7 @@
         <table class="Table">
             <tr>
                 <td class="Header leftalign" colspan="2">@(_translationService.GetResource("PDFInvoice.ProductName", order.CustomerLanguageId))</td>
+                <td class="Header">@(_translationService.GetResource("PDFInvoice.Warehouse", order.CustomerLanguageId) ?? "Warehouse")</td>
                 <td class="Header">@(_translationService.GetResource("PDFInvoice.ProductPrice", order.CustomerLanguageId))</td>
                 <td class="Header">@(_translationService.GetResource("PDFInvoice.ProductQuantity", order.CustomerLanguageId))</td>
                 <td class="Header">@(_translationService.GetResource("PDFInvoice.ProductTotal", order.CustomerLanguageId))</td>
@@ -237,6 +240,12 @@
                             <br/>
                             @(Html.Raw(item.AttributeDescription))
                         }
+                    </td>
+                    <td class="leftalign">
+                        @{
+                            var warehouse = !string.IsNullOrEmpty(item.WarehouseId) ? await _warehouseService.GetWarehouseById(item.WarehouseId) : null;
+                        }
+                        @(warehouse?.Name ?? "N/A")
                     </td>
                     <td>
                         @{

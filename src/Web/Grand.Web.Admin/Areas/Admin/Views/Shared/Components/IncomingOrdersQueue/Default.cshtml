@@ -43,6 +43,20 @@
         border: 2px solid #dc3545 !important;
         transition: all 0.3s ease;
     }
+    .incoming-order-control-panel {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    .incoming-order-control-panel .form-control {
+        border-color: #ff9800;
+    }
+    .incoming-order-control-panel .form-control:focus {
+        border-color: #e68900;
+        box-shadow: 0 0 0 0.2rem rgba(255, 152, 0, 0.25);
+    }
 </style>
 
 <script>
@@ -304,7 +318,81 @@
                     headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
                     attributes: { style: "text-align:center" }
                 }
-            ]
+            ],
+            dataBound: function() {
+                // After the grid is loaded, add the shipment date control panel
+                var grid = this;
+                var gridElement = $(grid.element);
+                
+                // First, remove any existing control panel to prevent duplication
+                var existingPanel = gridElement.parent().find(".incoming-order-control-panel[data-order-id='" + orderId + "']");
+                if (existingPanel.length > 0) {
+                    existingPanel.remove();
+                }
+                
+                // Create a new control panel
+                var panel = $('<div class="incoming-order-control-panel row mt-3 mb-3" data-order-id="' + orderId + '"></div>');
+                    
+                // Create the requested shipment date picker
+                var dateSection = $('<div class="col-md-6 form-group row"></div>');
+                dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]:</label>');
+                dateSection.append('<div class="col-sm-8"><input type="date" id="requestedShipmentDate_' + orderId + '" class="form-control requested-shipment-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
+                panel.append(dateSection);
+                
+                // Add some spacing/info section
+                var infoSection = $('<div class="col-md-6 text-right"></div>');
+                infoSection.append('<small class="text-muted">Set delivery date before order verification</small>');
+                panel.append(infoSection);
+                
+                // Add the panel after the grid
+                gridElement.after(panel);
+                    
+                // Load existing requested shipment date if available
+                $.ajax({
+                    url: "@Url.Action("GetRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin })",
+                    type: "GET",
+                    data: { orderId: orderId },
+                    success: function(response) {
+                        if (response && response.success && response.value) {
+                            $("#requestedShipmentDate_" + orderId).val(response.value);
+                        }
+                    }
+                });
+                    
+                // Wire up the date picker to save date changes immediately
+                $("#requestedShipmentDate_" + orderId).off("change").on("change", function() {
+                    var newDate = $(this).val();
+                    // Add anti-forgery token
+                    var data = {
+                        orderId: orderId,
+                        date: newDate
+                    };
+                    addAntiForgeryToken(data);
+                    
+                    $.ajax({
+                        url: "@Html.Raw(Url.Action("SaveRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        data: data,
+                        success: function(response) {
+                            if (response && response.success) {
+                                // Silent success - no notification needed
+                                
+                                // Reload main grid to reflect changes
+                                setTimeout(function() {
+                                    $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
+                                }, 500);
+                            } else {
+                                alert("Failed to save delivery date");
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Save date error:", error);
+                            console.error("Response:", xhr.responseText);
+                            alert("Error saving date: " + error);
+                        }
+                    });
+                });
+            }
         });
     }
 </script>

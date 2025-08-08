@@ -50,6 +50,13 @@
         padding: 15px;
         margin-top: 10px;
     }
+    .fulfillment-control-panel {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 10px;
+    }
     .incoming-order-control-panel .form-control {
         border-color: #ff9800;
     }
@@ -339,10 +346,10 @@
                 dateSection.append('<div class="col-sm-8"><input type="date" id="requestedShipmentDate_' + orderId + '" class="form-control requested-shipment-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
                 panel.append(dateSection);
                 
-                // Add some spacing/info section
-                var infoSection = $('<div class="col-md-6 text-right"></div>');
-                infoSection.append('<small class="text-muted">Set delivery date before order verification</small>');
-                panel.append(infoSection);
+                // Create the action buttons section to match fulfillment queue
+                var buttonSection = $('<div class="col-md-6 text-right"></div>');
+                buttonSection.append('<small class="text-muted">Set delivery date before order verification</small>');
+                panel.append(buttonSection);
                 
                 // Add the panel after the grid
                 gridElement.after(panel);

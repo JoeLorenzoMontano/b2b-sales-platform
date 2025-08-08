@@ -41,7 +41,8 @@ public class OrderController(
     IExportManager<Order> exportManager,
     IMediator mediator,
     ISalesEmployeeService _salesEmployeeService,
-    IPermissionService _permissionService)
+    IPermissionService _permissionService,
+    IWarehouseService warehouseService)
     : BaseAdminController
 {
     #region Utilities
@@ -353,6 +354,27 @@ public class OrderController(
                             }
                         }
                         
+                        // Get distinct warehouses from order items
+                        var warehouseIds = order.OrderItems
+                            .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                            .Select(item => item.WarehouseId)
+                            .Distinct()
+                            .ToList();
+                            
+                        if (warehouseIds.Any())
+                        {
+                            var warehouses = new List<string>();
+                            foreach (var warehouseId in warehouseIds)
+                            {
+                                var warehouse = await warehouseService.GetWarehouseById(warehouseId);
+                                if (warehouse != null)
+                                {
+                                    warehouses.Add(warehouse.Name);
+                                }
+                            }
+                            orderModel.Warehouses = string.Join(", ", warehouses);
+                        }
+                        
                         fulfillmentOrders.Add(orderModel);
                     }
                 }
@@ -447,6 +469,27 @@ public class OrderController(
                                 orderModel.SalesEmployeeId = impersonatingCustomer.Id;
                                 orderModel.SalesEmployeeName = impersonatingCustomer.Email;
                             }
+                        }
+                        
+                        // Get distinct warehouses from order items
+                        var warehouseIds = order.OrderItems
+                            .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                            .Select(item => item.WarehouseId)
+                            .Distinct()
+                            .ToList();
+                            
+                        if (warehouseIds.Any())
+                        {
+                            var warehouses = new List<string>();
+                            foreach (var warehouseId in warehouseIds)
+                            {
+                                var warehouse = await warehouseService.GetWarehouseById(warehouseId);
+                                if (warehouse != null)
+                                {
+                                    warehouses.Add(warehouse.Name);
+                                }
+                            }
+                            orderModel.Warehouses = string.Join(", ", warehouses);
                         }
                         
                         incomingOrders.Add(orderModel);

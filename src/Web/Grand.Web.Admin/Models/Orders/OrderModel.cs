@@ -44,6 +44,9 @@ public class OrderModel : BaseEntityModel
     
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomerGroups")]
     public string CustomerGroups { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.Warehouses")]
+    public string Warehouses { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomerIP")]
     public string CustomerIp { get; set; }

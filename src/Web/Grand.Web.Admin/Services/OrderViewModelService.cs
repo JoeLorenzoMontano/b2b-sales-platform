@@ -839,6 +839,17 @@ public class OrderViewModelService : IOrderViewModelService
             var vendor = await _vendorService.GetVendorById(orderItem.VendorId);
             orderItemModel.VendorName = vendor != null ? vendor.Name : "";
 
+            //warehouse
+            if (!string.IsNullOrEmpty(orderItem.WarehouseId))
+            {
+                var warehouse = await _warehouseService.GetWarehouseById(orderItem.WarehouseId);
+                orderItemModel.WarehouseName = warehouse?.Name ?? "";
+            }
+            else
+            {
+                orderItemModel.WarehouseName = "N/A";
+            }
+
             //unit price
             orderItemModel.UnitPriceInclTaxValue = orderItem.UnitPriceInclTax;
             orderItemModel.UnitPriceExclTaxValue = orderItem.UnitPriceExclTax;

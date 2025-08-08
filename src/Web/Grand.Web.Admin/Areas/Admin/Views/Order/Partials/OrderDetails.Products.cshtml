@@ -9,6 +9,7 @@
                 <table class="table table-bordered table-striped table-hover">
                     <col/>
                     <col/>
+                    <col/>
                     @if (Model.HasDownloadableProducts)
                     {
                         <col/>
@@ -25,6 +26,9 @@
                         </th>
                         <th>
                             @Loc["Admin.Orders.Products.ProductName"]
+                        </th>
+                        <th>
+                            @Loc["Admin.Orders.Fields.Warehouses"]
                         </th>
                         <th>
                             @Loc["Admin.Orders.Products.Price"]
@@ -180,6 +184,18 @@
                                                     </script>
                                             }
                                         </p>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    @if (!string.IsNullOrEmpty(item.WarehouseName))
+                                    {
+                                        @item.WarehouseName
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
                                     }
                                 </div>
                             </td>

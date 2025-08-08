@@ -357,6 +357,15 @@
                     combinationSelects.each(function() {
                         console.log('Dropdown ID:', this.id, 'onchange attr:', $(this).attr('onchange'));
                     });
+                    
+                    // Trigger attribute combination change for products with default selections
+                    productIds.forEach(function(productId) {
+                        var combinationSelect = $('#combination-' + productId);
+                        if (combinationSelect.length > 0 && combinationSelect.val()) {
+                            console.log('Triggering default combination change for initial load product:', productId);
+                            onAttributeCombinationChange(productId, combinationSelect.val());
+                        }
+                    });
                 }
             },
             error: function() {
@@ -413,6 +422,15 @@
                         $('#selected-products-tbody').append(response.html);
                         renumberFormFields(); // Fix array indices after adding products
                         updateTableColumns();
+                        
+                        // Trigger attribute combination change for newly added products with default selections
+                        productsToAdd.forEach(function(productId) {
+                            var combinationSelect = $('#combination-' + productId);
+                            if (combinationSelect.length > 0 && combinationSelect.val()) {
+                                console.log('Triggering default combination change for product:', productId);
+                                onAttributeCombinationChange(productId, combinationSelect.val());
+                            }
+                        });
                     }
                 },
                 error: function() {

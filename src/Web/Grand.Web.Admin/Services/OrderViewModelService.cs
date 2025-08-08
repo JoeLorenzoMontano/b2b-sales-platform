@@ -1362,6 +1362,12 @@ public class OrderViewModelService : IOrderViewModelService
                         Text = warehouse.Name
                     });
                 }
+                
+                // Set default warehouse to first available warehouse
+                if (rowModel.AvailableWarehouses.Any())
+                {
+                    rowModel.WarehouseId = rowModel.AvailableWarehouses.First().Value;
+                }
             }
 
             // Prepare attribute combinations if needed
@@ -1405,6 +1411,12 @@ public class OrderViewModelService : IOrderViewModelService
                         OverriddenPrice = null
                     });
                 }
+                
+                // Set default attribute combination to first available combination
+                if (rowModel.AttributeCombinations.Any())
+                {
+                    rowModel.SelectedCombinationId = rowModel.AttributeCombinations.First().Id;
+                }
             }
 
             // Generate HTML row
@@ -1422,12 +1434,12 @@ public class OrderViewModelService : IOrderViewModelService
             {
                 htmlBuilder.AppendLine($@"
                     <td class='warehouse-cell'>
-                        <select id='warehouse-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].WarehouseId' class='form-control'>
-                            <option value=''>Select Warehouse</option>");
+                        <select id='warehouse-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].WarehouseId' class='form-control'>");
                 
                 foreach (var warehouse in rowModel.AvailableWarehouses)
                 {
-                    htmlBuilder.AppendLine($"<option value='{warehouse.Value}'>{warehouse.Text}</option>");
+                    var selected = warehouse == rowModel.AvailableWarehouses.First() ? "selected" : "";
+                    htmlBuilder.AppendLine($"<option value='{warehouse.Value}' {selected}>{warehouse.Text}</option>");
                 }
                 
                 htmlBuilder.AppendLine(@"
@@ -1443,12 +1455,12 @@ public class OrderViewModelService : IOrderViewModelService
             {
                 htmlBuilder.AppendLine($@"
                     <td class='attributes-cell'>
-                        <select id='combination-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].SelectedCombinationId' class='form-control' onchange='onAttributeCombinationChange(""{productId}"", this.value)'>
-                            <option value=''>Select Combination</option>");
+                        <select id='combination-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].SelectedCombinationId' class='form-control' onchange='onAttributeCombinationChange(""{productId}"", this.value)'>");
 
                 foreach (var combo in rowModel.AttributeCombinations)
                 {
-                    htmlBuilder.AppendLine($"<option value='{combo.Id}'>{combo.AttributesInfo}</option>");
+                    var selected = combo == rowModel.AttributeCombinations.First() ? "selected" : "";
+                    htmlBuilder.AppendLine($"<option value='{combo.Id}' {selected}>{combo.AttributesInfo}</option>");
                 }
 
                 htmlBuilder.AppendLine(@"

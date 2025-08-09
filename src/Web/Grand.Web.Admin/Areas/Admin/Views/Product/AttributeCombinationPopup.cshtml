@@ -166,6 +166,14 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <admin-label asp-for="CaseSize" class="col-sm-3 control-label"/>
+                            <div class="col-md-9 col-sm-9">
+                                <admin-input asp-for="CaseSize"/>
+                                <span asp-validation-for="CaseSize"></span>
+                                <span class="help-block">@Loc["Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.CaseSize.Hint"]</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <admin-label asp-for="MarkAsNew" class="col-sm-3 control-label"/>
                             <div class="col-md-9 col-sm-9">
                                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">

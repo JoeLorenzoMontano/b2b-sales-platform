@@ -129,6 +129,9 @@ public class ProductDetailsModel : BaseEntityModel
 
         public string MeasureUnit { get; set; }
 
+        //case size for attribute combinations
+        public double CaseSize { get; set; }
+
         //pre-order
         public bool AvailableForPreOrder { get; set; }
 

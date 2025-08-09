@@ -774,9 +774,12 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
         var allowedQuantities = product.ParseAllowedQuantities();
         var allowedQuantitiesList = new List<double>(allowedQuantities);
         
-        // Add "1" option if the combination allows samples
+        // Add "1" option if the combination allows samples and set case size
         var combination = product.FindProductAttributeCombination(
             updatecartitem?.Attributes ?? new List<Domain.Common.CustomAttribute>());
+        
+        // Set case size from combination if available
+        model.CaseSize = combination?.CaseSize ?? 0;
         if (combination != null && combination.AllowSample)
         {
             // Add sample quantity (1) if not already in the list

@@ -81,6 +81,9 @@ public class ProductAttributeCombinationModel : BaseModel
 
     public IList<WarehouseInventoryModel> WarehouseInventoryModels { get; set; } = new List<WarehouseInventoryModel>();
 
+    [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.CaseSize")]
+    public double CaseSize { get; set; }
+
     #region Nested classes
 
     public class ProductAttributeModel : BaseEntityModel

@@ -478,6 +478,26 @@
                                 }
                             }
                         }
+                        
+                        // Update case calculations if case size is available
+                        if (response.data.caseSize && response.data.caseSize > 0) {
+                            var caseSize = response.data.caseSize;
+                            var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
+                            var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
+                            
+                            var quantity = 1;
+                            if (qtyInput) {
+                                quantity = parseFloat(qtyInput.value) || 1;
+                            } else if (qtyDropdown) {
+                                quantity = parseFloat(qtyDropdown.value) || 1;
+                            }
+                            
+                            var cases = (quantity / caseSize).toFixed(2);
+                            var caseDisplays = document.querySelectorAll('#case-display-@Model.Id, #case-display-input-@Model.Id');
+                            caseDisplays.forEach(function(display) {
+                                display.textContent = cases;
+                            });
+                        }
                     });
                 },
             },

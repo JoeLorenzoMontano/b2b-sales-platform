@@ -104,6 +104,11 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
         protected set => _tierPrices = value;
     }
 
+    /// <summary>
+    ///     Gets or sets the case size (number of units per case). When greater than 0, case quantities will be displayed to customers.
+    /// </summary>
+    public double CaseSize { get; set; }
+
     public object Clone()
     {
         return MemberwiseClone();

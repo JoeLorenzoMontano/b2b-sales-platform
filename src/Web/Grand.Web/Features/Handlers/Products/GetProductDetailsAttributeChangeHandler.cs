@@ -245,6 +245,12 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             // Add sample quantity (1) at the beginning of the list
             allowedQuantitiesList.Insert(0, 1);
         }
+        
+        // Set case size if combination exists
+        if (combination != null)
+        {
+            model.CaseSize = combination.CaseSize;
+        }
         else
         {
             model.SampleEnabled = false;

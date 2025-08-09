@@ -486,7 +486,7 @@
                             window['caseSize_@Model.Id'] = response.data.caseSize;
                             
                             // Populate case dropdowns and sync with quantity
-                            updateCaseDropdowns_@Model.Id();
+                            updateCaseDropdowns_@(Model.Id)();
                             
                             // Show case info elements with proper flexbox display
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
@@ -531,7 +531,7 @@
         });
         
         // Helper functions for case dropdown functionality
-        function updateCaseDropdowns_@Model.Id() {
+        function updateCaseDropdowns_@(Model.Id)() {
             var caseSize = window['caseSize_@Model.Id'];
             if (!caseSize || caseSize <= 0) return;
             
@@ -579,7 +579,7 @@
             caseDropdown.value = currentCases;
         }
         
-        function updateQuantityFromCases_@Model.Id(cases) {
+        function updateQuantityFromCases_@(Model.Id)(cases) {
             var caseSize = window['caseSize_@Model.Id'];
             if (!caseSize || caseSize <= 0) return;
             

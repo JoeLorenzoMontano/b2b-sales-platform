@@ -482,22 +482,11 @@
                         // Update case calculations if case size is available
                         console.log('Case size from response:', response.data.caseSize, 'Type:', typeof response.data.caseSize);
                         if (response.data.caseSize && typeof response.data.caseSize === 'number' && response.data.caseSize > 0) {
-                            var caseSize = response.data.caseSize;
-                            var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
-                            var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
+                            // Store case size globally for this product
+                            window['caseSize_@Model.Id'] = response.data.caseSize;
                             
-                            var quantity = 1;
-                            if (qtyInput) {
-                                quantity = parseFloat(qtyInput.value) || 1;
-                            } else if (qtyDropdown) {
-                                quantity = parseFloat(qtyDropdown.value) || 1;
-                            }
-                            
-                            var cases = (quantity / caseSize).toFixed(2);
-                            var caseDisplays = document.querySelectorAll('#case-display-@Model.Id, #case-display-input-@Model.Id');
-                            caseDisplays.forEach(function(display) {
-                                display.textContent = cases;
-                            });
+                            // Populate case dropdowns and sync with quantity
+                            updateCaseDropdowns_@Model.Id();
                             
                             // Show case info elements with proper flexbox display
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
@@ -540,5 +529,87 @@
                 }, 50);
             }
         });
+        
+        // Helper functions for case dropdown functionality
+        function updateCaseDropdowns_@Model.Id() {
+            var caseSize = window['caseSize_@Model.Id'];
+            if (!caseSize || caseSize <= 0) return;
+            
+            var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
+            var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
+            var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+            
+            if (!caseDropdown) return;
+            
+            // Get available quantities from the quantity dropdown/input
+            var availableQuantities = [];
+            if (qtyDropdown) {
+                for (var i = 0; i < qtyDropdown.options.length; i++) {
+                    availableQuantities.push(parseFloat(qtyDropdown.options[i].value));
+                }
+            } else if (qtyInput) {
+                // For input, create reasonable case options based on case size
+                var currentQty = parseFloat(qtyInput.value) || caseSize;
+                for (var mult = 1; mult <= 10; mult++) {
+                    availableQuantities.push(caseSize * mult);
+                }
+            }
+            
+            // Clear and populate case dropdown
+            caseDropdown.innerHTML = '';
+            availableQuantities.forEach(function(qty) {
+                if (qty % caseSize === 0) { // Only show quantities that are exact multiples of case size
+                    var cases = qty / caseSize;
+                    var option = document.createElement('option');
+                    option.value = cases;
+                    option.textContent = cases.toString();
+                    caseDropdown.appendChild(option);
+                }
+            });
+            
+            // Set current case value
+            var currentQty = 1;
+            if (qtyInput) {
+                currentQty = parseFloat(qtyInput.value) || 1;
+            } else if (qtyDropdown) {
+                currentQty = parseFloat(qtyDropdown.value) || 1;
+            }
+            
+            var currentCases = Math.round(currentQty / caseSize * 100) / 100;
+            caseDropdown.value = currentCases;
+        }
+        
+        function updateQuantityFromCases_@Model.Id(cases) {
+            var caseSize = window['caseSize_@Model.Id'];
+            if (!caseSize || caseSize <= 0) return;
+            
+            var newQuantity = parseFloat(cases) * caseSize;
+            var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
+            var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
+            
+            if (qtyInput) {
+                qtyInput.value = newQuantity;
+            } else if (qtyDropdown) {
+                // Find the closest available quantity
+                var bestMatch = null;
+                var bestDiff = Infinity;
+                for (var i = 0; i < qtyDropdown.options.length; i++) {
+                    var optionValue = parseFloat(qtyDropdown.options[i].value);
+                    var diff = Math.abs(optionValue - newQuantity);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestMatch = qtyDropdown.options[i].value;
+                    }
+                }
+                if (bestMatch !== null) {
+                    qtyDropdown.value = bestMatch;
+                }
+            }
+            
+            // Trigger attribute change to update prices, etc.
+            if (typeof standardProductAttributes_@(Model.Id) !== 'undefined') {
+                standardProductAttributes_@(Model.Id).attrchange();
+            }
+        }
     </script>
 }

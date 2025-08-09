@@ -348,7 +348,7 @@
                 
                 // Create the action buttons section to match fulfillment queue
                 var buttonSection = $('<div class="col-md-6 text-right"></div>');
-                buttonSection.append('<small class="text-muted">Set delivery date before order verification</small>');
+                // For incoming orders, we don't have a shipment button, but keep the structure
                 panel.append(buttonSection);
                 
                 // Add the panel after the grid

@@ -502,7 +502,8 @@
                             // Show case info elements with proper flexbox display
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
-                                element.style.display = 'd-flex';
+                                element.classList.add('d-flex');
+                                element.style.display = '';
                                 element.style.alignItems = 'center';
                             });
                         } else {
@@ -511,6 +512,7 @@
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 console.log('Hiding element:', element);
+                                element.classList.remove('d-flex');
                                 element.style.display = 'none';
                                 element.style.alignItems = '';
                             });

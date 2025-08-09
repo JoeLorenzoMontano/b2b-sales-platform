@@ -497,6 +497,18 @@
                             caseDisplays.forEach(function(display) {
                                 display.textContent = cases;
                             });
+                            
+                            // Show case info elements
+                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
+                            caseInfoElements.forEach(function(element) {
+                                element.style.display = 'd-flex';
+                            });
+                        } else {
+                            // Hide case info if no case size
+                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
+                            caseInfoElements.forEach(function(element) {
+                                element.style.display = 'none';
+                            });
                         }
                     });
                 },

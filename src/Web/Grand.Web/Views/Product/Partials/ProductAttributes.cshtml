@@ -479,13 +479,8 @@
                             }
                         }
                         
-                        // Always handle case display based on case size
-                        var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
-                        
-                        if (response.data.hasOwnProperty('caseSize') && 
-                            typeof response.data.caseSize === 'number' && 
-                            response.data.caseSize > 0) {
-                            // Show and update case calculations
+                        // Update case calculations if case size is available
+                        if (response.data.caseSize && typeof response.data.caseSize === 'number' && response.data.caseSize > 0) {
                             var caseSize = response.data.caseSize;
                             var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
                             var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
@@ -504,12 +499,14 @@
                             });
                             
                             // Show case info elements with proper flexbox display
+                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 element.style.display = 'd-flex';
                                 element.style.alignItems = 'center';
                             });
                         } else {
-                            // Hide case info if no case size or case size <= 0
+                            // Hide case info if no case size
+                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 element.style.display = 'none';
                             });

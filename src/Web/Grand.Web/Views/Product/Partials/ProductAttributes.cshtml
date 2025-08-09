@@ -480,7 +480,7 @@
                         }
                         
                         // Update case calculations if case size is available
-                        if (response.data.caseSize && response.data.caseSize > 0) {
+                        if (response.data.caseSize && typeof response.data.caseSize === 'number' && response.data.caseSize > 0) {
                             var caseSize = response.data.caseSize;
                             var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
                             var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
@@ -498,10 +498,11 @@
                                 display.textContent = cases;
                             });
                             
-                            // Show case info elements
+                            // Show case info elements with proper flexbox display
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 element.style.display = 'd-flex';
+                                element.style.alignItems = 'center';
                             });
                         } else {
                             // Hide case info if no case size

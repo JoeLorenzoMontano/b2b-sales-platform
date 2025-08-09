@@ -378,7 +378,8 @@ public class ProductController : BasePublicController
             pictureFullSizeUrl = modelProduct.PictureFullSizeUrl,
             pictureDefaultSizeUrl = modelProduct.PictureDefaultSizeUrl,
             sampleEnabled = modelProduct.SampleEnabled,
-            allowedQuantities = allowedQuantitiesArray
+            allowedQuantities = allowedQuantitiesArray,
+            caseSize = modelProduct.CaseSize
         });
     }
 

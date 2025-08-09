@@ -1040,6 +1040,9 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
         [GrandResourceDisplayName(
             "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.NotifyAdminForQuantityBelow")]
         public int NotifyAdminForQuantityBelow { get; set; }
+        
+        [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.CaseSize")]
+        public double CaseSize { get; set; }
     }
 
     public class ProductAttributeCombinationTierPricesModel : BaseEntityModel

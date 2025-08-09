@@ -1808,7 +1808,8 @@ public class ProductViewModelService : IProductViewModelService
                 Mpn = x.Mpn,
                 Gtin = x.Gtin,
                 OverriddenPrice = x.OverriddenPrice,
-                NotifyAdminForQuantityBelow = x.NotifyAdminForQuantityBelow
+                NotifyAdminForQuantityBelow = x.NotifyAdminForQuantityBelow,
+                CaseSize = x.CaseSize
             };
             items.Add(pacModel);
         }

@@ -948,6 +948,9 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
             "Vendor.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.NotifyAdminForQuantityBelow")]
         [UIHint("DecimalN2")]
         public double NotifyAdminForQuantityBelow { get; set; }
+        
+        [GrandResourceDisplayName("Vendor.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.CaseSize")]
+        public double CaseSize { get; set; }
 
         public string ProductId { get; set; }
     }

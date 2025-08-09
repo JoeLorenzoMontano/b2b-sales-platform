@@ -14,7 +14,7 @@ public interface ICustomerViewModelService
     Task<CustomerListModel> PrepareCustomerListModel();
 
     Task<(IEnumerable<CustomerModel> customerModelList, int totalCount)> PrepareCustomerList(CustomerListModel model,
-        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, int pageIndex, int pageSize);
+        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, string[] searchDefaultRepIds, int pageIndex, int pageSize);
 
     Task PrepareCustomerModel(CustomerModel model, Customer customer, bool excludeProperties);
     Task<Customer> InsertCustomerModel(CustomerModel model);

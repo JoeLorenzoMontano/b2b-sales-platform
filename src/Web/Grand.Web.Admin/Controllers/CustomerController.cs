@@ -226,10 +226,10 @@ public class CustomerController : BaseAdminController
     [HttpPost]
 
     public async Task<IActionResult> CustomerList(DataSourceRequest command, CustomerListModel model,
-        string[] searchCustomerGroupIds, string[] searchCustomerTagIds)
+        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, string[] searchDefaultRepIds)
     {
         var (customerModelList, totalCount) = await _customerViewModelService.PrepareCustomerList(model,
-            searchCustomerGroupIds, searchCustomerTagIds, command.Page, command.PageSize);
+            searchCustomerGroupIds, searchCustomerTagIds, searchDefaultRepIds, command.Page, command.PageSize);
         var gridModel = new DataSourceResult {
             Data = customerModelList.ToList().OrderBy(x => x.FullName),
             Total = totalCount

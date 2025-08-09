@@ -134,6 +134,30 @@ public class CustomerViewModelService : ICustomerViewModelService
     {
         var registered = await _groupService.GetCustomerGroupBySystemName(SystemCustomerGroupNames.Registered);
         var customerGroups = await _groupService.GetAllCustomerGroups(showHidden: true);
+        // Get staff customers for Default Rep dropdown (same as DefaultImpersonatedByEmployeeId)
+        var availableDefaultReps = new List<SelectListItem>();
+        var staffGroup = await _groupService.GetCustomerGroupBySystemName(SystemCustomerGroupNames.Staff);
+        if (staffGroup != null)
+        {
+            var staffCustomers = await _customerService.GetAllCustomers(
+                customerGroupIds: new[] { staffGroup.Id });
+                
+            foreach (var employee in staffCustomers)
+            {
+                var firstName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.FirstName);
+                var lastName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.LastName);
+                var employeeName = $"{firstName} {lastName}";
+                
+                if (string.IsNullOrWhiteSpace(employeeName.Trim()))
+                    employeeName = employee.Email;
+                    
+                availableDefaultReps.Add(new SelectListItem {
+                    Text = employeeName,
+                    Value = employee.Id
+                });
+            }
+        }
+
         var model = new CustomerListModel {
             UsernamesEnabled = _customerSettings.UsernamesEnabled,
             CompanyEnabled = _customerSettings.CompanyEnabled,
@@ -143,6 +167,7 @@ public class CustomerViewModelService : ICustomerViewModelService
                 { Text = cr.Name, Value = cr.Id.ToString(), Selected = cr.Id == registered.Id }).ToList(),
             AvailableCustomerTags = (await _customerTagService.GetAllCustomerTags())
                 .Select(ct => new SelectListItem { Text = ct.Name, Value = ct.Id.ToString() }).ToList(),
+            AvailableDefaultReps = availableDefaultReps,
             SearchCustomerGroupIds = new List<string> { customerGroups.FirstOrDefault(x => x.Id == registered.Id)?.Id }
         };
         return model;
@@ -150,13 +175,14 @@ public class CustomerViewModelService : ICustomerViewModelService
 
     public virtual async Task<(IEnumerable<CustomerModel> customerModelList, int totalCount)> PrepareCustomerList(
         CustomerListModel model,
-        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, int pageIndex, int pageSize)
+        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, string[] searchDefaultRepIds, int pageIndex, int pageSize)
     {
         var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
 
         var customers = await _customerService.GetAllCustomers(
             customerGroupIds: searchCustomerGroupIds,
             customerTagIds: searchCustomerTagIds,
+            defaultImpersonatedByEmployeeIds: searchDefaultRepIds,
             email: model.SearchEmail,
             username: model.SearchUsername,
             firstName: model.SearchFirstName,

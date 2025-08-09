@@ -2258,7 +2258,8 @@ public class ProductViewModelService(
                     Gtin = model.Gtin,
                     OverriddenPrice = model.OverriddenPrice,
                     NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow.ToInt(),
-                    PictureId = model.PictureId
+                    PictureId = model.PictureId,
+                    CaseSize = model.CaseSize
                 };
 
                 if (product.UseMultipleWarehouses)
@@ -2308,6 +2309,7 @@ public class ProductViewModelService(
             combination.OverriddenPrice = model.OverriddenPrice;
             combination.NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow.ToInt();
             combination.PictureId = model.PictureId;
+            combination.CaseSize = model.CaseSize;
 
             if (product.UseMultipleWarehouses)
             {

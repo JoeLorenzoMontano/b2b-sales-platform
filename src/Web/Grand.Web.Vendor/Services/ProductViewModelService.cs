@@ -2008,7 +2008,8 @@ public class ProductViewModelService : IProductViewModelService
                     Gtin = model.Gtin,
                     OverriddenPrice = model.OverriddenPrice,
                     NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow,
-                    PictureId = model.PictureId
+                    PictureId = model.PictureId,
+                    CaseSize = model.CaseSize
                 };
 
                 if (product.UseMultipleWarehouses)
@@ -2048,6 +2049,7 @@ public class ProductViewModelService : IProductViewModelService
             combination.OverriddenPrice = model.OverriddenPrice;
             combination.NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow;
             combination.PictureId = model.PictureId;
+            combination.CaseSize = model.CaseSize;
 
             if (product.UseMultipleWarehouses)
             {

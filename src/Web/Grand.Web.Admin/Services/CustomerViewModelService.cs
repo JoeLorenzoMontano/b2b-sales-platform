@@ -158,6 +158,29 @@ public class CustomerViewModelService : ICustomerViewModelService
             }
         }
 
+        // Get distinct cities from customer addresses
+        var allCustomers = await _customerService.GetAllCustomers();
+        var availableCities = new List<SelectListItem>();
+        var uniqueCities = new HashSet<string>();
+        
+        foreach (var customer in allCustomers)
+        {
+            foreach (var address in customer.Addresses)
+            {
+                if (!string.IsNullOrWhiteSpace(address.City) && !uniqueCities.Contains(address.City))
+                {
+                    uniqueCities.Add(address.City);
+                    availableCities.Add(new SelectListItem {
+                        Text = address.City,
+                        Value = address.City
+                    });
+                }
+            }
+        }
+        
+        // Sort cities alphabetically
+        availableCities = availableCities.OrderBy(x => x.Text).ToList();
+
         var model = new CustomerListModel {
             UsernamesEnabled = _customerSettings.UsernamesEnabled,
             CompanyEnabled = _customerSettings.CompanyEnabled,
@@ -168,6 +191,7 @@ public class CustomerViewModelService : ICustomerViewModelService
             AvailableCustomerTags = (await _customerTagService.GetAllCustomerTags())
                 .Select(ct => new SelectListItem { Text = ct.Name, Value = ct.Id.ToString() }).ToList(),
             AvailableDefaultReps = availableDefaultReps,
+            AvailableCities = availableCities,
             SearchCustomerGroupIds = new List<string> { customerGroups.FirstOrDefault(x => x.Id == registered.Id)?.Id }
         };
         return model;
@@ -175,7 +199,7 @@ public class CustomerViewModelService : ICustomerViewModelService
 
     public virtual async Task<(IEnumerable<CustomerModel> customerModelList, int totalCount)> PrepareCustomerList(
         CustomerListModel model,
-        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, string[] searchDefaultRepIds, int pageIndex, int pageSize)
+        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, string[] searchDefaultRepIds, string[] searchCityNames, int pageIndex, int pageSize)
     {
         var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
 
@@ -183,6 +207,7 @@ public class CustomerViewModelService : ICustomerViewModelService
             customerGroupIds: searchCustomerGroupIds,
             customerTagIds: searchCustomerTagIds,
             defaultImpersonatedByEmployeeIds: searchDefaultRepIds,
+            cityNames: searchCityNames,
             email: model.SearchEmail,
             username: model.SearchUsername,
             firstName: model.SearchFirstName,

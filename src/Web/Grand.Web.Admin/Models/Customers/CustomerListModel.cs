@@ -30,6 +30,13 @@ public class CustomerListModel : BaseModel
     [UIHint("MultiSelect")]
     public IList<string> SearchDefaultRepIds { get; set; } = new List<string>();
 
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.Cities")]
+    public IList<SelectListItem> AvailableCities { get; set; } = new List<SelectListItem>();
+
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.Cities")]
+    [UIHint("MultiSelect")]
+    public IList<string> SearchCityNames { get; set; } = new List<string>();
+
     [GrandResourceDisplayName("Admin.Customers.Customers.List.SearchEmail")]
 
     public string SearchEmail { get; set; }

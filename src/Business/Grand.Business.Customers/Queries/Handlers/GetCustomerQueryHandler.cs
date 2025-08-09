@@ -43,6 +43,8 @@ public class GetCustomerQueryHandler : IRequestHandler<GetCustomerQuery, IQuerya
                 query = query.Where(c => c.CustomerTags.Contains(item));
         if (request.DefaultImpersonatedByEmployeeIds is { Length: > 0 })
             query = query.Where(c => request.DefaultImpersonatedByEmployeeIds.Contains(c.DefaultImpersonatedByEmployeeId));
+        if (request.CityNames is { Length: > 0 })
+            query = query.Where(c => c.Addresses.Any(addr => request.CityNames.Contains(addr.City)));
         if (!string.IsNullOrWhiteSpace(request.Email))
             query = query.Where(c => c.Email != null && c.Email.Contains(request.Email.ToLower()));
         if (!string.IsNullOrWhiteSpace(request.Username))

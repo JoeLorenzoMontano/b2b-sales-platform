@@ -122,6 +122,12 @@
                                             <admin-input asp-for="SearchDefaultRepIds" asp-template="MultiSelect" asp-selectitem="Model.AvailableDefaultReps"/>
                                         </div>
                                     </div>
+                                    <div class="form-group">
+                                        <admin-label asp-for="SearchCityNames" class="col-sm-3 control-label"/>
+                                        <div class="col-md-9 col-sm-9">
+                                            <admin-input asp-for="SearchCityNames" asp-template="MultiSelect" asp-selectitem="Model.AvailableCities"/>
+                                        </div>
+                                    </div>
                                     @if (Model.PhoneEnabled)
                                     {
                                         <div class="form-group">
@@ -323,6 +329,19 @@
                     }
                 })
 
+                $("#@Html.IdFor(model => model.SearchCityNames)").keydown(function (event) {
+                    if (event.keyCode == 13) {
+                        $("#search-customers").click();
+                        return false;
+                    }
+                });
+
+                $("#@Html.IdFor(model => model.SearchCityNames)").data().kendoMultiSelect.input.on('keydown',function(e){
+                    if (event.keyCode == 13) {
+                        $("#search-customers").click();
+                        return false;
+                    }
+                })
 
                 $("#@Html.IdFor(model => model.SearchEmail)").keydown(function (event) {
                     if (event.keyCode == 13) {
@@ -455,10 +474,16 @@
                     defaultRepIds = $('#@Html.IdFor(model => model.SearchDefaultRepIds)').val();
                 }
 
+                var cityNames = [];
+                if($('#@Html.IdFor(model => model.SearchCityNames)').val()!=null){
+                    cityNames = $('#@Html.IdFor(model => model.SearchCityNames)').val();
+                }
+
                 var data = {
                     SearchCustomerGroupIds: customerGroupIds,
                     SearchCustomerTagIds: customerTagIds,
                     SearchDefaultRepIds: defaultRepIds,
+                    SearchCityNames: cityNames,
                     SearchEmail: $('#@Html.IdFor(model => model.SearchEmail)').val(),
                     SearchUsername: $('#@Html.IdFor(model => model.SearchUsername)').val(),
                     SearchFirstName: $('#@Html.IdFor(model => model.SearchFirstName)').val(),

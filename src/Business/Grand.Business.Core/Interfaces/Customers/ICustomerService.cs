@@ -48,7 +48,7 @@ public interface ICustomerService
         DateTime? createdToUtc = null, string affiliateId = "", string vendorId = "", string storeId = "",
         string ownerId = "",
         string salesEmployeeId = "", string[] customerGroupIds = null, string[] customerTagIds = null,
-        string[] defaultImpersonatedByEmployeeIds = null,
+        string[] defaultImpersonatedByEmployeeIds = null, string[] cityNames = null,
         string email = null, string username = null,
         string firstName = null, string lastName = null,
         string company = null, string phone = null, string zipPostalCode = null,

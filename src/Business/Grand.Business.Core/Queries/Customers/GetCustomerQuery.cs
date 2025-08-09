@@ -18,6 +18,7 @@ public class GetCustomerQuery : IRequest<IQueryable<Customer>>
     public string[] CustomerGroupIds { get; set; } = null;
     public string[] CustomerTagIds { get; set; } = null;
     public string[] DefaultImpersonatedByEmployeeIds { get; set; } = null;
+    public string[] CityNames { get; set; } = null;
     public string Email { get; set; } = null;
     public string Username { get; set; } = null;
     public string FirstName { get; set; } = null;

@@ -537,6 +537,12 @@
             
             if (!caseDropdown) return;
             
+            // Update Units display first (show units per case)
+            var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
+            if (unitsDisplay) {
+                unitsDisplay.textContent = caseSize.toString();
+            }
+            
             // Get available quantities from the quantity dropdown/input
             var availableQuantities = [];
             if (qtyDropdown) {
@@ -574,7 +580,7 @@
             var currentCases = Math.round(currentQty / caseSize * 100) / 100;
             caseDropdown.value = currentCases;
             
-            // Update total field
+            // Update total field and units display
             updateTotalField_@(Model.Id)(currentCases, currentQty);
         }
         
@@ -619,9 +625,20 @@
             var caseSize = window['caseSize_@Model.Id'];
             if (!caseSize || caseSize <= 0) return;
             
+            // Update Units display (show units per case)
+            var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
+            if (unitsDisplay) {
+                unitsDisplay.textContent = caseSize.toString();
+            }
+            
+            // Update Total dropdown/input
             var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
             
             if (totalDropdown) {
+                // Total should be Cases × Units (caseSize)  
+                // For example: 3 cases × 12 units per case = 36 total
+                var correctTotal = parseFloat(cases) * caseSize;
+                
                 if (totalDropdown.tagName === 'SELECT') {
                     // For select element - populate with multiple total options
                     totalDropdown.innerHTML = '';
@@ -631,12 +648,12 @@
                     if (casesDropdown) {
                         for (var i = 0; i < casesDropdown.options.length; i++) {
                             var caseValue = parseFloat(casesDropdown.options[i].value);
-                            var totalValue = caseValue * caseSize;
+                            var totalValue = caseValue * caseSize; // Cases × Units per case = Total
                             
                             var option = document.createElement('option');
                             option.value = totalValue;
                             option.textContent = totalValue.toString();
-                            if (caseValue == parseFloat(cases)) {
+                            if (Math.abs(totalValue - correctTotal) < 0.01) { // Use small epsilon for floating point comparison
                                 option.selected = true;
                             }
                             totalDropdown.appendChild(option);
@@ -644,8 +661,7 @@
                     }
                 } else {
                     // For input element  
-                    var totalValue = parseFloat(cases) * caseSize;
-                    totalDropdown.value = totalValue;
+                    totalDropdown.value = correctTotal;
                 }
             }
         }
@@ -654,8 +670,13 @@
             var caseSize = window['caseSize_@Model.Id'];
             if (!caseSize || caseSize <= 0) return;
             
+            // Calculate cases from total: Total ÷ Units per case = Cases
+            // For example: 36 total ÷ 12 units per case = 3 cases
             var cases = parseFloat(totalValue) / caseSize;
-            var quantity = parseFloat(totalValue); // Total is the final quantity
+            
+            // The main quantity field should represent the total quantity
+            // This is what gets sent to the shopping cart
+            var finalQuantity = parseFloat(totalValue);
             
             // Update Cases dropdown
             var casesDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
@@ -663,19 +684,19 @@
                 casesDropdown.value = cases;
             }
             
-            // Update Units dropdown/input
+            // Update Units dropdown/input - this should show the total quantity
             var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
             var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
             
             if (qtyInput) {
-                qtyInput.value = quantity;
+                qtyInput.value = finalQuantity;
             } else if (qtyDropdown) {
                 // Find the closest available quantity
                 var bestMatch = null;
                 var bestDiff = Infinity;
                 for (var i = 0; i < qtyDropdown.options.length; i++) {
                     var optionValue = parseFloat(qtyDropdown.options[i].value);
-                    var diff = Math.abs(optionValue - quantity);
+                    var diff = Math.abs(optionValue - finalQuantity);
                     if (diff < bestDiff) {
                         bestDiff = diff;
                         bestMatch = qtyDropdown.options[i].value;

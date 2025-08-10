@@ -639,23 +639,21 @@
                     }
                 }
                 
-                // Include exact multiples of case size OR sample quantities
-                if (qty % caseSize === 0 || isSampleQty) {
-                    var cases = qty / caseSize;
-                    if (cases < 0) {
-                        return;
-                    }
-                    var option = document.createElement('option');
-                    option.value = cases;
-                    
-                    // Show sample indicator in cases dropdown
-                    if (isSampleQty) {
-                        option.textContent = cases.toString() + ' (Sample)';
-                    } else {
-                        option.textContent = cases.toString();
-                    }
-                    
+                var option = document.createElement('option');
+                
+                if (isSampleQty) {
+                    // Samples: Show as-is without case calculations
+                    option.value = qty;
+                    option.textContent = qty.toString() + ' (Sample)';
                     caseDropdown.appendChild(option);
+                } else if (qty % caseSize === 0) {
+                    // Regular quantities: Only exact multiples of case size
+                    var cases = qty / caseSize;
+                    if (cases >= 1) {  // Only show whole case values >= 1
+                        option.value = cases;
+                        option.textContent = cases.toString();
+                        caseDropdown.appendChild(option);
+                    }
                 }
             });
             

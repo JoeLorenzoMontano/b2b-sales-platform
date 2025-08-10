@@ -616,16 +616,27 @@
         }
         
         function updateTotalField_@(Model.Id)(cases, quantity) {
+            var caseSize = window['caseSize_@Model.Id'];
+            if (!caseSize || caseSize <= 0) return;
+            
             var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
             
             if (totalDropdown) {
-                // Clear and add single option showing the total
-                totalDropdown.innerHTML = '';
-                var option = document.createElement('option');
-                option.value = quantity;
-                option.textContent = quantity.toString();
-                option.selected = true;
-                totalDropdown.appendChild(option);
+                // Total = Cases × Case Size (not quantity)
+                var totalValue = parseFloat(cases) * caseSize;
+                
+                if (totalDropdown.tagName === 'SELECT') {
+                    // For select element
+                    totalDropdown.innerHTML = '';
+                    var option = document.createElement('option');
+                    option.value = totalValue;
+                    option.textContent = totalValue.toString();
+                    option.selected = true;
+                    totalDropdown.appendChild(option);
+                } else {
+                    // For input element  
+                    totalDropdown.value = totalValue;
+                }
             }
         }
     </script>

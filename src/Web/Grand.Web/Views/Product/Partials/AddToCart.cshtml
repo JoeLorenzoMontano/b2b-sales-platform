@@ -27,8 +27,7 @@
         <div class="min-qty-notification text-danger w-100 mb-2">@Model.MinimumQuantityNotification</div>
     }
 
-    <div role="group" class="input-group product-add-to-cart flex-nowrap">
-
+    <div class="product-add-to-cart-container">
         @if (!Model.DisableBuyButton)
         {
             @if (Model.AllowedQuantities.Any())
@@ -38,7 +37,7 @@
                     <div class="d-flex align-items-end">
                         <!-- Cases -->
                         <div class="case-info mr-2" id="case-info-@Model.ProductId" style="display: none;">
-                            <label for="EnteredCases_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Cases</label>
+                            <label for="EnteredCases_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Cases</label>
                             <select name="EnteredCases" id="EnteredCases_@Model.ProductId" 
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
                                     class="custom-select form-control" style="width: 70px;">
@@ -47,14 +46,14 @@
                         
                         <!-- Units -->
                         <div class="mr-2">
-                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Units</label>
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Units</label>
                             <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control" style="width: 80px;"
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
                         </div>
                         
                         <!-- Total -->
                         <div class="case-info mr-2" id="total-info-@Model.ProductId" style="display: none;">
-                            <label for="EnteredTotal_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Total</label>
+                            <label for="EnteredTotal_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Total</label>
                             <select name="EnteredTotal" id="EnteredTotal_@Model.ProductId" 
                                     class="custom-select form-control" style="width: 80px;" readonly disabled>
                             </select>
@@ -77,7 +76,7 @@
                     <div class="d-flex align-items-end">
                         <!-- Cases -->
                         <div class="case-info mr-2" id="case-info-input-@Model.ProductId" style="display: none;">
-                            <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Cases</label>
+                            <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Cases</label>
                             <select name="EnteredCases" id="EnteredCases_input_@Model.ProductId" 
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
                                     class="custom-select form-control" style="width: 70px;">
@@ -86,14 +85,14 @@
                         
                         <!-- Units -->
                         <div class="mr-2">
-                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Units</label>
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Units</label>
                             <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="form-control text-center" style="width: 80px;"
                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
                         </div>
                         
                         <!-- Total -->
                         <div class="case-info mr-2" id="total-info-input-@Model.ProductId" style="display: none;">
-                            <label for="EnteredTotal_input_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Total</label>
+                            <label for="EnteredTotal_input_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Total</label>
                             <input type="number" id="EnteredTotal_input_@Model.ProductId" 
                                    class="form-control text-center" style="width: 80px;" readonly>
                         </div>
@@ -133,13 +132,13 @@
             {
                 addToCartText = Loc["ShoppingCart.BuyNow"];
             }
-
-            <div class="input-group-append">
-                <button type="button" id="add-to-cart-button-@Model.ProductId" class="btn btn-info w-100 add-to-cart-button d-inline-flex" data-productid="@Model.ProductId" onclick="AxiosCart.addproducttocart_details('@Url.RouteUrl("AddProductDetails", new { productId = Model.ProductId, shoppingCartTypeId = (int)shoppingCartType })', @($"'#product-details-form-{Model.ProductId}'"));return false;">
-                    <span>@addToCartText</span>
-                </button>
-            </div>
-        }
+        
+        <!-- Add to Cart Button - always positioned below quantity controls -->
+        <div class="mt-3">
+            <button type="button" id="add-to-cart-button-@Model.ProductId" class="btn btn-info w-100 add-to-cart-button d-inline-flex" data-productid="@Model.ProductId" onclick="AxiosCart.addproducttocart_details('@Url.RouteUrl("AddProductDetails", new { productId = Model.ProductId, shoppingCartTypeId = (int)shoppingCartType })', @($"'#product-details-form-{Model.ProductId}'"));return false;">
+                <span>@addToCartText</span>
+            </button>
+        </div>
     </div>
     
     @if (Model.CaseSize > 0)

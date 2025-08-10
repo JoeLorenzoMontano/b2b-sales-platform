@@ -33,39 +33,79 @@
         {
             @if (Model.AllowedQuantities.Any())
             {
-                <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control qty-dropdown mr-2" 
-                        onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
-                if (!string.IsNullOrEmpty(Model.MeasureUnit))
-                {
-                    <span class="qty-unit d-flex align-items-center mr-2">
-                        @Model.MeasureUnit
-                    </span>
-                }
-                <div class="case-info d-flex align-items-center mr-2" id="case-info-@Model.ProductId" style="display: none; white-space: nowrap;">
-                    <label for="EnteredCases_@Model.ProductId" class="mr-1 mb-0 text-muted small">Cases:</label>
-                    <select name="EnteredCases" id="EnteredCases_@Model.ProductId" 
-                            onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
-                            class="custom-select form-control case-dropdown" style="width: auto; min-width: 60px;">
-                    </select>
+                <!-- Quantity Group Box -->
+                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-@Model.ProductId" style="background-color: #f8f9fa;">
+                    <div class="d-flex align-items-end">
+                        <!-- Cases -->
+                        <div class="case-info mr-2" id="case-info-@Model.ProductId" style="display: none;">
+                            <label for="EnteredCases_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Cases</label>
+                            <select name="EnteredCases" id="EnteredCases_@Model.ProductId" 
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
+                                    class="custom-select form-control" style="width: 70px;">
+                            </select>
+                        </div>
+                        
+                        <!-- Units -->
+                        <div class="mr-2">
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Units</label>
+                            <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control" style="width: 80px;"
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
+                        </div>
+                        
+                        <!-- Total -->
+                        <div class="case-info mr-2" id="total-info-@Model.ProductId" style="display: none;">
+                            <label for="EnteredTotal_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Total</label>
+                            <select name="EnteredTotal" id="EnteredTotal_@Model.ProductId" 
+                                    class="custom-select form-control" style="width: 80px;" readonly disabled>
+                            </select>
+                        </div>
+                        
+                        <!-- Unit Label -->
+                        @if (!string.IsNullOrEmpty(Model.MeasureUnit))
+                        {
+                            <div class="qty-unit d-flex align-items-center">
+                                <small class="text-muted">@Model.MeasureUnit</small>
+                            </div>
+                        }
+                    </div>
                 </div>
             }
             else
             {
-                <label for=@($"EnteredQuantity_{Model.ProductId}") class="sr-only">@Loc["ShoppingCart.AddToCart"]</label>
-                <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="qty-input form-control text-center"
-                       onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
-                if (!string.IsNullOrEmpty(Model.MeasureUnit))
-                {
-                    <span class="qty-unit d-flex align-items-center mr-2">
-                        @Model.MeasureUnit
-                    </span>
-                }
-                <div class="case-info d-flex align-items-center mr-2" id="case-info-input-@Model.ProductId" style="display: none; white-space: nowrap;">
-                    <label for="EnteredCases_input_@Model.ProductId" class="mr-1 mb-0 text-muted small">Cases:</label>
-                    <select name="EnteredCases" id="EnteredCases_input_@Model.ProductId" 
-                            onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
-                            class="custom-select form-control case-dropdown" style="width: auto; min-width: 60px;">
-                    </select>
+                <!-- Quantity Group Box (Input Version) -->
+                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-input-@Model.ProductId" style="background-color: #f8f9fa;">
+                    <div class="d-flex align-items-end">
+                        <!-- Cases -->
+                        <div class="case-info mr-2" id="case-info-input-@Model.ProductId" style="display: none;">
+                            <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Cases</label>
+                            <select name="EnteredCases" id="EnteredCases_input_@Model.ProductId" 
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
+                                    class="custom-select form-control" style="width: 70px;">
+                            </select>
+                        </div>
+                        
+                        <!-- Units -->
+                        <div class="mr-2">
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Units</label>
+                            <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="form-control text-center" style="width: 80px;"
+                                   onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
+                        </div>
+                        
+                        <!-- Total -->
+                        <div class="case-info mr-2" id="total-info-input-@Model.ProductId" style="display: none;">
+                            <label for="EnteredTotal_input_@Model.ProductId" class="form-label small text-muted mb-1 d-block">Total</label>
+                            <input type="number" id="EnteredTotal_input_@Model.ProductId" 
+                                   class="form-control text-center" style="width: 80px;" readonly>
+                        </div>
+                        
+                        <!-- Unit Label -->
+                        @if (!string.IsNullOrEmpty(Model.MeasureUnit))
+                        {
+                            <div class="qty-unit d-flex align-items-center">
+                                <small class="text-muted">@Model.MeasureUnit</small>
+                            </div>
+                        }
+                    </div>
                 </div>
             }
 

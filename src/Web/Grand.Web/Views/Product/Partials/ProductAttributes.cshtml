@@ -488,22 +488,18 @@
                             // Populate case dropdowns and sync with quantity
                             updateCaseDropdowns_@(Model.Id)();
                             
-                            // Show case info elements with proper flexbox display
-                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
+                            // Show case info and total elements
+                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id, #total-info-@Model.Id, #total-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
-                                element.classList.add('d-flex');
-                                element.style.display = '';
-                                element.style.alignItems = 'center';
+                                element.style.display = 'block';
                             });
                         } else {
-                            // Hide case info if no case size
+                            // Hide case info and total if no case size
                             console.log('Hiding case info - case size not valid');
-                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id');
+                            var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id, #total-info-@Model.Id, #total-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 console.log('Hiding element:', element);
-                                element.classList.remove('d-flex');
                                 element.style.display = 'none';
-                                element.style.alignItems = '';
                             });
                         }
                     });
@@ -577,6 +573,9 @@
             
             var currentCases = Math.round(currentQty / caseSize * 100) / 100;
             caseDropdown.value = currentCases;
+            
+            // Update total field
+            updateTotalField_@(Model.Id)(currentCases, currentQty);
         }
         
         function updateQuantityFromCases_@(Model.Id)(cases) {
@@ -606,9 +605,27 @@
                 }
             }
             
+            // Update total field
+            var cases = parseFloat(newQuantity / caseSize).toFixed(2);
+            updateTotalField_@(Model.Id)(cases, newQuantity);
+            
             // Trigger attribute change to update prices, etc.
             if (typeof standardProductAttributes_@(Model.Id) !== 'undefined') {
                 standardProductAttributes_@(Model.Id).attrchange();
+            }
+        }
+        
+        function updateTotalField_@(Model.Id)(cases, quantity) {
+            var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
+            
+            if (totalDropdown) {
+                // Clear and add single option showing the total
+                totalDropdown.innerHTML = '';
+                var option = document.createElement('option');
+                option.value = quantity;
+                option.textContent = quantity.toString();
+                option.selected = true;
+                totalDropdown.appendChild(option);
             }
         }
     </script>

@@ -494,13 +494,28 @@
                                 element.style.display = 'block';
                             });
                         } else {
-                            // Hide case info and total if no case size
+                            // Hide case info and total if no case size, show interactive Units dropdown/input
                             console.log('Hiding case info - case size not valid');
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id, #total-info-@Model.Id, #total-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 console.log('Hiding element:', element);
                                 element.style.display = 'none';
                             });
+                            
+                            // Show interactive Units dropdown/input and hide Units display
+                            var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
+                            var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
+                            var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
+                            
+                            if (unitsDisplay) {
+                                unitsDisplay.style.display = 'none';
+                            }
+                            if (qtyDropdown) {
+                                qtyDropdown.style.display = 'block';
+                            }
+                            if (qtyInput) {
+                                qtyInput.style.display = 'block';
+                            }
                         }
                     });
                 },
@@ -537,10 +552,19 @@
             
             if (!caseDropdown) return;
             
-            // Update Units display first (show units per case)
+            // Show Units display and hide the interactive quantity dropdown/input
             var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
             if (unitsDisplay) {
                 unitsDisplay.textContent = caseSize.toString();
+                unitsDisplay.style.display = 'block';
+            }
+            
+            // Hide the interactive quantity controls
+            if (qtyDropdown) {
+                qtyDropdown.style.display = 'none';
+            }
+            if (qtyInput) {
+                qtyInput.style.display = 'none';
             }
             
             // Get available quantities from the quantity dropdown/input

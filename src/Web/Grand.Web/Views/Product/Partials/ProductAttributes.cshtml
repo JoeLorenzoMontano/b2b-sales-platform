@@ -327,8 +327,12 @@
                                 sampleNotification.style.display = 'none';
                                 sampleNotification.innerHTML = '<small>Sample size (1) available for this product</small>';
                                 
-                                // Insert after the quantity dropdown
-                                if (quantitySelect) {
+                                // Insert after the quantity group box instead of inside it
+                                var quantityGroup = document.getElementById('quantity-group-@Model.Id') || document.getElementById('quantity-group-input-@Model.Id');
+                                if (quantityGroup && quantityGroup.parentNode) {
+                                    quantityGroup.parentNode.insertBefore(sampleNotification, quantityGroup.nextSibling);
+                                } else if (quantitySelect) {
+                                    // Fallback to old behavior if quantity group not found
                                     quantitySelect.parentNode.insertBefore(sampleNotification, quantitySelect.nextSibling);
                                 }
                             }
@@ -338,6 +342,10 @@
                                 sampleNotification.style.display = 'block';
                                 
                                 // Add event listener to quantity dropdown to show/hide "Ordering Sample" badge
+                                // For case-enabled products, we also need to listen to the case dropdown
+                                var caseSize = window['caseSize_@Model.Id'];
+                                var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+                                
                                 if (quantitySelect && !quantitySelect.hasAttribute('data-sample-listener')) {
                                     // Create or get the sample indicator badge
                                     var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
@@ -468,6 +476,41 @@
                                     // Mark that we've attached the listener
                                     quantitySelect.setAttribute('data-sample-listener', 'true');
                                 }
+                                
+                                // Add event listener to case dropdown for sample detection
+                                if (caseDropdown && caseSize && caseSize > 0 && !caseDropdown.hasAttribute('data-sample-listener')) {
+                                    var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
+                                    
+                                    caseDropdown.addEventListener('change', function() {
+                                        // Check if selected case option includes "(Sample)"
+                                        var selectedOption = this.options[this.selectedIndex];
+                                        var isSample = selectedOption && selectedOption.text.includes('(Sample)');
+                                        
+                                        if (sampleIndicator) {
+                                            if (isSample) {
+                                                sampleIndicator.style.display = 'block';
+                                                sampleIndicator.style.visibility = 'visible';
+                                                sampleIndicator.style.opacity = '1';
+                                            } else {
+                                                sampleIndicator.style.display = 'none';
+                                                sampleIndicator.style.visibility = 'hidden';
+                                                sampleIndicator.style.opacity = '0';
+                                            }
+                                        }
+                                    });
+                                    
+                                    // Set initial state for case dropdown
+                                    var initialSelectedOption = caseDropdown.options[caseDropdown.selectedIndex];
+                                    var initialIsSample = initialSelectedOption && initialSelectedOption.text.includes('(Sample)');
+                                    
+                                    if (sampleIndicator && initialIsSample) {
+                                        sampleIndicator.style.display = 'block';
+                                        sampleIndicator.style.visibility = 'visible';
+                                        sampleIndicator.style.opacity = '1';
+                                    }
+                                    
+                                    caseDropdown.setAttribute('data-sample-listener', 'true');
+                                }
                             } else {
                                 sampleNotification.style.display = 'none';
                                 
@@ -584,11 +627,31 @@
             // Clear and populate case dropdown
             caseDropdown.innerHTML = '';
             availableQuantities.forEach(function(qty) {
-                if (qty % caseSize === 0) { // Only show quantities that are exact multiples of case size
+                // Check if this quantity is a sample by looking at the original dropdown
+                var isSampleQty = false;
+                if (qtyDropdown) {
+                    for (var i = 0; i < qtyDropdown.options.length; i++) {
+                        if (qtyDropdown.options[i].value == qty && 
+                            qtyDropdown.options[i].text.includes('(Sample)')) {
+                            isSampleQty = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Include exact multiples of case size OR sample quantities
+                if (qty % caseSize === 0 || isSampleQty) {
                     var cases = qty / caseSize;
                     var option = document.createElement('option');
                     option.value = cases;
-                    option.textContent = cases.toString();
+                    
+                    // Show sample indicator in cases dropdown
+                    if (isSampleQty) {
+                        option.textContent = cases.toString() + ' (Sample)';
+                    } else {
+                        option.textContent = cases.toString();
+                    }
+                    
                     caseDropdown.appendChild(option);
                 }
             });

@@ -622,21 +622,73 @@
             var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
             
             if (totalDropdown) {
-                // Total = Cases × Case Size (not quantity)
-                var totalValue = parseFloat(cases) * caseSize;
-                
                 if (totalDropdown.tagName === 'SELECT') {
-                    // For select element
+                    // For select element - populate with multiple total options
                     totalDropdown.innerHTML = '';
-                    var option = document.createElement('option');
-                    option.value = totalValue;
-                    option.textContent = totalValue.toString();
-                    option.selected = true;
-                    totalDropdown.appendChild(option);
+                    
+                    // Get available cases from the cases dropdown
+                    var casesDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+                    if (casesDropdown) {
+                        for (var i = 0; i < casesDropdown.options.length; i++) {
+                            var caseValue = parseFloat(casesDropdown.options[i].value);
+                            var totalValue = caseValue * caseSize;
+                            
+                            var option = document.createElement('option');
+                            option.value = totalValue;
+                            option.textContent = totalValue.toString();
+                            if (caseValue == parseFloat(cases)) {
+                                option.selected = true;
+                            }
+                            totalDropdown.appendChild(option);
+                        }
+                    }
                 } else {
                     // For input element  
+                    var totalValue = parseFloat(cases) * caseSize;
                     totalDropdown.value = totalValue;
                 }
+            }
+        }
+        
+        function updateQuantityFromTotal_@(Model.Id)(totalValue) {
+            var caseSize = window['caseSize_@Model.Id'];
+            if (!caseSize || caseSize <= 0) return;
+            
+            var cases = parseFloat(totalValue) / caseSize;
+            var quantity = parseFloat(totalValue); // Total is the final quantity
+            
+            // Update Cases dropdown
+            var casesDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+            if (casesDropdown) {
+                casesDropdown.value = cases;
+            }
+            
+            // Update Units dropdown/input
+            var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
+            var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
+            
+            if (qtyInput) {
+                qtyInput.value = quantity;
+            } else if (qtyDropdown) {
+                // Find the closest available quantity
+                var bestMatch = null;
+                var bestDiff = Infinity;
+                for (var i = 0; i < qtyDropdown.options.length; i++) {
+                    var optionValue = parseFloat(qtyDropdown.options[i].value);
+                    var diff = Math.abs(optionValue - quantity);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestMatch = qtyDropdown.options[i].value;
+                    }
+                }
+                if (bestMatch !== null) {
+                    qtyDropdown.value = bestMatch;
+                }
+            }
+            
+            // Trigger attribute change to update prices, etc.
+            if (typeof standardProductAttributes_@(Model.Id) !== 'undefined') {
+                standardProductAttributes_@(Model.Id).attrchange();
             }
         }
     </script>

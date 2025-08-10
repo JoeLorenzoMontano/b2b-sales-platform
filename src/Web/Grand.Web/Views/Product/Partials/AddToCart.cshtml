@@ -33,11 +33,11 @@
             @if (Model.AllowedQuantities.Any())
             {
                 <!-- Quantity Group Box -->
-                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-@Model.ProductId" style="background-color: #f8f9fa;">
+                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-@Model.ProductId" style="background-color: #ffffff; border-color: #dee2e6;">
                     <div class="d-flex align-items-end">
                         <!-- Cases -->
                         <div class="case-info mr-2" id="case-info-@Model.ProductId" style="display: none;">
-                            <label for="EnteredCases_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Cases</label>
+                            <label for="EnteredCases_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
                             <select name="EnteredCases" id="EnteredCases_@Model.ProductId" 
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
                                     class="custom-select form-control" style="width: 70px;">
@@ -46,16 +46,17 @@
                         
                         <!-- Units -->
                         <div class="mr-2">
-                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Units</label>
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
                             <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control" style="width: 80px;"
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
                         </div>
                         
                         <!-- Total -->
                         <div class="case-info mr-2" id="total-info-@Model.ProductId" style="display: none;">
-                            <label for="EnteredTotal_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Total</label>
+                            <label for="EnteredTotal_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Total</label>
                             <select name="EnteredTotal" id="EnteredTotal_@Model.ProductId" 
-                                    class="custom-select form-control" style="width: 80px;" readonly disabled>
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromTotal_@(Model.ProductId)(this.value);"
+                                    class="custom-select form-control" style="width: 80px;">
                             </select>
                         </div>
                         
@@ -72,11 +73,11 @@
             else
             {
                 <!-- Quantity Group Box (Input Version) -->
-                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-input-@Model.ProductId" style="background-color: #f8f9fa;">
+                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-input-@Model.ProductId" style="background-color: #ffffff; border-color: #dee2e6;">
                     <div class="d-flex align-items-end">
                         <!-- Cases -->
                         <div class="case-info mr-2" id="case-info-input-@Model.ProductId" style="display: none;">
-                            <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Cases</label>
+                            <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
                             <select name="EnteredCases" id="EnteredCases_input_@Model.ProductId" 
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromCases_@(Model.ProductId)(this.value);" 
                                     class="custom-select form-control" style="width: 70px;">
@@ -85,16 +86,17 @@
                         
                         <!-- Units -->
                         <div class="mr-2">
-                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Units</label>
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
                             <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="form-control text-center" style="width: 80px;"
                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
                         </div>
                         
                         <!-- Total -->
                         <div class="case-info mr-2" id="total-info-input-@Model.ProductId" style="display: none;">
-                            <label for="EnteredTotal_input_@Model.ProductId" class="form-label small text-dark mb-1 d-block font-weight-bold">Total</label>
+                            <label for="EnteredTotal_input_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Total</label>
                             <input type="number" id="EnteredTotal_input_@Model.ProductId" 
-                                   class="form-control text-center" style="width: 80px;" readonly>
+                                   onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') updateQuantityFromTotal_@(Model.ProductId)(this.value);"
+                                   class="form-control text-center" style="width: 80px;">
                         </div>
                         
                         <!-- Unit Label -->

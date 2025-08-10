@@ -22,7 +22,7 @@
 }
 @if (!Model.DisableBuyButton || Model.EnteredPrice)
 {
-    if (!string.IsNullOrEmpty(Model.MinimumQuantityNotification))
+    @if (!string.IsNullOrEmpty(Model.MinimumQuantityNotification))
     {
         <div class="min-qty-notification text-danger w-100 mb-2">@Model.MinimumQuantityNotification</div>
     }
@@ -109,80 +109,81 @@
             }
 
             var addToCartText = "";
-            if (!string.IsNullOrEmpty(Model.UpdatedShoppingCartItemId) && Model.UpdateShoppingCartItemType.HasValue && (Model.UpdateShoppingCartItemType.Value == ShoppingCartType.ShoppingCart || Model.UpdateShoppingCartItemType.Value == ShoppingCartType.OnHoldCart))
-            {
-                addToCartText = Loc["ShoppingCart.AddToCart.Update"];
-            }
-            else
-            {
-                addToCartText = Loc["ShoppingCart.AddToCart"];
-            }
-
-            if (Model.IsReservation)
-            {
-                addToCartText = Loc["ShoppingCart.Reservation"];
-            }
-
-            if (Model.AvailableForPreOrder)
-            {
-                addToCartText = Loc["ShoppingCart.PreOrder"];
-            }
-
-            if (Model.IsAuction)
-            {
-                addToCartText = Loc["ShoppingCart.BuyNow"];
-            }
-        
-        <!-- Add to Cart Button - always positioned below quantity controls -->
-        <div class="mt-3">
-            <button type="button" id="add-to-cart-button-@Model.ProductId" class="btn btn-info w-100 add-to-cart-button d-inline-flex" data-productid="@Model.ProductId" onclick="AxiosCart.addproducttocart_details('@Url.RouteUrl("AddProductDetails", new { productId = Model.ProductId, shoppingCartTypeId = (int)shoppingCartType })', @($"'#product-details-form-{Model.ProductId}'"));return false;">
-                <span>@addToCartText</span>
-            </button>
-        </div>
-    </div>
-    
-    @if (Model.CaseSize > 0)
-    {
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const caseSize = @Model.CaseSize;
-                const productId = '@Model.ProductId';
-                
-                function updateCaseDisplay() {
-                    const qtyInput = document.getElementById('EnteredQuantity_' + productId);
-                    const qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_' + productId + '"]');
-                    
-                    let quantity = 1;
-                    if (qtyInput) {
-                        quantity = parseFloat(qtyInput.value) || 1;
-                    } else if (qtyDropdown) {
-                        quantity = parseFloat(qtyDropdown.value) || 1;
-                    }
-                    
-                    const cases = (quantity / caseSize).toFixed(2);
-                    
-                    const caseDisplays = document.querySelectorAll('#case-display-' + productId + ', #case-display-input-' + productId);
-                    caseDisplays.forEach(function(display) {
-                        display.textContent = cases;
-                    });
+                if (!string.IsNullOrEmpty(Model.UpdatedShoppingCartItemId) && Model.UpdateShoppingCartItemType.HasValue && (Model.UpdateShoppingCartItemType.Value == ShoppingCartType.ShoppingCart || Model.UpdateShoppingCartItemType.Value == ShoppingCartType.OnHoldCart))
+                {
+                    addToCartText = Loc["ShoppingCart.AddToCart.Update"];
                 }
-                
-                // Initial calculation
-                updateCaseDisplay();
-                
-                // Listen for quantity changes
+                else
+                {
+                    addToCartText = Loc["ShoppingCart.AddToCart"];
+                }
+
+                if (Model.IsReservation)
+                {
+                    addToCartText = Loc["ShoppingCart.Reservation"];
+                }
+
+                if (Model.AvailableForPreOrder)
+                {
+                    addToCartText = Loc["ShoppingCart.PreOrder"];
+                }
+
+                if (Model.IsAuction)
+                {
+                    addToCartText = Loc["ShoppingCart.BuyNow"];
+                }
+        
+            <!-- Add to Cart Button - always positioned below quantity controls -->
+            <div class="mt-3">
+                <button type="button" id="add-to-cart-button-@Model.ProductId" class="btn btn-info w-100 add-to-cart-button d-inline-flex" data-productid="@Model.ProductId" onclick="AxiosCart.addproducttocart_details('@Url.RouteUrl("AddProductDetails", new { productId = Model.ProductId, shoppingCartTypeId = (int)shoppingCartType })', @($"'#product-details-form-{Model.ProductId}'"));return false;">
+                    <span>@addToCartText</span>
+                </button>
+            </div>
+        }
+    </div>
+}
+
+@if (Model.CaseSize > 0)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const caseSize = @Model.CaseSize;
+            const productId = '@Model.ProductId';
+            
+            function updateCaseDisplay() {
                 const qtyInput = document.getElementById('EnteredQuantity_' + productId);
                 const qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_' + productId + '"]');
                 
+                let quantity = 1;
                 if (qtyInput) {
-                    qtyInput.addEventListener('input', updateCaseDisplay);
-                    qtyInput.addEventListener('change', updateCaseDisplay);
+                    quantity = parseFloat(qtyInput.value) || 1;
+                } else if (qtyDropdown) {
+                    quantity = parseFloat(qtyDropdown.value) || 1;
                 }
                 
-                if (qtyDropdown) {
-                    qtyDropdown.addEventListener('change', updateCaseDisplay);
-                }
-            });
-        </script>
-    }
+                const cases = (quantity / caseSize).toFixed(2);
+                
+                const caseDisplays = document.querySelectorAll('#case-display-' + productId + ', #case-display-input-' + productId);
+                caseDisplays.forEach(function(display) {
+                    display.textContent = cases;
+                });
+            }
+            
+            // Initial calculation
+            updateCaseDisplay();
+            
+            // Listen for quantity changes
+            const qtyInput = document.getElementById('EnteredQuantity_' + productId);
+            const qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_' + productId + '"]');
+            
+            if (qtyInput) {
+                qtyInput.addEventListener('input', updateCaseDisplay);
+                qtyInput.addEventListener('change', updateCaseDisplay);
+            }
+            
+            if (qtyDropdown) {
+                qtyDropdown.addEventListener('change', updateCaseDisplay);
+            }
+        });
+    </script>
 }

@@ -2,6 +2,197 @@
 @model OrderModel
 
 <vc:admin-widget widget-zone="order_details_products_top" additional-data="Model"/>
+
+@* Mobile card layout - hidden on desktop *@
+<div class="mobile-product-cards" style="display: none;">
+    @for (var j = 0; j < Model.Items.Count; j++)
+    {
+        var item = Model.Items[j];
+        <input asp-for="@Model.Items[j].Id" type="hidden"/>
+        <div class="mobile-product-card">
+            <div class="mobile-product-header">
+                <img src="@item.PictureThumbnailUrl" alt="@item.ProductName" class="mobile-product-image"/>
+                <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })" class="mobile-product-title">
+                    @item.ProductName
+                </a>
+            </div>
+            
+            <div class="mobile-product-details">
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label">Warehouse:</span>
+                    <span class="mobile-detail-value">
+                        @if (!string.IsNullOrEmpty(item.WarehouseName))
+                        {
+                            @item.WarehouseName
+                        }
+                        else
+                        {
+                            <span class="text-muted">N/A</span>
+                        }
+                    </span>
+                </div>
+                
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label">Price:</span>
+                    <span class="mobile-detail-value mobile-inline-edit">
+                        @{
+                            var showTaxLabels = item.UnitPriceExclTax != item.UnitPriceInclTax;
+                        }
+                        @if (showTaxLabels)
+                        {
+                            <small class="text-muted">Excl Tax:</small>
+                        }
+                        <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field mobile-price-input"/>
+                    </span>
+                </div>
+                
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label">Quantity:</span>
+                    <span class="mobile-detail-value mobile-inline-edit">
+                        <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control inline-edit-field mobile-qty-input" min="1"/>
+                        @if (item.OpenQty > 0 || item.CancelQty > 0)
+                        {
+                            <div style="font-size: 11px; margin-top: 2px;">
+                                @if (item.OpenQty > 0) { <span>Open: @item.OpenQty</span> }
+                                @if (item.CancelQty > 0) { <span>Canceled: @item.CancelQty</span> }
+                            </div>
+                        }
+                    </span>
+                </div>
+                
+                @if (Model.Items.Sum(x => x.DiscountInclTaxValue) > 0)
+                {
+                    <div class="mobile-detail-row">
+                        <span class="mobile-detail-label">Discount:</span>
+                        <span class="mobile-detail-value">
+                            @switch (Model.TaxDisplayType)
+                            {
+                                case TaxDisplayType.ExcludingTax:
+                                {
+                                    @item.DiscountExclTax
+                                }
+                                    break;
+                                case TaxDisplayType.IncludingTax:
+                                {
+                                    @item.DiscountInclTax
+                                }
+                                    break;
+                            }
+                        </span>
+                    </div>
+                }
+                
+                @if (Model.Items.Sum(x => x.CommissionValue) > 0)
+                {
+                    <div class="mobile-detail-row">
+                        <span class="mobile-detail-label">Commission:</span>
+                        <span class="mobile-detail-value">@item.Commission</span>
+                    </div>
+                }
+                
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label"><strong>Total:</strong></span>
+                    <span class="mobile-detail-value"><strong>
+                        <span class="subtotal-display" data-order-item-id="@item.Id">
+                            @switch (Model.TaxDisplayType)
+                            {
+                                case TaxDisplayType.ExcludingTax:
+                                {
+                                    @item.SubTotalExclTax
+                                }
+                                    break;
+                                case TaxDisplayType.IncludingTax:
+                                {
+                                    @item.SubTotalInclTax
+                                }
+                                    break;
+                            }
+                        </span>
+                    </strong></span>
+                </div>
+            </div>
+            
+            @* Collapsible additional details *@
+            @if (!string.IsNullOrEmpty(item.AttributeInfo) || !string.IsNullOrEmpty(item.Sku) || !string.IsNullOrEmpty(item.VendorName) || item.MerchandiseReturnIds.Count > 0 || item.PurchasedGiftVoucherIds.Count > 0 || (Model.HasDownloadableProducts && item.IsDownload))
+            {
+                <div class="mobile-collapsible-details">
+                    <button type="button" class="mobile-toggle-details" data-item-id="@item.Id">
+                        Additional Details <i class="fa fa-chevron-down"></i>
+                    </button>
+                    <div class="mobile-additional-details" id="mobile-details-@item.Id">
+                        @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                        {
+                            <div><strong>Attributes:</strong> @Html.Raw(item.AttributeInfo)</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.Sku))
+                        {
+                            <div><strong>SKU:</strong> @item.Sku</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.VendorName))
+                        {
+                            <div><strong>Vendor:</strong> @item.VendorName</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.RecurringInfo))
+                        {
+                            <div><strong>Recurring:</strong> @Html.Raw(item.RecurringInfo)</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.RentalInfo))
+                        {
+                            <div><strong>Rental:</strong> @Html.Raw(item.RentalInfo)</div>
+                        }
+                        @if (item.MerchandiseReturnIds.Count > 0)
+                        {
+                            <div>
+                                <strong>Returns:</strong>
+                                @for (var i = 0; i < item.MerchandiseReturnIds.Count; i++)
+                                {
+                                    <a href="@Url.Action("Edit", "MerchandiseReturn", new { id = item.MerchandiseReturnIds[i], area = Constants.AreaAdmin })" class="btn btn-sm btn-outline-primary">View</a>
+                                }
+                            </div>
+                        }
+                        @if (item.PurchasedGiftVoucherIds.Count > 0)
+                        {
+                            <div>
+                                <strong>Gift Vouchers:</strong>
+                                @for (var i = 0; i < item.PurchasedGiftVoucherIds.Count; i++)
+                                {
+                                    <a href="@Url.Action("Edit", "GiftVoucher", new { id = item.PurchasedGiftVoucherIds[i], area = Constants.AreaAdmin })" class="btn btn-sm btn-outline-primary">View</a>
+                                }
+                            </div>
+                        }
+                        @if (Model.HasDownloadableProducts && item.IsDownload)
+                        {
+                            <div>
+                                <strong>Download Count:</strong> @item.DownloadCount
+                                @if (item.DownloadActivationType == DownloadActivationType.Manually)
+                                {
+                                    <br><strong>Status:</strong> @(item.IsDownloadActivated ? "Active" : "Inactive")
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            
+            <div class="mobile-actions">
+                <div class="mobile-save-status" id="save-status-@item.Id" style="display:none;">
+                    <small class="text-muted">
+                        <i class="fa fa-spinner fa-spin"></i> Saving...
+                    </small>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');" class="k-button btn-sm" title="@Loc["Admin.Common.Delete"]">
+                        <span class="k-icon k-i-delete"></span>
+                    </button>
+                    <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');" class="k-button btn-sm" title="@Loc["Admin.Common.Cancel"]">
+                        <span class="k-icon k-i-cancel"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
 <div class="table-responsive order-table">
     <table class="table table-bordered table-striped table-hover">
         <tr>

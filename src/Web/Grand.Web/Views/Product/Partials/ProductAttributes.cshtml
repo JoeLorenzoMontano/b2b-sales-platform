@@ -642,6 +642,9 @@
                 // Include exact multiples of case size OR sample quantities
                 if (qty % caseSize === 0 || isSampleQty) {
                     var cases = qty / caseSize;
+                    if (cases < 0) {
+                        return;
+                    }
                     var option = document.createElement('option');
                     option.value = cases;
                     

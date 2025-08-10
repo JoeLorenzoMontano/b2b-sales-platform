@@ -144,6 +144,201 @@
 
 @* Inline edit styles *@
 <style>
+/* Mobile-specific responsive styles */
+@@media (max-width: 768px) {
+    /* Collapsible header actions */
+    .x_title .actions {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .x_title .actions .btn-group {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .x_title .actions .btn-group .btn {
+        width: 100%;
+        margin-bottom: 0;
+        text-align: left;
+        justify-content: flex-start;
+    }
+    
+    /* Hide table on mobile, show card layout */
+    .order-table table {
+        display: none;
+    }
+    
+    /* Mobile card layout for products */
+    .mobile-product-cards {
+        display: block;
+    }
+    
+    .mobile-product-card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .mobile-product-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .mobile-product-image {
+        width: 60px;
+        height: 60px;
+        margin-right: 15px;
+        border-radius: 4px;
+    }
+    
+    .mobile-product-title {
+        flex: 1;
+        font-weight: 600;
+        color: #333;
+        text-decoration: none;
+    }
+    
+    .mobile-product-details {
+        margin-bottom: 15px;
+    }
+    
+    .mobile-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    
+    .mobile-detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .mobile-detail-label {
+        font-weight: 600;
+        color: #666;
+        min-width: 80px;
+    }
+    
+    .mobile-detail-value {
+        flex: 1;
+        text-align: right;
+    }
+    
+    .mobile-collapsible-details {
+        margin-top: 10px;
+    }
+    
+    .mobile-toggle-details {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 8px 12px;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        font-size: 14px;
+        color: #495057;
+    }
+    
+    .mobile-toggle-details:hover {
+        background: #e9ecef;
+    }
+    
+    .mobile-toggle-details .fa {
+        float: right;
+        transition: transform 0.3s ease;
+    }
+    
+    .mobile-toggle-details.expanded .fa {
+        transform: rotate(180deg);
+    }
+    
+    .mobile-additional-details {
+        display: none;
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    
+    .mobile-additional-details.show {
+        display: block;
+    }
+    
+    .mobile-inline-edit {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .mobile-inline-edit input {
+        max-width: 100px;
+        height: 32px;
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .mobile-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+    
+    .mobile-actions .btn-group {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .mobile-actions .k-button {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 4px;
+    }
+    
+    .mobile-save-status {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    /* Form actions at bottom */
+    .form-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .form-actions .k-button {
+        width: 100%;
+        padding: 12px;
+        text-align: center;
+    }
+}
+
+/* Desktop styles - hide mobile elements */
+@@media (min-width: 769px) {
+    .mobile-product-cards {
+        display: none;
+    }
+}
+
 /* Order Item Inline Edit Styles */
 .inline-edit-field {
     border: 1px solid #ddd;
@@ -218,15 +413,36 @@
 }
 </style>
 
-@* Inline edit JavaScript *@
+@* Mobile collapsible details JavaScript *@
 <script>
 $(document).ready(function() {
     initializeInlineEditing();
+    initializeMobileCollapsibleDetails();
 });
 
+function initializeMobileCollapsibleDetails() {
+    // Handle mobile collapsible details toggle
+    $(document).on('click', '.mobile-toggle-details', function() {
+        const $button = $(this);
+        const itemId = $button.data('item-id');
+        const $details = $('#mobile-details-' + itemId);
+        const $icon = $button.find('.fa');
+        
+        if ($details.hasClass('show')) {
+            $details.removeClass('show').slideUp(200);
+            $button.removeClass('expanded');
+            $icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        } else {
+            $details.addClass('show').slideDown(200);
+            $button.addClass('expanded');
+            $icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        }
+    });
+}
+
 function initializeInlineEditing() {
-    // Handle blur event for auto-save on price and quantity fields
-    $(document).on('blur', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function() {
+    // Handle blur event for auto-save on price and quantity fields (including mobile inputs)
+    $(document).on('blur', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function() {
         const $field = $(this);
         const $row = $field.closest('tr');
         // Extract index from field name (e.g., "Items[0].UnitPriceExclTaxValue" -> "0")
@@ -272,8 +488,8 @@ function initializeInlineEditing() {
         }
     });
 
-    // Handle focus event - clear errors and store original value
-    $(document).on('focus', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function() {
+    // Handle focus event - clear errors and store original value (including mobile inputs)
+    $(document).on('focus', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function() {
         const $field = $(this);
         clearFieldError($field);
         
@@ -283,8 +499,8 @@ function initializeInlineEditing() {
         }
     });
 
-    // Prevent form submission when pressing Enter
-    $(document).on('keypress', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"]', function(e) {
+    // Prevent form submission when pressing Enter (including mobile inputs)
+    $(document).on('keypress', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function(e) {
         if (e.which === 13) {
             $(this).blur();
             return false;
@@ -326,8 +542,10 @@ function getValidationMessage(fieldType) {
 }
 
 function autoSaveOrderItem(orderItemId, $field, newValue) {
+    // Find status div - could be in table row or mobile card
     const $row = $field.closest('tr');
-    const $statusDiv = $row.find('#save-status-' + orderItemId);
+    const $mobileCard = $field.closest('.mobile-product-card');
+    const $statusDiv = $row.length ? $row.find('#save-status-' + orderItemId) : $mobileCard.find('#save-status-' + orderItemId);
     const orderId = $('input[name="Id"]').val();
     const fieldType = getFieldType($field);
     

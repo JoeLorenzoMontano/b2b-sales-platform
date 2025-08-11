@@ -51,26 +51,23 @@
         </div>
     }
     <div class="form-group col-sm-12 col-md-6">
-        <validation-provider tag="div" rules="required" v-slot="{ errors, classes }">
+        <validation-provider tag="div" rules="" v-slot="{ errors, classes }">
             <label asp-for="FirstName" class="col-form-label">@Loc["Address.Fields.FirstName"]:</label>
-            <span class="required">*</span>
-            <input asp-for="FirstName" v-model="createorupdateaddress@{@prefix}.FirstName" v-bind:class="[classes , 'form-control']" data-val-required=@Loc["Address.Fields.FirstName.Required"]/>
+            <input asp-for="FirstName" v-model="createorupdateaddress@{@prefix}.FirstName" v-bind:class="[classes , 'form-control']"/>
             <span class="field-validation-error">{{ errors[0] }}</span>
         </validation-provider>
     </div>
     <div class="form-group col-sm-12 col-md-6">
-        <validation-provider tag="div" rules="required" v-slot="{ errors, classes }">
+        <validation-provider tag="div" rules="" v-slot="{ errors, classes }">
             <label asp-for="LastName" class="col-form-label">@Loc["Address.Fields.LastName"]:</label>
-            <span class="required">*</span>
-            <input asp-for="LastName" v-model="createorupdateaddress@{@prefix}.LastName" v-bind:class="[classes , 'form-control']" data-val-required=@Loc["Address.Fields.LastName.Required"]/>
+            <input asp-for="LastName" v-model="createorupdateaddress@{@prefix}.LastName" v-bind:class="[classes , 'form-control']"/>
             <span class="field-validation-error">{{ errors[0] }}</span>
         </validation-provider>
     </div>
     <div class="form-group col-sm-12">
-        <validation-provider tag="div" rules="required|email" v-slot="{ errors, classes }">
+        <validation-provider tag="div" rules="email" v-slot="{ errors, classes }">
             <label asp-for="Email" class="col-form-label">@Loc["Address.Fields.Email"]:</label>
-            <span class="required">*</span>
-            <input asp-for="Email" v-model="createorupdateaddress@{@prefix}.Email" v-bind:class="[classes , 'form-control']" asp-readonly="@(Model.DisallowUsersToChangeEmail)" data-val-required=@Loc["Address.Fields.Email.Required"] data-val-email=@Loc["Common.WrongEmail"]/>
+            <input asp-for="Email" v-model="createorupdateaddress@{@prefix}.Email" v-bind:class="[classes , 'form-control']" asp-readonly="@(Model.DisallowUsersToChangeEmail)" data-val-email=@Loc["Common.WrongEmail"]/>
             <span class="field-validation-error">{{ errors[0] }}</span>
         </validation-provider>
     </div>
@@ -115,10 +112,9 @@
     @if (Model.CountryEnabled)
     {
         <div class="form-group col-sm-12 col-md-6">
-            <validation-provider tag="div" rules="required" v-slot="{ errors, classes }">
+            <validation-provider tag="div" rules="" v-slot="{ errors, classes }">
                 <label asp-for="CountryId" class="col-form-label">@Loc["Address.Fields.Country"]:</label>
-                <span class="required">*</span>
-                <select asp-for="CountryId" asp-items="Model.AvailableCountries" data-val-required=@Loc["Address.Fields.Country.Required"]
+                <select asp-for="CountryId" asp-items="Model.AvailableCountries"
                         onchange="@Html.IdFor(model => model.CountryId)_select_element(this)" v-bind:class="[classes , 'form-control custom-select']" v-model="createorupdateaddress@{@prefix}.CountryId">
                 </select>
                 <span class="field-validation-error">{{ errors[0] }}</span>
@@ -129,10 +125,9 @@
     @if (Model.CountryEnabled && Model.StateProvinceEnabled)
     {
         <div class="form-group col-sm-12 col-md-6">
-            <validation-provider tag="div" rules="required" v-slot="{ errors, classes }">
+            <validation-provider tag="div" rules="" v-slot="{ errors, classes }">
                 <label asp-for="StateProvinceId" class="col-form-label">@Loc["Address.Fields.StateProvince"]:</label>
-                <span class="required">*</span>
-                <select asp-for="StateProvinceId" data-val-required="@Loc["Address.Fields.StateProvince.Required"]" v-bind:class="[classes , 'form-control custom-select']"
+                <select asp-for="StateProvinceId" v-bind:class="[classes , 'form-control custom-select']"
                         onchange="@Html.IdFor(model => model.StateProvinceId)_select_element(this)" asp-items="Model.AvailableStates" v-model="createorupdateaddress@{@prefix}.StateProvinceId">
                 </select>
                 <span class="field-validation-error">{{ errors[0] }}</span>

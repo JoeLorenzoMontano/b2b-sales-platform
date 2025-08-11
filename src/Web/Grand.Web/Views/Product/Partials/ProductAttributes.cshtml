@@ -775,6 +775,20 @@
           }
           updateTotalField_@(Model.Id)(casesForTotal, newQuantity);
 
+          // Handle sample indicator visibility - ensure it stays consistent
+          var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
+          if (sampleIndicator) {
+              if (isSample) {
+                  sampleIndicator.style.display = 'block';
+                  sampleIndicator.style.visibility = 'visible';
+                  sampleIndicator.style.opacity = '1';
+              } else {
+                  sampleIndicator.style.display = 'none';
+                  sampleIndicator.style.visibility = 'hidden';
+                  sampleIndicator.style.opacity = '0';
+              }
+          }
+
           // Trigger attribute change to update prices, etc.
           if (typeof standardProductAttributes_@(Model.Id) !== 'undefined') {
               standardProductAttributes_@(Model.Id).attrchange();

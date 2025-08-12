@@ -536,12 +536,21 @@
                             caseInfoElements.forEach(function(element) {
                                 element.style.display = 'block';
                             });
+                            
+                            // Update case pricing display
+                            updateCasePricing_@(Model.Id)();
                         } else {
                             // Hide case info and total if no case size, show interactive Units dropdown/input
                             console.log('Hiding case info - case size not valid');
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id, #total-info-@Model.Id, #total-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 console.log('Hiding element:', element);
+                                element.style.display = 'none';
+                            });
+                            
+                            // Hide case pricing displays
+                            var pricingElements = document.querySelectorAll('#case-pricing-@Model.Id, #case-pricing-input-@Model.Id');
+                            pricingElements.forEach(function(element) {
                                 element.style.display = 'none';
                             });
                             
@@ -885,6 +894,53 @@
             if (typeof standardProductAttributes_@(Model.Id) !== 'undefined') {
                 standardProductAttributes_@(Model.Id).attrchange();
             }
+        }
+        
+        function updateCasePricing_@(Model.Id)() {
+            var caseSize = window['caseSize_@Model.Id'];
+            if (!caseSize || caseSize <= 0) return;
+            
+            // Get current unit price from the main price display
+            var priceElement = document.querySelector('.price-value-@Model.Id');
+            if (!priceElement) return;
+            
+            var priceText = priceElement.textContent || priceElement.innerText;
+            var unitPrice = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+            if (isNaN(unitPrice)) return;
+            
+            // Get current number of cases
+            var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+            var cases = 1;
+            if (caseDropdown && caseDropdown.value) {
+                cases = parseFloat(caseDropdown.value) || 1;
+            }
+            
+            // Calculate prices
+            var casePrice = unitPrice * caseSize;
+            var totalPrice = casePrice * cases;
+            
+            // Update price displays for both dropdown and input versions
+            var unitPriceSpans = document.querySelectorAll('#unit-price-@Model.Id, #unit-price-input-@Model.Id');
+            var casePriceSpans = document.querySelectorAll('#case-price-@Model.Id, #case-price-input-@Model.Id');
+            var totalPriceSpans = document.querySelectorAll('#total-price-@Model.Id, #total-price-input-@Model.Id');
+            
+            unitPriceSpans.forEach(function(span) {
+                span.textContent = '$' + unitPrice.toFixed(2);
+            });
+            
+            casePriceSpans.forEach(function(span) {
+                span.textContent = '$' + casePrice.toFixed(2);
+            });
+            
+            totalPriceSpans.forEach(function(span) {
+                span.textContent = '$' + totalPrice.toFixed(2);
+            });
+            
+            // Show pricing displays
+            var pricingElements = document.querySelectorAll('#case-pricing-@Model.Id, #case-pricing-input-@Model.Id');
+            pricingElements.forEach(function(element) {
+                element.style.display = 'block';
+            });
         }
     </script>
 }

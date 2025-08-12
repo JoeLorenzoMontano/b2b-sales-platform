@@ -593,147 +593,146 @@
             }
         });
         
-        // Helper functions for case dropdown functionality
-        function updateCaseDropdowns_@(Model.Id)() {
-            var caseSize = window['caseSize_@Model.Id'];
-            if (!caseSize || caseSize <= 0) return;
-            
-            var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
-            var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
-            var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
-            
-            if (!caseDropdown) return;
-            
-            // Show Units display and hide the interactive quantity dropdown/input
-            var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
-            if (unitsDisplay) {
-                unitsDisplay.textContent = caseSize.toString();
-                unitsDisplay.style.display = 'block';
-            }
-            
-            // Hide the interactive quantity controls
-            if (qtyDropdown) {
-                qtyDropdown.style.display = 'none';
-            }
-            if (qtyInput) {
-                qtyInput.style.display = 'none';
-            }
-            
-            // Get available quantities from the quantity dropdown/input
-            var availableQuantities = [];
-            if (qtyDropdown) {
-                for (var i = 0; i < qtyDropdown.options.length; i++) {
-                    availableQuantities.push(parseFloat(qtyDropdown.options[i].value));
-                }
-            } else if (qtyInput) {
-                // For input, create reasonable case options based on case size
-                var currentQty = parseFloat(qtyInput.value) || caseSize;
-                for (var mult = 1; mult <= 10; mult++) {
-                    availableQuantities.push(caseSize * mult);
-                }
-            }
-            
-            // Clear and populate case dropdown
-            caseDropdown.innerHTML = '';
+          // Helper functions for case dropdown functionality
+    function updateCaseDropdowns_@(Model.Id)() {
+        var caseSize = window['caseSize_@Model.Id'];
+        if (!caseSize || caseSize <= 0) return;
 
-            // First, check if there are any sample quantities to avoid duplicates
-            var hasSampleQuantity1 = false;
+        var qtyInput = document.getElementById('EnteredQuantity_@Model.Id');
+        var qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_@Model.Id"]');
+        var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+
+        if (!caseDropdown) return;
+
+        // Hide Units display and show the interactive quantity dropdown/input
+        var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
+        if (unitsDisplay) {
+            unitsDisplay.style.display = 'none';
+        }
+
+        // Keep the interactive quantity controls visible
+        if (qtyDropdown) {
+            qtyDropdown.style.display = 'block';
+        }
+        if (qtyInput) {
+            qtyInput.style.display = 'block';
+        }
+
+        // Get available quantities from the quantity dropdown/input
+        var availableQuantities = [];
+        if (qtyDropdown) {
+            for (var i = 0; i < qtyDropdown.options.length; i++) {
+                availableQuantities.push(parseFloat(qtyDropdown.options[i].value));
+            }
+        } else if (qtyInput) {
+            // For input, create reasonable case options based on case size
+            var currentQty = parseFloat(qtyInput.value) || caseSize;
+            for (var mult = 1; mult <= 10; mult++) {
+                availableQuantities.push(caseSize * mult);
+            }
+        }
+
+        // Clear and populate case dropdown
+        caseDropdown.innerHTML = '';
+
+        // First, check if there are any sample quantities to avoid duplicates
+        var hasSampleQuantity1 = false;
+        if (qtyDropdown) {
+            for (var i = 0; i < qtyDropdown.options.length; i++) {
+                if (qtyDropdown.options[i].value == '1' &&
+                    qtyDropdown.options[i].text.includes('(Sample)')) {
+                    hasSampleQuantity1 = true;
+                    break;
+                }
+            }
+        }
+
+        availableQuantities.forEach(function(qty) {
+            // Check if this quantity is a sample by looking at the original dropdown
+            var isSampleQty = false;
             if (qtyDropdown) {
                 for (var i = 0; i < qtyDropdown.options.length; i++) {
-                    if (qtyDropdown.options[i].value == '1' &&
+                    if (qtyDropdown.options[i].value == qty &&
                         qtyDropdown.options[i].text.includes('(Sample)')) {
-                        hasSampleQuantity1 = true;
+                        isSampleQty = true;
                         break;
                     }
                 }
             }
 
-            availableQuantities.forEach(function(qty) {
-                // Check if this quantity is a sample by looking at the original dropdown
-                var isSampleQty = false;
-                if (qtyDropdown) {
-                    for (var i = 0; i < qtyDropdown.options.length; i++) {
-                        if (qtyDropdown.options[i].value == qty &&
-                            qtyDropdown.options[i].text.includes('(Sample)')) {
-                            isSampleQty = true;
-                            break;
-                        }
+            var option = document.createElement('option');
+
+            if (isSampleQty) {
+                // Samples: Show as-is without case calculations
+                option.value = qty;
+                option.textContent = qty.toString() + ' (Sample)';
+                caseDropdown.appendChild(option);
+            } else if (qty % caseSize === 0) {
+                // Regular quantities: Only exact multiples of case size
+                var cases = qty / caseSize;
+                if (cases >= 1) {
+                    // Exclude regular "1" if there's a sample version of "1"
+                    if (cases === 1 && hasSampleQuantity1) {
+                        return; // Skip this option
                     }
-                }
-
-                var option = document.createElement('option');
-
-                if (isSampleQty) {
-                    // Samples: Show as-is without case calculations
-                    option.value = qty;
-                    option.textContent = qty.toString() + ' (Sample)';
+                    option.value = cases;
+                    option.textContent = cases.toString();
                     caseDropdown.appendChild(option);
-                } else if (qty % caseSize === 0) {
-                    // Regular quantities: Only exact multiples of case size
-                    var cases = qty / caseSize;
-                    if (cases >= 1) {
-                        // Exclude regular "1" if there's a sample version of "1"
-                        if (cases === 1 && hasSampleQuantity1) {
-                            return; // Skip this option
-                        }
-                        option.value = cases;
-                        option.textContent = cases.toString();
-                        caseDropdown.appendChild(option);
-                    }
                 }
-            });
-            
-              // Set current case value
-              var currentQty = 1;
-              if (qtyInput) {
-                  currentQty = parseFloat(qtyInput.value) || 1;
-              } else if (qtyDropdown) {
-                  currentQty = parseFloat(qtyDropdown.value) || 1;
-              }
+            }
+        });
 
-              // Find the correct option to select based on current quantity
-              var selectedValue = null;
+          // Set current case value
+          var currentQty = 1;
+          if (qtyInput) {
+              currentQty = parseFloat(qtyInput.value) || 1;
+          } else if (qtyDropdown) {
+              currentQty = parseFloat(qtyDropdown.value) || 1;
+          }
 
-              // First check if current quantity is a sample
-              var isCurrentQtySample = false;
-              if (qtyDropdown) {
-                  for (var i = 0; i < qtyDropdown.options.length; i++) {
-                      if (qtyDropdown.options[i].value == currentQty &&
-                          qtyDropdown.options[i].text.includes('(Sample)')) {
-                          isCurrentQtySample = true;
-                          break;
-                      }
+          // Find the correct option to select based on current quantity
+          var selectedValue = null;
+
+          // First check if current quantity is a sample
+          var isCurrentQtySample = false;
+          if (qtyDropdown) {
+              for (var i = 0; i < qtyDropdown.options.length; i++) {
+                  if (qtyDropdown.options[i].value == currentQty &&
+                      qtyDropdown.options[i].text.includes('(Sample)')) {
+                      isCurrentQtySample = true;
+                      break;
                   }
               }
+          }
 
+          if (isCurrentQtySample) {
+              // For samples, use the actual quantity value
+              selectedValue = currentQty;
+          } else if (currentQty % caseSize === 0) {
+              // For regular quantities, use the case calculation
+              var currentCases = currentQty / caseSize;
+              if (currentCases >= 1) {
+                  selectedValue = currentCases;
+              }
+          }
+
+          // Set the dropdown value if we found a match
+          if (selectedValue !== null) {
+              caseDropdown.value = selectedValue;
+          }
+
+          // Update total field and units display only if we have a valid selection
+          if (selectedValue !== null) {
+              // Calculate the cases value for the total field update
+              var casesForTotal;
               if (isCurrentQtySample) {
-                  // For samples, use the actual quantity value
-                  selectedValue = currentQty;
-              } else if (currentQty % caseSize === 0) {
-                  // For regular quantities, use the case calculation
-                  var currentCases = currentQty / caseSize;
-                  if (currentCases >= 1) {
-                      selectedValue = currentCases;
-                  }
+                  casesForTotal = currentQty; // For samples, use actual quantity
+              } else {
+                  casesForTotal = selectedValue; // For regular cases, use the case value
               }
-
-              // Set the dropdown value if we found a match
-              if (selectedValue !== null) {
-                  caseDropdown.value = selectedValue;
-              }
-            
-              // Update total field and units display only if we have a valid selection
-              if (selectedValue !== null) {
-                  // Calculate the cases value for the total field update
-                  var casesForTotal;
-                  if (isCurrentQtySample) {
-                      casesForTotal = currentQty; // For samples, use actual quantity
-                  } else {
-                      casesForTotal = selectedValue; // For regular cases, use the case value
-                  }
-                  updateTotalField_@(Model.Id)(casesForTotal, currentQty);
-              }
-        }
+              updateTotalField_@(Model.Id)(casesForTotal, currentQty);
+          }
+    }
         
         function updateQuantityFromCases_@(Model.Id)(cases) {
           var caseSize = window['caseSize_@Model.Id'];

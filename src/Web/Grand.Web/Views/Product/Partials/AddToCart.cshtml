@@ -40,7 +40,7 @@
                             <label for="EnteredCases_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
                             <select name="EnteredCases" id="EnteredCases_@Model.ProductId" 
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { updateQuantityFromCases_@(Model.ProductId)(this.value); updateCasePricing_@(Model.ProductId)(); }" 
-                                    class="custom-select form-control" style="width: 70px;">
+                                    class="custom-select form-control" style="width: 120px;">
                             </select>
                             <div style="color: black;"><span id="case-price-@Model.ProductId"></span></div>
                         </div>
@@ -84,7 +84,7 @@
                             <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
                             <select name="EnteredCases" id="EnteredCases_input_@Model.ProductId" 
                                     onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { updateQuantityFromCases_@(Model.ProductId)(this.value); updateCasePricing_@(Model.ProductId)(); }" 
-                                    class="custom-select form-control" style="width: 70px;">
+                                    class="custom-select form-control" style="width: 120px;">
                             </select>
                             <div style="color: black;"><span id="case-price-input-@Model.ProductId">-</span></div>
                         </div>

@@ -2031,6 +2031,7 @@ public class ProductViewModelService(
                     : x.StockQuantity,
                 AllowOutOfStockOrders = x.AllowOutOfStockOrders,
                 AllowSample = x.AllowSample,
+                SampleQuantities = x.SampleQuantities,
                 Sku = x.Sku,
                 Mpn = x.Mpn,
                 Gtin = x.Gtin,
@@ -2095,26 +2096,51 @@ public class ProductViewModelService(
     }
 
     /// <summary>
-    /// Ensures that the product's AllowedQuantities string includes the value "1"
-    /// Called when a product attribute combination has AllowSample=true
+    /// Ensures that the product's allowed quantities includes all sample quantities when any attribute combination allows samples
     /// </summary>
     /// <param name="product">The product to update</param>
-    private async Task EnsureAllowedQuantityContainsOne(Product product)
+    private async Task EnsureAllowedQuantityContainsSamples(Product product)
     {
-        // If no allowed quantities specified, we don't need to add "1"
+        // If no allowed quantities specified, we don't need to add sample quantities
         if (string.IsNullOrEmpty(product.AllowedQuantities))
             return;
 
         // Parse the existing allowed quantities
         var quantities = product.ParseAllowedQuantities().ToList();
+        bool needsUpdate = false;
 
-        // Check if "1" is already in the list
-        if (!quantities.Contains(1))
+        // Collect all sample quantities from all combinations
+        var sampleQuantities = new HashSet<double>();
+        
+        foreach (var combination in product.ProductAttributeCombinations)
         {
-            // Add "1" to the beginning of the list
-            quantities.Insert(0, 1);
+            // Add quantities from new SampleQuantities property
+            var combinationSampleQuantities = combination.GetSampleQuantities();
+            foreach (var qty in combinationSampleQuantities)
+            {
+                sampleQuantities.Add(qty);
+            }
+            
+            // Fallback to legacy AllowSample behavior for backward compatibility
+            if (combination.AllowSample && !sampleQuantities.Contains(1))
+            {
+                sampleQuantities.Add(1);
+            }
+        }
 
-            // Convert back to comma-separated string and update the product
+        // Add any missing sample quantities to the allowed quantities
+        foreach (var sampleQty in sampleQuantities)
+        {
+            if (!quantities.Contains(sampleQty))
+            {
+                quantities.Add(sampleQty);
+                needsUpdate = true;
+            }
+        }
+
+        // Update the product if we added any new quantities
+        if (needsUpdate)
+        {
             product.AllowedQuantities = string.Join(",", quantities.OrderBy(q => q));
             await productService.UpdateProduct(product);
         }
@@ -2249,6 +2275,7 @@ public class ProductViewModelService(
                     ReservedQuantity = model.ReservedQuantity,
                     AllowOutOfStockOrders = model.AllowOutOfStockOrders,
                     AllowSample = model.AllowSample,
+                    SampleQuantities = model.SampleQuantities,
                     MarkAsNew = model.MarkAsNew,
                     MarkAsNewStartDateTimeUtc = model.MarkAsNewStartDateTimeUtc,
                     MarkAsNewEndDateTimeUtc = model.MarkAsNewEndDateTimeUtc,
@@ -2274,7 +2301,7 @@ public class ProductViewModelService(
                 // If AllowSample is true, ensure "1" is in the product's AllowedQuantities
                 if (model.AllowSample)
                 {
-                    await EnsureAllowedQuantityContainsOne(product);
+                    await EnsureAllowedQuantityContainsSamples(product);
                 }
 
                 if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
@@ -2299,6 +2326,7 @@ public class ProductViewModelService(
             combination.ReservedQuantity = model.ReservedQuantity;
             combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
             combination.AllowSample = model.AllowSample;
+            combination.SampleQuantities = model.SampleQuantities;
             combination.MarkAsNew = model.MarkAsNew;
             combination.MarkAsNewStartDateTimeUtc = model.MarkAsNewStartDateTimeUtc;
             combination.MarkAsNewEndDateTimeUtc = model.MarkAsNewEndDateTimeUtc;
@@ -2326,7 +2354,7 @@ public class ProductViewModelService(
             // If AllowSample is true, ensure "1" is in the product's AllowedQuantities
             if (model.AllowSample)
             {
-                await EnsureAllowedQuantityContainsOne(product);
+                await EnsureAllowedQuantityContainsSamples(product);
             }
 
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)

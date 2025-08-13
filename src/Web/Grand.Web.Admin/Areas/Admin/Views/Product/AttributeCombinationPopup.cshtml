@@ -166,6 +166,14 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <admin-label asp-for="SampleQuantities" class="col-sm-3 control-label"/>
+                            <div class="col-md-9 col-sm-9">
+                                <admin-input asp-for="SampleQuantities" asp-postfix="comma-separated" />
+                                <span asp-validation-for="SampleQuantities"></span>
+                                <span class="help-block">@Loc["Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.SampleQuantities.Hint"]</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <admin-label asp-for="CaseSize" class="col-sm-3 control-label"/>
                             <div class="col-md-9 col-sm-9">
                                 <admin-input asp-for="CaseSize"/>

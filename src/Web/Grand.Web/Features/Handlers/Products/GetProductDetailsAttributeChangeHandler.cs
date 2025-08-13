@@ -235,15 +235,35 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         // Check if the combination allows samples
         var combination = product.FindProductAttributeCombination(customAttributes);
         
-        if (combination != null && combination.AllowSample)
+        if (combination != null)
         {
-            // Set the sample availability flag on the model
-            model.SampleEnabled = true;
-            
-            // Remove 1 if it exists already (to avoid duplicates)
-            allowedQuantitiesList.Remove(1);
-            // Add sample quantity (1) at the beginning of the list
-            allowedQuantitiesList.Insert(0, 1);
+            // Check if combination has sample quantities defined
+            var sampleQuantities = combination.GetSampleQuantities();
+            if (sampleQuantities.Length > 0)
+            {
+                // Set the sample availability flag on the model
+                model.SampleEnabled = true;
+                
+                // Add all sample quantities to the allowed quantities list
+                foreach (var sampleQty in sampleQuantities)
+                {
+                    // Remove if it exists already (to avoid duplicates)
+                    allowedQuantitiesList.Remove(sampleQty);
+                    // Add sample quantity at the beginning of the list
+                    allowedQuantitiesList.Insert(0, sampleQty);
+                }
+            }
+            // Fallback to legacy AllowSample behavior for backward compatibility
+            else if (combination.AllowSample)
+            {
+                // Set the sample availability flag on the model
+                model.SampleEnabled = true;
+                
+                // Remove 1 if it exists already (to avoid duplicates)
+                allowedQuantitiesList.Remove(1);
+                // Add sample quantity (1) at the beginning of the list
+                allowedQuantitiesList.Insert(0, 1);
+            }
         }
         
         // Set case size if combination exists
@@ -259,8 +279,11 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         // Add quantities to the model
         foreach (var qty in allowedQuantitiesList)
         {
+            // Check if this quantity is a sample quantity
+            bool isSampleQuantity = combination != null && combination.IsSampleQuantity(qty);
+            
             model.AllowedQuantities.Add(new SelectListItem {
-                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.') + (qty == 1 && model.SampleEnabled ? " (Sample)" : ""),
+                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.') + (isSampleQuantity ? " (Sample)" : ""),
                 Value = qty.ToString("F2").TrimEnd('0').TrimEnd('.')
             });
         }

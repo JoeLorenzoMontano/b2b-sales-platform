@@ -275,7 +275,7 @@ public class PricingService : IPricingService
       var combination = product.FindProductAttributeCombination(attributes);
       if (combination != null)
       {
-        if (combination.AllowSample && quantity == 1)
+        if (combination.IsSampleQuantity(quantity))
         {
           finalPrice = 0;
         }

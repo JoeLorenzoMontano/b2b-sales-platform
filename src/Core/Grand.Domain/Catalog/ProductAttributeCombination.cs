@@ -36,6 +36,11 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
     public bool AllowSample { get; set; }
     
     /// <summary>
+    ///     Gets or sets comma-separated sample quantities that should be offered as free samples (e.g., "1,3,5")
+    /// </summary>
+    public string SampleQuantities { get; set; }
+    
+    /// <summary>
     ///     Gets or sets a value indicating whether this attribute combination is marked as new
     /// </summary>
     public bool MarkAsNew { get; set; }
@@ -112,5 +117,39 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
     public object Clone()
     {
         return MemberwiseClone();
+    }
+    
+    /// <summary>
+    /// Gets the parsed sample quantities as an array of doubles
+    /// </summary>
+    /// <returns>Array of sample quantities, or empty array if none defined</returns>
+    public double[] GetSampleQuantities()
+    {
+        if (string.IsNullOrWhiteSpace(SampleQuantities))
+            return Array.Empty<double>();
+            
+        return SampleQuantities
+            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(x => double.TryParse(x.Trim(), out _))
+            .Select(x => double.Parse(x.Trim()))
+            .ToArray();
+    }
+    
+    /// <summary>
+    /// Checks if the specified quantity is a valid sample quantity
+    /// </summary>
+    /// <param name="quantity">The quantity to check</param>
+    /// <returns>True if it's a valid sample quantity</returns>
+    public bool IsSampleQuantity(double quantity)
+    {
+        // Check new SampleQuantities property first
+        var sampleQuantities = GetSampleQuantities();
+        if (sampleQuantities.Length > 0)
+        {
+            return sampleQuantities.Contains(quantity);
+        }
+        
+        // Fallback to legacy AllowSample behavior for backward compatibility
+        return AllowSample && quantity == 1;
     }
 }

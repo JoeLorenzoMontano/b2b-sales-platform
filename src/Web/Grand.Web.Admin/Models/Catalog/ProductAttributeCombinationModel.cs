@@ -26,6 +26,10 @@ public class ProductAttributeCombinationModel : BaseModel
         "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowSample")]
     public bool AllowSample { get; set; }
     
+    [GrandResourceDisplayName(
+        "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.SampleQuantities")]
+    public string SampleQuantities { get; set; }
+    
     [GrandResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNew")]
     public bool MarkAsNew { get; set; }
     

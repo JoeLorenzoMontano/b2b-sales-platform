@@ -1022,6 +1022,10 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
         [GrandResourceDisplayName(
             "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowSample")]
         public bool AllowSample { get; set; }
+        
+        [GrandResourceDisplayName(
+            "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.SampleQuantities")]
+        public string SampleQuantities { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.Sku")]
         public string Sku { get; set; }

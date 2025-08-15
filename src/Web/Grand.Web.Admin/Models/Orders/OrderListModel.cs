@@ -17,6 +17,9 @@ public class OrderListModel : BaseModel
 
     public string CustomerId { get; set; }
 
+    [GrandResourceDisplayName("Admin.Orders.List.Customer")]
+    public string CustomerName { get; set; }
+
     [GrandResourceDisplayName("Admin.Orders.List.BillingEmail")]
     public string BillingEmail { get; set; }
 

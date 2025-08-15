@@ -449,6 +449,11 @@
                 }
             });
 
+            // Auto-search when customers are selected/deselected
+            $("#@Html.IdFor(model => model.SearchCustomerIds)").data("kendoMultiSelect").bind("change", function() {
+                $("#search-orders").click();
+            });
+
             $('#delete-selected').click(function(e) {
                 if (confirm('@Loc["Admin.Common.AreYouSure"]')) {
 

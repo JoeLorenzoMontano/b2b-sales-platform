@@ -647,17 +647,18 @@
         // Clear and populate case dropdown
         caseDropdown.innerHTML = '';
 
-        // First, check if there are any sample quantities to avoid duplicates
-        var hasSampleQuantity1 = false;
+        // First, collect all sample quantities to avoid duplicates
+        var sampleQuantities = [];
         if (qtyDropdown) {
             for (var i = 0; i < qtyDropdown.options.length; i++) {
-                if (qtyDropdown.options[i].value == '1' &&
-                    qtyDropdown.options[i].text.includes('(Sample)')) {
-                    hasSampleQuantity1 = true;
-                    break;
+                if (qtyDropdown.options[i].text.includes('(Sample)')) {
+                    sampleQuantities.push(parseFloat(qtyDropdown.options[i].value));
                 }
             }
         }
+
+        // Create array to hold all options with their display info
+        var caseOptions = [];
 
         availableQuantities.forEach(function(qty) {
             // Check if this quantity is a sample by looking at the original dropdown
@@ -672,26 +673,40 @@
                 }
             }
 
-            var option = document.createElement('option');
-
             if (isSampleQty) {
                 // Samples: Show as-is without case calculations
-                option.value = qty;
-                option.textContent = qty.toString() + ' (Sample)';
-                caseDropdown.appendChild(option);
+                caseOptions.push({
+                    value: qty,
+                    text: qty.toString() + ' (Sample)',
+                    sortOrder: qty
+                });
             } else if (qty % caseSize === 0) {
                 // Regular quantities: Only exact multiples of case size
                 var cases = qty / caseSize;
                 if (cases >= 1) {
-                    // Exclude regular "1" if there's a sample version of "1"
-                    if (cases === 1 && hasSampleQuantity1) {
-                        return; // Skip this option
+                    // Exclude regular quantities if there's a sample version
+                    if (!sampleQuantities.includes(cases)) {
+                        caseOptions.push({
+                            value: cases,
+                            text: cases.toString(),
+                            sortOrder: cases
+                        });
                     }
-                    option.value = cases;
-                    option.textContent = cases.toString();
-                    caseDropdown.appendChild(option);
                 }
             }
+        });
+
+        // Sort options by value (smallest to greatest)
+        caseOptions.sort(function(a, b) {
+            return a.sortOrder - b.sortOrder;
+        });
+
+        // Add sorted options to dropdown
+        caseOptions.forEach(function(optionData) {
+            var option = document.createElement('option');
+            option.value = optionData.value;
+            option.textContent = optionData.text;
+            caseDropdown.appendChild(option);
         });
 
           // Set current case value

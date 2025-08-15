@@ -15,4 +15,5 @@ public class GetProductDetailsAttributeChange : IRequest<ProductDetailsAttribute
     public Product Product { get; set; }
     public ProductModel Model { get; set; }
     public int Quantity { get; set; }
+    public bool EnableSamplePricing { get; set; } = true; // Default to true for backward compatibility
 }

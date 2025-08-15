@@ -108,6 +108,20 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
                 
             double finalPrice = unitprice.unitprice;
             
+            // Override sample pricing logic based on user preference
+            if (!request.EnableSamplePricing)
+            {
+                // If sample pricing is disabled, we need to recalculate the price without sample logic
+                var combination = request.Product.FindProductAttributeCombination(customAttributes);
+                if (combination != null && combination.IsSampleQuantity(quantity))
+                {
+                    // Calculate the price as if it's not a sample quantity
+                    // Use the product's regular pricing without sample override
+                    var regularPrice = await _pricingService.GetFinalPrice(request.Product, request.Customer, request.Store, request.Currency, 0, true, quantity, rentalStartDate, rentalEndDate);
+                    finalPrice = regularPrice.finalPrice;
+                }
+            }
+            
             // Check if this is a sample selection (just for UI indication, not price)
             if (customAttributes != null && customAttributes.Any())
             {

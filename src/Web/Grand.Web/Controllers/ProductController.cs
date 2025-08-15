@@ -348,6 +348,13 @@ public class ProductController : BasePublicController
         {
             quantity = parsedQuantity;
         }
+        
+        // Get sample pricing preference from the request
+        bool enableSamplePricing = true; // Default to true
+        if (Request.Form.ContainsKey("EnableSamplePricing") && bool.TryParse(Request.Form["EnableSamplePricing"], out bool parsedSamplePricing))
+        {
+            enableSamplePricing = parsedSamplePricing;
+        }
 
         var modelProduct = await _mediator.Send(new GetProductDetailsAttributeChange {
             Currency = _contextAccessor.WorkContext.WorkingCurrency,
@@ -355,7 +362,8 @@ public class ProductController : BasePublicController
             Store = _contextAccessor.StoreContext.CurrentStore,
             Model = model,
             Product = product,
-            Quantity = quantity
+            Quantity = quantity,
+            EnableSamplePricing = enableSamplePricing
         });
 
         // Properly serialize SelectListItem objects into simpler JSON objects

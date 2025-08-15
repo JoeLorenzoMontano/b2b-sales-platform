@@ -212,6 +212,11 @@
                         data.append('EnteredQuantity', qtyInput.value);
                     }
                     
+                    // Add sample pricing preference to form data
+                    var enableSamplePricing = window['enableSamplePricing_@(Model.Id)'] !== undefined ? 
+                        window['enableSamplePricing_@(Model.Id)'] : true;
+                    data.append('EnableSamplePricing', enableSamplePricing);
+                    
                     axios({
                         url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
                         data: data,
@@ -354,7 +359,13 @@
                                         sampleIndicator.id = 'sample-indicator-@Model.Id';
                                         sampleIndicator.className = 'sample-indicator badge badge-warning mt-2 ml-2';
                                         sampleIndicator.style.display = 'none';
-                                        sampleIndicator.innerHTML = '<span><i class="fa fa-info-circle mr-2"></i>You are ordering a SAMPLE of this product (Quantity: 1)</span>';
+                                        sampleIndicator.innerHTML = '<div class="d-flex align-items-center justify-content-center flex-wrap">' +
+                                            '<span class="mr-3"><i class="fa fa-info-circle mr-2"></i>You are ordering a SAMPLE of this product (Quantity: 1)</span>' +
+                                            '<label class="mb-0 d-flex align-items-center">' +
+                                                '<input type="checkbox" id="enable-sample-pricing-@Model.Id" class="mr-1" checked onchange="handleSamplePricingChange_@(Model.Id)(this.checked)"> ' +
+                                                '<small>Free Sample</small>' +
+                                            '</label>' +
+                                        '</div>';
                                         
                                         // For grouped products, we need to add the indicator within the card body for associated products
                                         var isGroupedProduct = document.querySelector('.product-grouped') !== null;
@@ -942,5 +953,49 @@
                 element.style.display = 'block';
             });
         }
+        
+        // Handle sample pricing checkbox change
+        function handleSamplePricingChange_@(Model.Id)(enableSamplePricing) {
+            // Store the sample pricing preference for use when getting prices
+            window['enableSamplePricing_@(Model.Id)'] = enableSamplePricing;
+            
+            // Update the indicator text based on checkbox state
+            var sampleIndicator = document.querySelector('#sample-indicator-@(Model.Id)');
+            if (sampleIndicator) {
+                var infoSpan = sampleIndicator.querySelector('span');
+                if (infoSpan) {
+                    var currentQuantity = getCurrentSampleQuantity_@(Model.Id)();
+                    if (enableSamplePricing) {
+                        infoSpan.innerHTML = '<i class="fa fa-info-circle mr-2"></i>You are ordering a SAMPLE of this product (Quantity: ' + currentQuantity + ') - FREE';
+                    } else {
+                        infoSpan.innerHTML = '<i class="fa fa-info-circle mr-2"></i>You are ordering a SAMPLE quantity (Quantity: ' + currentQuantity + ') - REGULAR PRICE';
+                    }
+                }
+            }
+            
+            // Trigger attribute change to update pricing
+            if (typeof standardProductAttributes_@(Model.Id) !== 'undefined') {
+                standardProductAttributes_@(Model.Id).attrchange();
+            }
+        }
+        
+        // Helper function to get current sample quantity
+        function getCurrentSampleQuantity_@(Model.Id)() {
+            var quantitySelect = document.getElementById('EnteredQuantity_@(Model.Id)');
+            if (quantitySelect) {
+                if (quantitySelect.tagName.toLowerCase() === 'select') {
+                    var selectedOption = quantitySelect.options[quantitySelect.selectedIndex];
+                    if (selectedOption && selectedOption.text.includes('(Sample)')) {
+                        return selectedOption.value;
+                    }
+                } else if (quantitySelect.tagName.toLowerCase() === 'input') {
+                    return quantitySelect.value || '1';
+                }
+            }
+            return '1';
+        }
+        
+        // Initialize sample pricing state
+        window['enableSamplePricing_@(Model.Id)'] = true; // Default to enabled
     </script>
 }

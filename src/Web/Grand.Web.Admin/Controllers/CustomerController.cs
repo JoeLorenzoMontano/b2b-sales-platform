@@ -734,7 +734,7 @@ public class CustomerController : BaseAdminController
             });
 
         var model = new OrderListModel {
-            CustomerId = customerId
+            SearchCustomerIds = new List<string> { customerId }
         };
         if (await _groupService.IsStaff(_contextAccessor.WorkContext.CurrentCustomer))
             model.StoreId = _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
@@ -769,7 +769,7 @@ public class CustomerController : BaseAdminController
         model.ImpersonatedByEmployeeId = customerId;
         
         // Clear other filters that might interfere with our search
-        model.CustomerId = null; // Don't filter by customer ID since we want all orders created by this employee
+        model.SearchCustomerIds = new List<string>(); // Don't filter by customer ID since we want all orders created by this employee
 
         var (orderModels, totalCount) =
             await orderViewModelService.PrepareOrderModel(model, command.Page, command.PageSize);

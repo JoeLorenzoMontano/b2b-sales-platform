@@ -61,11 +61,8 @@
                                     <div class="row">
                                         <div class="col-md-6 col-sm-12 col-12">
                                             <div class="form-group mb-0">
-                                                <admin-label asp-for="CustomerName" class="control-label"/>
-                                                <input class="form-control" type="text" id="search-customer-name" autocomplete="off" asp-for="CustomerName"/>
-                                                <span id="search-customer-friendly-name"></span>
-                                                <input type="button" id="search-customer-clear" class="k-button" style="display:none;" value="@Loc["Admin.Common.Clear"]"/>
-                                                @Html.TextBoxFor(model => model.CustomerId, new { autocomplete = "off", style = "display:none;" })
+                                                <admin-label asp-for="SearchCustomerIds" class="control-label"/>
+                                                <admin-input asp-for="SearchCustomerIds" asp-template="MultiSelect" asp-selectitem="Model.AvailableCustomers"/>
                                             </div>
                                         </div>
                                         <div class="col-md-6 col-sm-12 col-12">
@@ -152,29 +149,6 @@
                                         </script>
                                     </div>
                                 </div>
-                                <script>
-                                    $(document).ready(function() {
-                                        $('#search-customer-name').autocomplete({
-                                            delay: 500,
-                                            minLength: 2,
-                                            source: '@(Url.Action("CustomerSearchAutoComplete", "Customer", new { area = Constants.AreaAdmin }))',
-                                            select: function(event, ui) {
-                                                $('#@Html.IdFor(model => model.CustomerId)').val(ui.item.customerid);
-                                                $('#search-customer-friendly-name').text(ui.item.label);
-                                                $('#search-customer-clear').show();
-                                                return false;
-                                            }
-                                        });
-
-                                        $('#search-customer-clear').click(function () {
-                                            $('#@Html.IdFor(model => model.CustomerId)').val('');
-                                            $('#search-customer-friendly-name').text('');
-                                            $('#search-customer-name').val('');
-                                            $('#search-customer-clear').hide();
-                                            return false;
-                                        });
-                                    });
-                                </script>
                                 <div class="form-group">
                                     <admin-label asp-for="BillingEmail" class="col-sm-3 control-label"/>
                                     <div class="col-md-9 col-sm-9">
@@ -461,7 +435,14 @@
                 }
             });
 
-            $("#search-customer-name").keydown(function (event) {
+            $("#@Html.IdFor(model => model.SearchCustomerIds)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    $("#search-orders").click();
+                    return false;
+                }
+            });
+
+            $("#@Html.IdFor(model => model.SearchCustomerIds)").data().kendoMultiSelect.input.on('keydown',function(e){
                 if (event.keyCode == 13) {
                     $("#search-orders").click();
                     return false;
@@ -522,6 +503,11 @@
         });
 
         function additionalData() {
+            var searchCustomerIds = [];
+            if($('#@Html.IdFor(model => model.SearchCustomerIds)').val()!=null){
+                searchCustomerIds = $('#@Html.IdFor(model => model.SearchCustomerIds)').val();
+            }
+
             var data = {
                 StartDate: $('#@Html.IdFor(model => model.StartDate)').val(),
                 EndDate: $('#@Html.IdFor(model => model.EndDate)').val(),
@@ -531,7 +517,7 @@
                 StoreId: $('#@Html.IdFor(model => model.StoreId)').val(),
                 VendorId: $('#@Html.IdFor(model => model.VendorId)').val(),
                 WarehouseId: $('#@Html.IdFor(model => model.WarehouseId)').val(),
-                CustomerId: $('#@Html.IdFor(model => model.CustomerId)').val(),
+                SearchCustomerIds: searchCustomerIds,
                 BillingEmail: $('#@Html.IdFor(model => model.BillingEmail)').val(),
                 BillingLastName: $('#@Html.IdFor(model => model.BillingLastName)').val(),
                 BillingCountryId: $('#@Html.IdFor(model => model.BillingCountryId)').val(),

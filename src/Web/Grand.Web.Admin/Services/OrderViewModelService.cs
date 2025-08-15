@@ -25,6 +25,9 @@ using Grand.Domain.Payments;
 using Grand.Domain.Shipping;
 using Grand.Domain.Tax;
 using Grand.Infrastructure;
+using Grand.Web.Common.DataSource;
+using Grand.Domain.Customers;
+using Grand.Domain;
 using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Orders;
@@ -249,6 +252,15 @@ public class OrderViewModelService : IOrderViewModelService
         foreach (var salesEmployee in await _salesEmployeeService.GetAll())
             model.AvailableEmployees.Add(new SelectListItem { Text = salesEmployee.Name, Value = salesEmployee.Id });
 
+        //customers - get customers for multiselect (limited for performance)
+        model.AvailableCustomers.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
+        var customers = await _customerService.GetAllCustomers(pageSize: 1000);
+        foreach (var customer in customers)
+        {
+            var customerName = !string.IsNullOrEmpty(customer.GetFullName()) ? customer.GetFullName() : customer.Email;
+            model.AvailableCustomers.Add(new SelectListItem { Text = customerName, Value = customer.Id });
+        }
+
         if (startDate.HasValue)
             model.StartDate = startDate.Value;
 
@@ -282,11 +294,22 @@ public class OrderViewModelService : IOrderViewModelService
 
         var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
 
+        //handle customer filtering - if SearchCustomerIds is specified, we need to filter by those
+        string customerIdFilter = "";
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Any() && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            // For multiple customer IDs, we'll need to search without customer filter and then post-filter
+            // For now, if only one customer is selected, use it directly
+            if (model.SearchCustomerIds.Count == 1)
+                customerIdFilter = model.SearchCustomerIds.First();
+        }
+
         //load orders
         var orders = await _orderService.SearchOrders(
             model.StoreId,
             model.VendorId,
-            model.CustomerId,
+            customerIdFilter,
             filterByProductId,
             warehouseId: model.WarehouseId,
             salesEmployeeId: salesEmployeeId,
@@ -305,6 +328,14 @@ public class OrderViewModelService : IOrderViewModelService
             pageIndex: pageIndex - 1,
             pageSize: pageSize,
             orderTagId: model.OrderTag);
+
+        // Post-filter for multiple customer IDs if needed
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Count > 1 && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            var filteredOrders = orders.Where(o => model.SearchCustomerIds.Contains(o.CustomerId)).ToList();
+            orders = new PagedList<Order>(filteredOrders, orders.PageIndex, orders.PageSize, filteredOrders.Count);
+        }
 
 
         var primaryStoreCurrency = await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId);
@@ -361,11 +392,22 @@ public class OrderViewModelService : IOrderViewModelService
 
         var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
 
+        //handle customer filtering - if SearchCustomerIds is specified, we need to filter by those
+        string customerIdFilter = "";
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Any() && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            // For multiple customer IDs, we'll need to search without customer filter and then post-filter
+            // For now, if only one customer is selected, use it directly
+            if (model.SearchCustomerIds.Count == 1)
+                customerIdFilter = model.SearchCustomerIds.First();
+        }
+
         // Load orders with Pending payment status specifically
         var orders = await _orderService.SearchOrders(
             model.StoreId,
             model.VendorId,
-            model.CustomerId,
+            customerIdFilter,
             filterByProductId,
             warehouseId: model.WarehouseId,
             salesEmployeeId: salesEmployeeId,
@@ -385,10 +427,17 @@ public class OrderViewModelService : IOrderViewModelService
             pageSize: pageSize,
             orderTagId: model.OrderTag);
 
+        // Post-filter for multiple customer IDs if needed
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Count > 1 && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            var filteredOrders = orders.Where(o => model.SearchCustomerIds.Contains(o.CustomerId)).ToList();
+            orders = new PagedList<Order>(filteredOrders, orders.PageIndex, orders.PageSize, filteredOrders.Count);
+        }
+
         // Debug logging
         System.Console.WriteLine($"[DEBUG] Pending orders found: {orders.TotalCount}");
 
-        // No additional filtering needed since we already filtered at the service level
         var pagedUnpaidOrders = orders;
 
         var primaryStoreCurrency = await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId);

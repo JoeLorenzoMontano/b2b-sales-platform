@@ -15,10 +15,12 @@ public class OrderListModel : BaseModel
     [UIHint("DateNullable")]
     public DateTime? EndDate { get; set; }
 
-    public string CustomerId { get; set; }
+    [GrandResourceDisplayName("Admin.Orders.List.Customer")]
+    public IList<SelectListItem> AvailableCustomers { get; set; } = new List<SelectListItem>();
 
     [GrandResourceDisplayName("Admin.Orders.List.Customer")]
-    public string CustomerName { get; set; }
+    [UIHint("MultiSelect")]
+    public IList<string> SearchCustomerIds { get; set; } = new List<string>();
 
     [GrandResourceDisplayName("Admin.Orders.List.BillingEmail")]
     public string BillingEmail { get; set; }

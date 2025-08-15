@@ -35,6 +35,15 @@
                 <!-- Quantity Group Box -->
                 <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-@Model.ProductId" style="background-color: #ffffff; border-color: #dee2e6;">
                     <div class="d-flex align-items-end">
+                        <!-- Units -->
+                        <div class="mr-2">
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
+                            <div id="EnteredUnits_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
+                            <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control" style="width: 120px;"
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
+                            <div style="color: black;"><span id="unit-price-@Model.ProductId"></span></div>
+                        </div>
+                        
                         <!-- Cases -->
                         <div class="case-info mr-2" id="case-info-@Model.ProductId" style="display: none;">
                             <label for="EnteredCases_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
@@ -43,15 +52,6 @@
                                     class="custom-select form-control" style="width: 120px;">
                             </select>
                             <div style="color: black;"><span id="case-price-@Model.ProductId"></span></div>
-                        </div>
-                        
-                        <!-- Units -->
-                        <div class="mr-2">
-                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
-                            <div id="EnteredUnits_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
-                            <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control" style="width: 120px;"
-                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
-                            <div style="color: black;"><span id="unit-price-@Model.ProductId"></span></div>
                         </div>
                         
                         <!-- Total -->
@@ -79,6 +79,15 @@
                 <!-- Quantity Group Box (Input Version) -->
                 <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-input-@Model.ProductId" style="background-color: #ffffff; border-color: #dee2e6;">
                     <div class="d-flex align-items-end">
+                        <!-- Units -->
+                        <div class="mr-2">
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
+                            <div id="EnteredUnits_input_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
+                            <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="form-control text-center" style="width: 120px;"
+                                onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
+                            <div style="color: black;"><span id="unit-price-input-@Model.ProductId">-</span></div>
+                        </div>
+                        
                         <!-- Cases -->
                         <div class="case-info mr-2" id="case-info-input-@Model.ProductId" style="display: none;">
                             <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
@@ -89,21 +98,12 @@
                             <div style="color: black;"><span id="case-price-input-@Model.ProductId">-</span></div>
                         </div>
                         
-                        <!-- Units -->
-                        <div class="mr-2">
-                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
-                            <div id="EnteredUnits_input_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
-                            <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="form-control text-center" style="width: 120px;"
-                                onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
-                            <div style="color: black;"><span id="unit-price-input-@Model.ProductId">-</span></div>
-                        </div>
-                        
                         <!-- Total -->
                         <div class="case-info mr-2" id="total-info-input-@Model.ProductId" style="display: none;">
                             <label for="EnteredTotal_input_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Total</label>
                             <input type="number" id="EnteredTotal_input_@Model.ProductId" 
                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { updateQuantityFromTotal_@(Model.ProductId)(this.value); updateCasePricing_@(Model.ProductId)(); }"
-                                   class="form-control text-center" style="width: 80px;"><div>Total: <span id="total-price-input-@Model.ProductId" style="color: black;">-</span></div>
+                                   class="form-control text-center" style="width: 80px;">
                             <div style="color: black;"><span id="total-price-input-@Model.ProductId">-</span></div>
                         </div>
                         

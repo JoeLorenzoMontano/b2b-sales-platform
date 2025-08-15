@@ -604,18 +604,19 @@
 
         if (!caseDropdown) return;
 
-        // Hide Units display and show the interactive quantity dropdown/input
+        // Show Units display and hide the interactive quantity dropdown/input
         var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
         if (unitsDisplay) {
-            unitsDisplay.style.display = 'none';
+            unitsDisplay.textContent = caseSize.toString();
+            unitsDisplay.style.display = 'block';
         }
 
-        // Keep the interactive quantity controls visible
+        // Hide the interactive quantity controls
         if (qtyDropdown) {
-            qtyDropdown.style.display = 'block';
+            qtyDropdown.style.display = 'none';
         }
         if (qtyInput) {
-            qtyInput.style.display = 'block';
+            qtyInput.style.display = 'none';
         }
 
         // Get available quantities from the quantity dropdown/input

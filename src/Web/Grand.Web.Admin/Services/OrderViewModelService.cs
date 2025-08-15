@@ -252,13 +252,23 @@ public class OrderViewModelService : IOrderViewModelService
         foreach (var salesEmployee in await _salesEmployeeService.GetAll())
             model.AvailableEmployees.Add(new SelectListItem { Text = salesEmployee.Name, Value = salesEmployee.Id });
 
-        //customers - get customers for multiselect (limited for performance)
+        //customers - get customers for multiselect (limited for performance, exclude blank names)
         model.AvailableCustomers.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
         var customers = await _customerService.GetAllCustomers(pageSize: 1000);
         foreach (var customer in customers)
         {
-            var customerName = !string.IsNullOrEmpty(customer.GetFullName()) ? customer.GetFullName() : customer.Email;
-            model.AvailableCustomers.Add(new SelectListItem { Text = customerName, Value = customer.Id });
+            // Skip system accounts and customers without meaningful names
+            if (customer.IsSystemAccount() || string.IsNullOrEmpty(customer.Email))
+                continue;
+                
+            var fullName = customer.GetFullName();
+            var customerName = !string.IsNullOrWhiteSpace(fullName) ? fullName : customer.Email;
+            
+            // Only add customers with non-empty display names
+            if (!string.IsNullOrWhiteSpace(customerName))
+            {
+                model.AvailableCustomers.Add(new SelectListItem { Text = customerName, Value = customer.Id });
+            }
         }
 
         if (startDate.HasValue)

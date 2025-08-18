@@ -55,6 +55,10 @@
                     return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
                 }                        
             }, {
+                field: "Warehouses",
+                title: "@Loc["Admin.Orders.Fields.Warehouses"]",
+                width: 150
+            }, {
                 field: "OrderStatus",
                 title: "@Loc["Admin.Customers.Customers.Orders.OrderStatus"]",
                 width: 130,

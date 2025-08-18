@@ -359,6 +359,28 @@ public class OrderViewModelService : IOrderViewModelService
             var store = await _storeService.GetStoreById(x.StoreId);
             var orderTotal = _priceFormatter.FormatPrice(x.OrderTotal,
                 await _currencyService.GetCurrencyByCode(x.CustomerCurrencyCode));
+            // Get distinct warehouses from order items
+            var warehouseIds = x.OrderItems
+                .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                .Select(item => item.WarehouseId)
+                .Distinct()
+                .ToList();
+                
+            var warehousesString = "";
+            if (warehouseIds.Any())
+            {
+                var warehouses = new List<string>();
+                foreach (var warehouseId in warehouseIds)
+                {
+                    var warehouse = await _warehouseService.GetWarehouseById(warehouseId);
+                    if (warehouse != null)
+                    {
+                        warehouses.Add(warehouse.Name);
+                    }
+                }
+                warehousesString = string.Join(", ", warehouses);
+            }
+
             items.Add(new OrderModel {
                 Id = x.Id,
                 OrderNumber = x.OrderNumber,
@@ -374,6 +396,7 @@ public class OrderViewModelService : IOrderViewModelService
                 CustomerId = x.CustomerId,
                 CustomerFullName = $"{x.BillingAddress?.FirstName} {x.BillingAddress?.LastName}",
                 CustomerCompany = x.BillingAddress?.Company,
+                Warehouses = warehousesString,
                 CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc)
             });
         }
@@ -461,6 +484,29 @@ public class OrderViewModelService : IOrderViewModelService
             var store = await _storeService.GetStoreById(x.StoreId);
             var orderTotal = _priceFormatter.FormatPrice(x.OrderTotal,
                 await _currencyService.GetCurrencyByCode(x.CustomerCurrencyCode));
+            
+            // Get distinct warehouses from order items
+            var warehouseIds = x.OrderItems
+                .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                .Select(item => item.WarehouseId)
+                .Distinct()
+                .ToList();
+                
+            var warehousesString = "";
+            if (warehouseIds.Any())
+            {
+                var warehouses = new List<string>();
+                foreach (var warehouseId in warehouseIds)
+                {
+                    var warehouse = await _warehouseService.GetWarehouseById(warehouseId);
+                    if (warehouse != null)
+                    {
+                        warehouses.Add(warehouse.Name);
+                    }
+                }
+                warehousesString = string.Join(", ", warehouses);
+            }
+
             items.Add(new OrderModel {
                 Id = x.Id,
                 OrderNumber = x.OrderNumber,
@@ -478,6 +524,7 @@ public class OrderViewModelService : IOrderViewModelService
                 CustomerId = x.CustomerId,
                 CustomerFullName = $"{x.BillingAddress?.FirstName} {x.BillingAddress?.LastName}",
                 CustomerCompany = x.BillingAddress?.Company,
+                Warehouses = warehousesString,
                 CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc)
             });
         }

@@ -26,6 +26,9 @@ public class ShipmentModel : BaseEntityModel
     // Order information
     public decimal OrderTotal { get; set; }
     public string SalesEmployeeName { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.Warehouses")]
+    public string Warehouses { get; set; }
 
     // Shipping information
     public string ShippingAddressString { get; set; }

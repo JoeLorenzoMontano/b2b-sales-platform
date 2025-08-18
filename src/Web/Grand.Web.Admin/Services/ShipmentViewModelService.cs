@@ -129,6 +129,27 @@ public class ShipmentViewModelService : IShipmentViewModelService
             }
         }
 
+        // Get distinct warehouses from shipment items
+        var warehouseIds = shipment.ShipmentItems
+            .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+            .Select(item => item.WarehouseId)
+            .Distinct()
+            .ToList();
+            
+        if (warehouseIds.Any())
+        {
+            var warehouses = new List<string>();
+            foreach (var warehouseId in warehouseIds)
+            {
+                var warehouse = await _warehouseService.GetWarehouseById(warehouseId);
+                if (warehouse != null)
+                {
+                    warehouses.Add(warehouse.Name);
+                }
+            }
+            model.Warehouses = string.Join(", ", warehouses);
+        }
+
         if (prepareProducts)
             foreach (var shipmentItem in shipment.ShipmentItems)
             {

@@ -283,23 +283,7 @@
                                              (discountAmount > 0 || originalPrice != currentPrice) && 
                                              originalPrice > currentPrice;
                         }
-                        @if (hasDiscount)
-                        {
-                            <span style="text-decoration: line-through; color: #999;">
-                                @originalPrice.ToString("N2")
-                            </span><br/>
-                            <strong>
-                                @currentPrice.ToString("N2")
-                            </strong><br/>
-                            <small style="color: green;">
-                                @(string.Format(_translationService.GetResource("PDFInvoice.YouSaved", order.CustomerLanguageId) ?? "Saved: {0}", 
-                                (originalPrice - currentPrice).ToString("N2")))
-                            </small>
-                        }
-                        else
-                        {
-                            @currentPrice.ToString("N2")
-                        }
+                        @currentPrice.ToString("N2")
                     </td>
                     <td>@item.Quantity</td>
                     <td class="bold">

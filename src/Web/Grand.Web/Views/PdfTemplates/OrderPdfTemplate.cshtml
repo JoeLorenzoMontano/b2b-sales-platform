@@ -133,15 +133,26 @@
         <h4>@store.CompanyName</h4>
         if (logoExists)
         {
-            var url = await _pictureService.GetPictureUrl(logoPicture, 0, false, store.SslEnabled ? store.SecureUrl : store.Url);
-            // Fix malformed URLs that cause Scryber layout errors
-            if (!string.IsNullOrEmpty(url))
+            try
             {
-                url = url.Replace("/https://", "https://").Replace("/http://", "http://");
+                var url = await _pictureService.GetPictureUrl(logoPicture, 0, false, store.SslEnabled ? store.SecureUrl : store.Url);
+                // Fix malformed URLs that cause Scryber layout errors
+                if (!string.IsNullOrEmpty(url))
+                {
+                    url = url.Replace("/https://", "https://").Replace("/http://", "http://");
+                    // Only render if we have a valid URL
+                    if (!string.IsNullOrEmpty(url) && (url.StartsWith("http") || url.StartsWith("/")))
+                    {
+                        <div style="float: right;">
+                            <img src="@url" title="logo" alt="logo"/>
+                        </div>
+                    }
+                }
             }
-            <div style="float: right; top:10px;">
-                <img src="@url" title="logo" alt="logo"/>
-            </div>
+            catch
+            {
+                // Silently skip logo on any error to prevent PDF generation failure
+            }
         }
 
         <h6>@(string.Format(_translationService.GetResource("PDFInvoice.Order#", order.CustomerLanguageId), order.OrderNumber)) (@order.CreatedOnUtc)</h6>

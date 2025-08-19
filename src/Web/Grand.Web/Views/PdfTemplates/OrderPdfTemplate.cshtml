@@ -230,11 +230,20 @@
                 <td class="Header">@(_translationService.GetResource("PDFInvoice.ProductQuantity", order.CustomerLanguageId))</td>
                 <td class="Header">@(_translationService.GetResource("PDFInvoice.ProductTotal", order.CustomerLanguageId))</td>
             </tr>
-            @foreach (var item in order.OrderItems.Where(x => x.VendorId == Model.Item2 || !limitbyVendor).ToList())
+            @{
+                var orderItems = order.OrderItems?.Where(x => x.VendorId == Model.Item2 || !limitbyVendor).ToList() ?? new List<OrderItem>();
+            }
+            @if (orderItems.Any())
+            {
+                @foreach (var item in orderItems)
             {
                 <tr>
                     <td class="autoWidth leftalign" colspan="2">
-                        @((await _productService.GetProductByIdIncludeArch(item.ProductId)).Name)
+                        @{
+                            var product = await _productService.GetProductByIdIncludeArch(item.ProductId);
+                            var productName = product?.Name ?? $"Product #{item.ProductId}";
+                        }
+                        @productName
                         @if (!string.IsNullOrEmpty(item.AttributeDescription))
                         {
                             <br/>
@@ -250,9 +259,13 @@
                     <td>
                         @{
                             var discountAmount = priceIncludesTax ? item.DiscountAmountInclTax : item.DiscountAmountExclTax;
-                            var originalPrice = priceIncludesTax ? (item.UnitPriceWithoutDiscInclTax ?? item.UnitPriceInclTax) : (item.UnitPriceWithoutDiscExclTax ?? item.UnitPriceExclTax);
+                            var originalPrice = priceIncludesTax ? item.UnitPriceWithoutDiscInclTax : item.UnitPriceWithoutDiscExclTax;
                             var currentPrice = priceIncludesTax ? item.UnitPriceInclTax : item.UnitPriceExclTax;
-                            var hasDiscount = (discountAmount > 0 || originalPrice != currentPrice) && originalPrice > currentPrice;
+                            
+                            // Ensure we have valid prices before comparison
+                            var hasDiscount = originalPrice > 0 && currentPrice > 0 && 
+                                             (discountAmount > 0 || originalPrice != currentPrice) && 
+                                             originalPrice > currentPrice;
                         }
                         @if (hasDiscount)
                         {
@@ -282,6 +295,15 @@
                         {
                             @item.PriceExclTax.ToString("N2")
                         }
+                    </td>
+                </tr>
+            }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 20px;">
+                        No items found in this order.
                     </td>
                 </tr>
             }

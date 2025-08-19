@@ -250,7 +250,7 @@
                     <td>
                         @{
                             var discountAmount = priceIncludesTax ? item.DiscountAmountInclTax : item.DiscountAmountExclTax;
-                            var originalPrice = priceIncludesTax ? item.UnitPriceWithoutDiscInclTax : item.UnitPriceWithoutDiscExclTax;
+                            var originalPrice = priceIncludesTax ? (item.UnitPriceWithoutDiscInclTax ?? item.UnitPriceInclTax) : (item.UnitPriceWithoutDiscExclTax ?? item.UnitPriceExclTax);
                             var currentPrice = priceIncludesTax ? item.UnitPriceInclTax : item.UnitPriceExclTax;
                             var hasDiscount = (discountAmount > 0 || originalPrice != currentPrice) && originalPrice > currentPrice;
                         }

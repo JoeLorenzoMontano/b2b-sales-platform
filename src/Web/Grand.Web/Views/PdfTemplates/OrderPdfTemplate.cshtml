@@ -252,7 +252,7 @@
                             var discountAmount = priceIncludesTax ? item.DiscountAmountInclTax : item.DiscountAmountExclTax;
                             var originalPrice = priceIncludesTax ? item.UnitPriceWithoutDiscInclTax : item.UnitPriceWithoutDiscExclTax;
                             var currentPrice = priceIncludesTax ? item.UnitPriceInclTax : item.UnitPriceExclTax;
-                            var hasDiscount = discountAmount > 0 || originalPrice != currentPrice;
+                            var hasDiscount = (discountAmount > 0 || originalPrice != currentPrice) && originalPrice > currentPrice;
                         }
                         @if (hasDiscount)
                         {

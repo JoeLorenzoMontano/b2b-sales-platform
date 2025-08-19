@@ -310,12 +310,11 @@
         </table>
         @if (!limitbyVendor)
         {
-            <div class="summary">
+            <div class="summary" style="text-align: right">
                 @if (!string.IsNullOrEmpty(order.CheckoutAttributeDescription))
                 {
-                    @(Html.Raw(order.CheckoutAttributeDescription))
+                    <div style="text-align: left;">@(Html.Raw(order.CheckoutAttributeDescription))</div>
                 }
-                <div style="float: right">
 
                     @(_translationService.GetResource("PDFInvoice.Sub-Total", order.CustomerLanguageId))
                     @if (priceIncludesTax)
@@ -387,8 +386,6 @@
                     <b>
                         @(_translationService.GetResource("PDFInvoice.OrderTotal", order.CustomerLanguageId)) @order.OrderTotal.ToString("N2") @order.CustomerCurrencyCode<br/>
                     </b>
-
-                </div>
             </div>
         }
 

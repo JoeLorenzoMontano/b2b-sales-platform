@@ -133,25 +133,14 @@
         <h4>@store.CompanyName</h4>
         if (logoExists)
         {
-            try
+            var url = await _pictureService.GetPictureUrl(logoPicture, 0, false, store.SslEnabled ? store.SecureUrl : store.Url);
+            // Fix malformed URLs that cause Scryber layout errors
+            if (!string.IsNullOrEmpty(url))
             {
-                var url = await _pictureService.GetPictureUrl(logoPicture, 0, false, store.SslEnabled ? store.SecureUrl : store.Url);
-                // Fix malformed URLs that cause Scryber layout errors
-                if (!string.IsNullOrEmpty(url))
-                {
-                    url = url.Replace("/https://", "https://").Replace("/http://", "http://");
-                    // Only render if we have a valid URL
-                    if (!string.IsNullOrEmpty(url) && (url.StartsWith("http") || url.StartsWith("/")))
-                    {
-                        <div style="float: right;">
-                            <img src="@url" title="logo" alt="logo"/>
-                        </div>
-                    }
-                }
-            }
-            catch
-            {
-                // Silently skip logo on any error to prevent PDF generation failure
+                url = url.Replace("/https://", "https://").Replace("/http://", "http://");
+                <div style="float: right;">
+                    <img src="@url" title="logo" alt="logo"/>
+                </div>
             }
         }
 
@@ -283,7 +272,23 @@
                                              (discountAmount > 0 || originalPrice != currentPrice) && 
                                              originalPrice > currentPrice;
                         }
-                        @currentPrice.ToString("N2")
+                        @if (hasDiscount)
+                        {
+                            <span style="text-decoration: line-through; color: #999;">
+                                @originalPrice.ToString("N2")
+                            </span><br/>
+                            <strong>
+                                @currentPrice.ToString("N2")
+                            </strong><br/>
+                            <small style="color: green;">
+                                @(string.Format(_translationService.GetResource("PDFInvoice.YouSaved", order.CustomerLanguageId) ?? "Saved: {0}", 
+                                (originalPrice - currentPrice).ToString("N2")))
+                            </small>
+                        }
+                        else
+                        {
+                            @currentPrice.ToString("N2")
+                        }
                     </td>
                     <td>@item.Quantity</td>
                     <td class="bold">

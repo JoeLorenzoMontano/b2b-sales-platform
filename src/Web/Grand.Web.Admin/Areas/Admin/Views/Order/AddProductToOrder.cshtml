@@ -70,141 +70,29 @@
                 <vc:admin-widget widget-zone="order_add_products_bottom" additional-data="Model"/>
             </div>
             <div class="x_content">
-                <!-- Existing Order Items Section -->
-                <div class="mb-4">
-                    <h4>@Loc["Admin.Orders.Products.Current"] (@Model.OrderNumber)</h4>
-                    <div id="existing-order-items-grid" style="max-height: 400px; overflow-y: auto; border: 1px solid #e4e5e7; border-radius: 4px;"></div>
-                </div>
-                
-                <!-- Search Results Section -->
-                <div class="mb-4">
-                    <h4>@Loc["Admin.Orders.Products.AddNew.Note1"]</h4>
-                    <div id="product-search-results" style="max-height: 600px; overflow-y: auto;"></div>
-                </div>
+                <strong>@Loc["Admin.Orders.Products.AddNew.Note1"]</strong>
+                <div id="products-grid"></div>
             </div>
         </div>
     </div>
 </div>
-<style>
-    .product-search-item {
-        border: 1px solid #e4e5e7;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        padding: 15px;
-        background-color: #fff;
-    }
-    
-    .product-search-item:hover {
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    .product-name {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 5px;
-    }
-    
-    .product-sku {
-        color: #666;
-        font-size: 0.9em;
-        margin-bottom: 10px;
-    }
-    
-    .product-controls {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-    
-    .inline-field {
-        display: flex;
-        flex-direction: column;
-        min-width: 120px;
-    }
-    
-    .inline-field label {
-        font-size: 0.85em;
-        color: #666;
-        margin-bottom: 3px;
-        font-weight: 500;
-    }
-    
-    .inline-field input, .inline-field select {
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        padding: 5px 8px;
-        font-size: 0.9em;
-    }
-    
-    .add-product-btn {
-        background-color: #28a745;
-        border: none;
-        color: white;
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.9em;
-        margin-top: 20px;
-    }
-    
-    .add-product-btn:hover {
-        background-color: #218838;
-    }
-    
-    .add-product-btn:disabled {
-        background-color: #6c757d;
-        cursor: not-allowed;
-    }
-    
-    .search-pagination {
-        text-align: center;
-        margin-top: 20px;
-    }
-    
-    .search-pagination button {
-        margin: 0 5px;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        background: white;
-        cursor: pointer;
-    }
-    
-    .search-pagination button.active {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-</style>
-
 <script>
     $(document).ready(function () {
+
         $('.extend-collapse').hide();
         $('.filter-extend-button').click(function () {
             $('.extend-collapse').toggle("slow");
             $('.filter-text-close').toggle();
         });
 
-        // Initialize existing order items grid
-        initializeExistingOrderItemsGrid();
-        
-        // Initialize search functionality
-        initializeProductSearch();
-    });
-
-    function initializeExistingOrderItemsGrid() {
-        $("#existing-order-items-grid").kendoGrid({
+        $("#products-grid").kendoGrid({
             dataSource: {
                 transport: {
                     read: {
-                        url: "@Html.Raw(Url.Action("GetOrderItemsForIncoming", "Order", new { area = Constants.AreaAdmin }))",
+                        url: "@Html.Raw(Url.Action("AddProductToOrder", "Order", new { area = Constants.AreaAdmin }))",
                         type: "POST",
                         dataType: "json",
-                        data: function() {
-                            return addAntiForgeryToken({
-                                orderId: '@Model.OrderId'
-                            });
-                        }
+                        data: additionalData
                     }
                 },
                 schema: {
@@ -213,241 +101,76 @@
                     errors: "Errors"
                 },
                 error: function(e) {
-                    console.log('Existing order items grid error:', e.errors);
-                }
+                    display_kendoui_grid_error(e);
+                    // Cancel the changes
+                    this.cancelChanges();
+                },
+                pageSize: @(adminAreaSettings.DefaultGridPageSize),
+                serverPaging: true,
+                serverFiltering: true,
+                serverSorting: true
+            },
+            pageable: {
+                refresh: true,
+                pageSizes: [@(adminAreaSettings.GridPageSizes)]
+            },
+            editable: {
+                confirmation: false,
+                mode: "inline"
             },
             scrollable: false,
-            sortable: false,
-            pageable: false,
-            columns: [
-                {
-                    field: "ProductName",
-                    title: "@Loc["Admin.Catalog.Products.Fields.Name"]",
-                    width: 350
-                },
-                {
-                    field: "Quantity",
-                    title: "@Loc["Admin.Orders.Products.Quantity"]",
-                    width: 100,
-                    template: "#=Quantity#"
-                },
-                {
-                    field: "UnitPriceInclTax",
-                    title: "@Loc["Admin.Orders.Products.UnitPrice"]",
-                    width: 120
-                },
-                {
-                    field: "SubTotal",
-                    title: "@Loc["Admin.Orders.Products.SubTotal"]",
-                    width: 120
-                },
-                {
-                    field: "AttributeInfo",
-                    title: "@Loc["Admin.Catalog.Products.ProductAttributes"]",
-                    encoded: false,
-                    template: function(dataItem) {
-                        return dataItem.AttributeInfo || "";
-                    }
-                }
-            ]
+            //selectable
+            selectable: true,
+            change: onChange,
+            columns: [{
+                field: "Name",
+                title: "@Loc["Admin.Orders.Products.AddNew.Name"]",
+                width: 400
+            },{
+                field: "Sku",
+                title: "@Loc["Admin.Orders.Products.AddNew.SKU"]",
+                width: 100
+            }]
         });
-    }
-
-    var currentSearchData = {};
-    var currentPage = 1;
-    var totalPages = 1;
-
-    function initializeProductSearch() {
-        // Search button click
+    });
+</script>
+<script>
+    $(document).ready(function () {
         $('#search-products').click(function () {
-            performProductSearch(1);
+            var grid = $('#products-grid').data('kendoGrid');
+            grid.dataSource.page(1); //new search. Set page size to 1
+            //grid.dataSource.read(); we already loaded the grid above using "page" function
             return false;
         });
-        
-        // Search on Enter key
-        $("#@Html.IdFor(model => model.SearchProductName)").keydown(function (event) {
-            if (event.keyCode == 13) {
-                performProductSearch(1);
-                return false;
-            }
-        });
-    }
+    });
 
-    function performProductSearch(page = 1) {
-        currentPage = page;
-        currentSearchData = {
+    $("#@Html.IdFor(model => model.SearchProductName)").keydown(function (event) {
+        if (event.keyCode == 13) {
+            $("#search-products").click();
+            return false;
+        }
+    });
+
+    function additionalData() {
+        var data = {
             SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
             SearchCategoryId: $('#SearchCategoryId').val(),
             SearchBrandId: $('#SearchBrandId').val(),
             SearchCollectionId: $('#SearchCollectionId').val(),
-            SearchProductTypeId: $('#SearchProductTypeId').val(),
-            page: page,
-            pageSize: 10
+            SearchProductTypeId: $('#SearchProductTypeId').val()
         };
-        
-        addAntiForgeryToken(currentSearchData);
-        
-        $.ajax({
-            url: "@Html.Raw(Url.Action("SearchProductsInline", "Order", new { area = Constants.AreaAdmin }))",
-            type: "POST",
-            dataType: "json",
-            data: currentSearchData,
-            success: function(response) {
-                if (response.success) {
-                    displaySearchResults(response.data, response.totalCount);
-                } else {
-                    $('#product-search-results').html('<div class="alert alert-warning">No products found matching your search criteria.</div>');
-                }
-            },
-            error: function() {
-                $('#product-search-results').html('<div class="alert alert-danger">Error occurred while searching products.</div>');
-            }
-        });
-    }
-
-    function displaySearchResults(products, totalCount) {
-        var html = '';
-        totalPages = Math.ceil(totalCount / 10);
-        
-        if (products && products.length > 0) {
-            products.forEach(function(product) {
-                html += buildProductRow(product);
-            });
-            
-            // Add pagination if needed
-            if (totalPages > 1) {
-                html += buildPagination();
-            }
-        } else {
-            html = '<div class="alert alert-info">No products found. Try adjusting your search criteria.</div>';
-        }
-        
-        $('#product-search-results').html(html);
-    }
-
-    function buildProductRow(product) {
-        return `
-            <div class="product-search-item" data-product-id="${product.id}">
-                <div class="product-name">${product.name}</div>
-                <div class="product-sku">SKU: ${product.sku || 'N/A'}</div>
-                <div class="product-controls">
-                    <div class="inline-field">
-                        <label>@Loc["Admin.Orders.Products.Quantity"]</label>
-                        <input type="number" id="quantity_${product.id}" value="1" min="1" />
-                    </div>
-                    <div class="inline-field">
-                        <label>@Loc["Admin.Orders.Products.UnitPrice"]</label>
-                        <input type="number" id="price_${product.id}" value="${product.price || '0.00'}" step="0.01" min="0" />
-                    </div>
-                    <div class="inline-field" id="warehouse_container_${product.id}" style="display:none;">
-                        <label>@Loc["Admin.Orders.Products.Warehouse"]</label>
-                        <select id="warehouse_${product.id}">
-                            <option value="">Select Warehouse</option>
-                        </select>
-                    </div>
-                    <div class="inline-field" id="attributes_container_${product.id}" style="display:none;">
-                        <label>@Loc["Admin.Catalog.Products.ProductAttributes"]</label>
-                        <select id="attributes_${product.id}">
-                            <option value="">Select Attributes</option>
-                        </select>
-                    </div>
-                    <button type="button" class="add-product-btn" onclick="addProductToOrder('${product.id}')">
-                        <i class="fa fa-plus"></i> Add to Order
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    function buildPagination() {
-        var paginationHtml = '<div class="search-pagination">';
-        
-        // Previous button
-        if (currentPage > 1) {
-            paginationHtml += `<button onclick="performProductSearch(${currentPage - 1})">Previous</button>`;
-        }
-        
-        // Page numbers
-        var startPage = Math.max(1, currentPage - 2);
-        var endPage = Math.min(totalPages, currentPage + 2);
-        
-        for (var i = startPage; i <= endPage; i++) {
-            var activeClass = i === currentPage ? 'active' : '';
-            paginationHtml += `<button class="${activeClass}" onclick="performProductSearch(${i})">${i}</button>`;
-        }
-        
-        // Next button
-        if (currentPage < totalPages) {
-            paginationHtml += `<button onclick="performProductSearch(${currentPage + 1})">Next</button>`;
-        }
-        
-        paginationHtml += '</div>';
-        return paginationHtml;
-    }
-
-    function addProductToOrder(productId) {
-        var quantity = $('#quantity_' + productId).val();
-        var price = $('#price_' + productId).val();
-        var warehouseId = $('#warehouse_' + productId).val();
-        var attributeCombinationId = $('#attributes_' + productId).val();
-        
-        if (!quantity || quantity < 1) {
-            alert('Please enter a valid quantity.');
-            return;
-        }
-        
-        if (!price || price < 0) {
-            alert('Please enter a valid price.');
-            return;
-        }
-        
-        var data = {
-            orderId: '@Model.OrderId',
-            productId: productId,
-            quantity: parseInt(quantity),
-            unitPrice: parseFloat(price),
-            warehouseId: warehouseId,
-            attributeCombinationId: attributeCombinationId
-        };
-        
         addAntiForgeryToken(data);
-        
-        // Disable the add button
-        var addButton = $(`[data-product-id="${productId}"] .add-product-btn`);
-        addButton.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Adding...');
-        
-        $.ajax({
-            url: "@Html.Raw(Url.Action("AddProductToOrderInline", "Order", new { area = Constants.AreaAdmin }))",
-            type: "POST",
-            data: data,
-            success: function(response) {
-                if (response.success) {
-                    // Refresh the existing order items grid
-                    var grid = $('#existing-order-items-grid').data('kendoGrid');
-                    if (grid) {
-                        grid.dataSource.read();
-                    }
-                    
-                    // Show success message
-                    alert('Product added successfully!');
-                    
-                    // Reset the form values
-                    $('#quantity_' + productId).val('1');
-                    $('#price_' + productId).val(response.originalPrice || '0.00');
-                    $('#warehouse_' + productId).val('');
-                    $('#attributes_' + productId).val('');
-                } else {
-                    alert('Error adding product: ' + (response.message || 'Unknown error'));
-                }
-            },
-            error: function() {
-                alert('Error occurred while adding product to order.');
-            },
-            complete: function() {
-                // Re-enable the add button
-                addButton.prop('disabled', false).html('<i class="fa fa-plus"></i> Add to Order');
-            }
-        });
+        return data;
+    }
+
+    function onChange(e) {
+        var grid = $('#products-grid').data('kendoGrid');
+        var selectedItem = grid.dataItem(grid.select());
+        var productId = selectedItem.Id;
+        //load "product details page" block
+        var productDetailsActionUrl = '@Html.Raw(Url.Action("AddProductToOrderDetails", "Order", new { orderId = Model.OrderId, productId = "productidplaceholder", area = Constants.AreaAdmin }))';
+        productDetailsActionUrl = productDetailsActionUrl.replace("productidplaceholder", productId);
+        setLocation(productDetailsActionUrl);
     }
 </script>
 <div id="productdetails">

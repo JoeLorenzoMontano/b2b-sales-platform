@@ -358,32 +358,27 @@
     }
 
     function buildProductRow(product) {
+        var uniqueId = product.combinationId ? `${product.id}_${product.combinationId}` : product.id;
+        
         return `
-            <div class="product-search-item" data-product-id="${product.id}">
+            <div class="product-search-item" data-product-id="${product.id}" data-combination-id="${product.combinationId || ''}" data-unique-id="${uniqueId}">
                 <div class="product-name">${product.name}</div>
-                <div class="product-sku">SKU: ${product.sku || 'N/A'}</div>
                 <div class="product-controls">
                     <div class="inline-field">
                         <label>@Loc["Admin.Orders.Products.Quantity"]</label>
-                        <input type="number" id="quantity_${product.id}" value="1" min="1" />
+                        <input type="number" id="quantity_${uniqueId}" value="1" min="1" />
                     </div>
                     <div class="inline-field">
                         <label>@Loc["Admin.Orders.Products.UnitPrice"]</label>
-                        <input type="number" id="price_${product.id}" value="${product.price || '0.00'}" step="0.01" min="0" />
+                        <input type="number" id="price_${uniqueId}" value="${product.price || '0.00'}" step="0.01" min="0" />
                     </div>
-                    <div class="inline-field" id="warehouse_container_${product.id}" style="display:none;">
+                    <div class="inline-field" id="warehouse_container_${uniqueId}" style="display:none;">
                         <label>@Loc["Admin.Orders.Products.Warehouse"]</label>
-                        <select id="warehouse_${product.id}">
+                        <select id="warehouse_${uniqueId}">
                             <option value="">Select Warehouse</option>
                         </select>
                     </div>
-                    <div class="inline-field" id="attributes_container_${product.id}" style="display:none;">
-                        <label>@Loc["Admin.Catalog.Products.ProductAttributes"]</label>
-                        <select id="attributes_${product.id}">
-                            <option value="">Select Attributes</option>
-                        </select>
-                    </div>
-                    <button type="button" class="add-product-btn" onclick="addSingleProductToOrder('${product.id}')">
+                    <button type="button" class="add-product-btn" onclick="addSingleProductToOrder('${uniqueId}')">
                         <i class="fa fa-plus"></i> Add to Order
                     </button>
                 </div>
@@ -417,11 +412,15 @@
         return paginationHtml;
     }
 
-    function addSingleProductToOrder(productId) {
-        var quantity = $('#quantity_' + productId).val();
-        var price = $('#price_' + productId).val();
-        var warehouseId = $('#warehouse_' + productId).val();
-        var attributeCombinationId = $('#attributes_' + productId).val();
+    function addSingleProductToOrder(uniqueId) {
+        // Find the product item using the unique ID
+        var productItem = $(`[data-unique-id="${uniqueId}"]`);
+        var productId = productItem.data('product-id');
+        var combinationId = productItem.data('combination-id');
+        
+        var quantity = $('#quantity_' + uniqueId).val();
+        var price = $('#price_' + uniqueId).val();
+        var warehouseId = $('#warehouse_' + uniqueId).val();
         
         if (!quantity || quantity < 1) {
             alert('Please enter a valid quantity.');
@@ -439,13 +438,13 @@
             quantity: parseInt(quantity),
             unitPrice: parseFloat(price),
             warehouseId: warehouseId,
-            attributeCombinationId: attributeCombinationId
+            attributeCombinationId: combinationId || ''
         };
         
         addAntiForgeryToken(data);
         
         // Disable the add button
-        var addButton = $(`[data-product-id="${productId}"] .add-product-btn`);
+        var addButton = $(`[data-unique-id="${uniqueId}"] .add-product-btn`);
         addButton.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Adding...');
         
         $.ajax({
@@ -464,10 +463,9 @@
                     alert('Product added successfully!');
                     
                     // Reset the form values
-                    $('#quantity_' + productId).val('1');
-                    $('#price_' + productId).val(response.originalPrice || '0.00');
-                    $('#warehouse_' + productId).val('');
-                    $('#attributes_' + productId).val('');
+                    $('#quantity_' + uniqueId).val('1');
+                    $('#price_' + uniqueId).val(response.originalPrice || '0.00');
+                    $('#warehouse_' + uniqueId).val('');
                 } else {
                     alert('Error adding product: ' + (response.message || 'Unknown error'));
                 }

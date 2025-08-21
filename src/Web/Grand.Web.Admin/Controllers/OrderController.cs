@@ -21,6 +21,7 @@ using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Orders;
 using Grand.Web.Common.DataSource;
+using Grand.Web.Common.Models;
 using Grand.Web.Common.Security.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -1581,9 +1582,12 @@ public class OrderController(
                         p.ProductAttributeMappings
                             .Where(mapping => mapping.Id == attr.Key)
                             .SelectMany(mapping => mapping.ProductAttributeValues)
-                            .Any(value => attr.Value.Contains(value.Id) && 
-                                        !string.IsNullOrEmpty(value.Name) &&
-                                        value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase))
+                            .Any(value => {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                return valueIds.Any(valueId => valueId.Trim() == value.Id) && 
+                                       !string.IsNullOrEmpty(value.Name) &&
+                                       value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase);
+                            })
                     )
                 ))
                 .ToList();
@@ -1732,9 +1736,12 @@ public class OrderController(
                         p.ProductAttributeMappings
                             .Where(mapping => mapping.Id == attr.Key)
                             .SelectMany(mapping => mapping.ProductAttributeValues)
-                            .Any(value => attr.Value.Contains(value.Id) && 
-                                        !string.IsNullOrEmpty(value.Name) &&
-                                        value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase))
+                            .Any(value => {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                return valueIds.Any(valueId => valueId.Trim() == value.Id) && 
+                                       !string.IsNullOrEmpty(value.Name) &&
+                                       value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase);
+                            })
                     )
                 ))
                 .ToList();
@@ -1748,30 +1755,88 @@ public class OrderController(
         // Filter out grouped products
         var filteredProducts = allProducts.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
 
-        // Apply pagination to combined results  
-        var pagedProducts = filteredProducts
+        // Create search result items that include attribute combinations
+        var searchResultItems = new List<object>();
+
+        foreach (var product in filteredProducts)
+        {
+            if (product.ProductAttributeCombinations?.Any() == true)
+            {
+                // Add each attribute combination as a separate searchable item
+                foreach (var combination in product.ProductAttributeCombinations)
+                {
+                    var attributeNames = new List<string>();
+                    foreach (var attr in combination.Attributes)
+                    {
+                        var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                        if (mapping != null)
+                        {
+                            // Split the Value string if it contains multiple values (comma-separated)
+                            var valueIds = attr.Value?.Split(',') ?? new string[0];
+                            foreach (var valueId in valueIds)
+                            {
+                                var trimmedValueId = valueId.Trim();
+                                if (!string.IsNullOrEmpty(trimmedValueId))
+                                {
+                                    var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                    if (attributeValue != null)
+                                    {
+                                        attributeNames.Add(attributeValue.Name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    var combinationName = attributeNames.Any() 
+                        ? $"{product.Name} - {string.Join(", ", attributeNames)}"
+                        : product.Name;
+                    
+                    var combinationPrice = combination.OverriddenPrice > 0 ? combination.OverriddenPrice : product.Price;
+
+                    searchResultItems.Add(new {
+                        id = product.Id,
+                        name = combinationName,
+                        sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku,
+                        price = combinationPrice,
+                        combinationId = combination.Id,
+                        hasAttributes = true
+                    });
+                }
+            }
+            else
+            {
+                // Add regular product without attribute combinations
+                searchResultItems.Add(new {
+                    id = product.Id,
+                    name = product.Name,
+                    sku = product.Sku,
+                    price = product.Price,
+                    combinationId = (string)null,
+                    hasAttributes = false
+                });
+            }
+        }
+
+        // Apply pagination to search result items
+        var totalCount = searchResultItems.Count;
+        var pagedItems = searchResultItems
             .Skip(((model.page ?? 1) - 1) * (model.pageSize ?? 10))
             .Take(model.pageSize ?? 10)
             .ToList();
 
-        var productData = pagedProducts.Select(x => new {
-            id = x.Id,
-            name = x.Name,
-            sku = x.Sku,
-            price = x.Price
-        });
-
         return Json(new { 
             success = true, 
-            data = productData,
-            totalCount = filteredProducts.Count
+            data = pagedItems,
+            totalCount = totalCount
         });
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
     public async Task<IActionResult> AddProductToOrderInline(string orderId, string productId, 
-        int quantity, decimal unitPrice, string warehouseId, string attributeCombinationId)
+        int quantity, decimal unitPrice, string warehouseId, string attributeCombinationId,
+        [FromServices] IProductService productService)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -1791,6 +1856,46 @@ public class OrderController(
                 Quantity: quantity,
                 TaxRate: 0 // Simplified for now
             );
+
+            // If we have an attribute combination ID, we need to set up the selected attributes
+            if (!string.IsNullOrEmpty(attributeCombinationId))
+            {
+                var product = await productService.GetProductById(productId);
+                var combination = product?.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == attributeCombinationId);
+                
+                if (combination != null && product != null)
+                {
+                    var selectedAttributes = new List<CustomAttributeModel>();
+                    
+                    foreach (var attr in combination.Attributes)
+                    {
+                        var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                        if (mapping != null)
+                        {
+                            // Split the Value string if it contains multiple values (comma-separated)
+                            var valueIds = attr.Value?.Split(',') ?? new string[0];
+                            foreach (var valueId in valueIds)
+                            {
+                                var trimmedValueId = valueId.Trim();
+                                if (!string.IsNullOrEmpty(trimmedValueId))
+                                {
+                                    var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                    if (attributeValue != null)
+                                    {
+                                        selectedAttributes.Add(new CustomAttributeModel
+                                        {
+                                            Key = attr.Key,
+                                            Value = trimmedValueId
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    model.SelectedAttributes = selectedAttributes;
+                }
+            }
 
             var warnings = await orderViewModelService.AddProductToOrderDetails(model);
             

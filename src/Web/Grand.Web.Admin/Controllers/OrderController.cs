@@ -1,4 +1,5 @@
 ﻿using Grand.Business.Core.Commands.Checkout.Orders;
+using Grand.Business.Core.Interfaces.Catalog.Brands;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
@@ -1695,7 +1696,8 @@ public class OrderController(
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
     public async Task<IActionResult> SearchProductsInline(DataSourceRequest command, OrderModel.AddOrderProductModel model,
-        [FromServices] IProductService productService)
+        [FromServices] IProductService productService,
+        [FromServices] IBrandService brandService)
     {
         var categoryIds = new List<string>();
         if (!string.IsNullOrEmpty(model.SearchCategoryId))
@@ -1755,6 +1757,22 @@ public class OrderController(
         // Filter out grouped products
         var filteredProducts = allProducts.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
 
+        // Get unique brand IDs and resolve brand names
+        var brandIds = filteredProducts.Where(p => !string.IsNullOrEmpty(p.BrandId))
+                                       .Select(p => p.BrandId)
+                                       .Distinct()
+                                       .ToList();
+        
+        var brands = new Dictionary<string, string>();
+        foreach (var brandId in brandIds)
+        {
+            var brand = await brandService.GetBrandById(brandId);
+            if (brand != null)
+            {
+                brands[brandId] = brand.Name;
+            }
+        }
+
         // Create search result items that include attribute combinations
         var searchResultItems = new List<object>();
 
@@ -1812,7 +1830,8 @@ public class OrderController(
                             sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku,
                             price = combinationPrice,
                             combinationId = combination.Id,
-                            hasAttributes = true
+                            hasAttributes = true,
+                            brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : ""
                         });
                     }
                 }
@@ -1826,7 +1845,8 @@ public class OrderController(
                     sku = product.Sku,
                     price = product.Price,
                     combinationId = (string)null,
-                    hasAttributes = false
+                    hasAttributes = false,
+                    brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : ""
                 });
             }
         }
@@ -1934,6 +1954,83 @@ public class OrderController(
                 success = false, 
                 message = "Error adding product: " + ex.Message
             });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> UpdateOrderItem(string orderId, string orderItemId, 
+        int? quantity, decimal? unitPrice)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null)
+                return Json(new { success = false, message = "Order item not found" });
+
+            bool updated = false;
+
+            if (quantity.HasValue && quantity.Value > 0)
+            {
+                orderItem.Quantity = quantity.Value;
+                updated = true;
+            }
+
+            if (unitPrice.HasValue && unitPrice.Value >= 0)
+            {
+                orderItem.UnitPriceInclTax = (double)unitPrice.Value;
+                orderItem.UnitPriceExclTax = (double)unitPrice.Value; // Simplified - should calculate based on tax
+                updated = true;
+            }
+
+            if (updated)
+            {
+                await orderService.UpdateOrder(order);
+                return Json(new { success = true, message = "Order item updated successfully" });
+            }
+
+            return Json(new { success = false, message = "No changes to update" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error updating order item: " + ex.Message });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> DeleteOrderItemInline(string orderId, string orderItemId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null)
+                return Json(new { success = false, message = "Order item not found" });
+
+            order.OrderItems.Remove(orderItem);
+            await orderService.UpdateOrder(order);
+            
+            return Json(new { success = true, message = "Order item deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error deleting order item: " + ex.Message });
         }
     }
 

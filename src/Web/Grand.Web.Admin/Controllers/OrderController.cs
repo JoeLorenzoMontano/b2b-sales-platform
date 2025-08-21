@@ -1546,6 +1546,7 @@ public class OrderController(
         if (!string.IsNullOrEmpty(model.SearchCategoryId))
             categoryIds.Add(model.SearchCategoryId);
 
+        // Perform standard product search
         var searchResult = await productService.SearchProducts(categoryIds: categoryIds,
             storeId: "",
             brandId: model.SearchBrandId,
@@ -1556,15 +1557,59 @@ public class OrderController(
             pageSize: command.PageSize,
             showHidden: true);
 
+        var allProducts = searchResult.products.ToList();
+
+        // If there are keywords, also search through product attribute combination names
+        if (!string.IsNullOrWhiteSpace(model.SearchProductName))
+        {
+            var keywords = model.SearchProductName.Trim();
+            
+            // Search for products that have attribute combinations with matching attribute value names
+            var additionalSearchResult = await productService.SearchProducts(
+                categoryIds: categoryIds,
+                storeId: "",
+                brandId: model.SearchBrandId,
+                collectionId: model.SearchCollectionId,
+                productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+                pageIndex: 0, // Get all results for attribute filtering
+                pageSize: int.MaxValue,
+                showHidden: true);
+
+            var attributeMatchedProducts = additionalSearchResult.products
+                .Where(p => p.ProductAttributeCombinations.Any(combo =>
+                    combo.Attributes.Any(attr => 
+                        p.ProductAttributeMappings
+                            .Where(mapping => mapping.Id == attr.Key)
+                            .SelectMany(mapping => mapping.ProductAttributeValues)
+                            .Any(value => attr.Value.Contains(value.Id) && 
+                                        !string.IsNullOrEmpty(value.Name) &&
+                                        value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase))
+                    )
+                ))
+                .ToList();
+
+            // Combine and deduplicate results
+            var existingProductIds = allProducts.Select(p => p.Id).ToHashSet();
+            var newProducts = attributeMatchedProducts.Where(p => !existingProductIds.Contains(p.Id));
+            allProducts.AddRange(newProducts);
+        }
+
+        // Apply pagination to combined results
+        var totalCount = allProducts.Count;
+        var pagedProducts = allProducts
+            .Skip((command.Page - 1) * command.PageSize)
+            .Take(command.PageSize)
+            .ToList();
+
         // Filter out grouped products
-        var filteredProducts = searchResult.products.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
+        var filteredProducts = pagedProducts.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
 
         var gridModel = new DataSourceResult {
             Data = filteredProducts.Select(x => new OrderModel.AddOrderProductModel.ProductModel {
                 Id = x.Id,
                 Name = x.Name
             }),
-            Total = filteredProducts.Count
+            Total = totalCount
         };
 
         return Json(gridModel);

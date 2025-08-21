@@ -344,45 +344,12 @@
             detailInit: shipmentItemsDetailInit,
             columns: [
                 {
-                    field: "Id",
-                    title: "Actions",
-                    width: 80,
+                    field: "OrderNumber",
+                    title: "Order ID",
+                    width: 100,
                     template: function(dataItem) {
-                        // Create dropdown HTML for this row
-                        var dropdownHtml = '<div id="action-dropdown-' + dataItem.Id + '" class="action-dropdown">' +
-                            '<a class="action-item" href="@Url.Action("ShipmentDetails", "Shipment", new { area = Constants.AreaAdmin })/' + dataItem.Id + '" target="_blank" rel="noopener">' +
-                                '<i class="fa fa-file-o"></i> View Details</a>' +
-                            '<a class="action-item" href="@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/' + dataItem.OrderId + '" target="_blank" rel="noopener">' +
-                                '<i class="fa fa-file-o"></i> View Order</a>' +
-                            '<a class="action-item" href="@Url.Action("PdfPackagingSlip", "Shipment", new { area = Constants.AreaAdmin })/' + dataItem.Id + '" target="_blank" rel="noopener">' +
-                                '<i class="fa fa-print"></i> Print Slip</a>' +
-                            '<div class="action-divider"></div>';
-                            
-                        // Only show Ship Order action if not already shipped
-                        if (!dataItem.ShippedDate) {
-                            dropdownHtml += '<a class="action-item ship-action" href="#" onclick="markAsShipped(\'' + dataItem.Id + '\'); return false;">' +
-                                '<i class="fa fa-truck"></i> Ship Order</a>';
-                        }
-                        
-                        // Only show Mark Delivered action if shipped but not delivered
-                        if (dataItem.ShippedDate && !dataItem.DeliveryDate) {
-                            dropdownHtml += '<a class="action-item deliver-action" href="#" onclick="markAsDelivered(\'' + dataItem.Id + '\'); return false;">' +
-                                '<i class="fa fa-check"></i> Mark Delivered</a>';
-                        }
-                        
-                        dropdownHtml += '</div>';
-                        
-                        // Add the dropdown to the container when the grid is rendered
-                        setTimeout(function() {
-                            if ($('#action-dropdown-' + dataItem.Id).length === 0) {
-                                $('#action-dropdown-container').append(dropdownHtml);
-                            }
-                        }, 100);
-                        
-                        // Return just the action button in a centered container
-                        return '<div style="text-align:center;"><button type="button" class="action-button" data-shipment-id="' + dataItem.Id + '">' +
-                            '<i class="fa fa-ellipsis-v"></i>' +
-                        '</button></div>';
+                        return '<a href="@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/' + dataItem.OrderId + '" class="badge bg-teal order-link" title="View order details">' + 
+                                '<i class="fa fa-shopping-cart mr-1"></i>' + dataItem.OrderNumber + '</a>';
                     }
                 },
                 {
@@ -459,15 +426,6 @@
                     title: "State",
                     width: 80,
                     template: valueOrDashTemplate("ShippingStateProvince")
-                },
-                {
-                    field: "OrderNumber",
-                    title: "Order ID",
-                    width: 100,
-                    template: function(dataItem) {
-                        return '<a href="@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/' + dataItem.OrderId + '" class="badge bg-teal order-link" title="View order details">' + 
-                                '<i class="fa fa-shopping-cart mr-1"></i>' + dataItem.OrderNumber + '</a>';
-                    }
                 },
                 {
                     field: "OrderTotal",
@@ -563,41 +521,9 @@
                         headerAttributes: { style: "background-color: #3f51b5; color: white;" }
                     },
                     {
-                        field: "ProductLine",
-                        title: "Product Line",
-                        template: function(dataItem) {
-                            if (dataItem.AttributeInfo && dataItem.AttributeInfo.length > 0) {
-                                return dataItem.AttributeInfo;
-                            }
-                            return "--";
-                        },
-                        width: 200,
-                        headerAttributes: { style: "background-color: #3f51b5; color: white;" }
-                    },
-                    {
-                        field: "Sku",
-                        title: "SKU",
-                        template: function(dataItem) {
-                            if (dataItem.Sku) {
-                                return dataItem.Sku;
-                            }
-                            return "--";
-                        },
-                        width: 150,
-                        headerAttributes: { style: "background-color: #3f51b5; color: white;" }
-                    },
-                    {
                         field: "QuantityInThisShipment",
                         title: "Quantity",
                         width: 100,
-                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" },
-                        attributes: { style: "text-align:center" }
-                    },
-                    {
-                        field: "UnitofMeasure",
-                        title: "Unit of Measure",
-                        template: function() { return 'Unit'; },
-                        width: 120,
                         headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" },
                         attributes: { style: "text-align:center" }
                     },

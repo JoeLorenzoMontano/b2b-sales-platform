@@ -277,13 +277,32 @@
                     width: 120,
                     template: function(dataItem) {
                         if (dataItem.CanEdit) {
-                            return `<input type="number" class="form-control form-control-sm quantity-input" 
-                                    value="${dataItem.OpenQty || dataItem.Quantity}" min="1" 
+                            var quantityInput = `<input type="number" class="form-control form-control-sm quantity-input" 
+                                    value="${dataItem.Quantity}" min="1" 
                                     data-order-item-id="${dataItem.Id}" 
                                     onblur="updateOrderItemQuantity('${dataItem.Id}', this.value)" 
                                     style="width: 80px;" />`;
+                            
+                            // Add open/cancel quantity info below like in Order Edit
+                            var additionalInfo = '';
+                            if (dataItem.OpenQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            }
+                            if (dataItem.CancelQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666;">Canceled: ${dataItem.CancelQty}</div>`;
+                            }
+                            
+                            return quantityInput + additionalInfo;
                         } else {
-                            return `<span class="text-muted">${dataItem.Quantity}</span>`;
+                            var displayText = `<span class="text-muted">${dataItem.Quantity}</span>`;
+                            // Show open/cancel info for read-only items too
+                            if (dataItem.OpenQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            }
+                            if (dataItem.CancelQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666;">Canceled: ${dataItem.CancelQty}</div>`;
+                            }
+                            return displayText;
                         }
                     }
                 },

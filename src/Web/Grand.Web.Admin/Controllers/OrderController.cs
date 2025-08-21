@@ -165,6 +165,7 @@ public class OrderController(
                     Sku = item.Sku,
                     Quantity = item.Quantity,
                     OpenQty = item.OpenQty,
+                    CancelQty = item.CancelQty,
                     UnitPriceInclTax = item.UnitPriceInclTax, // Return numeric value, not formatted string
                     UnitPriceFormatted = item.UnitPriceInclTax.ToString("C"),
                     SubTotal = subTotal,

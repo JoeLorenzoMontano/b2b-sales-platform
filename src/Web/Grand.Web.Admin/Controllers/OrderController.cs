@@ -1792,16 +1792,29 @@ public class OrderController(
                         ? $"{product.Name} - {string.Join(", ", attributeNames)}"
                         : product.Name;
                     
-                    var combinationPrice = combination.OverriddenPrice > 0 ? combination.OverriddenPrice : product.Price;
+                    // Only include this combination if it matches the search criteria
+                    bool shouldInclude = true;
+                    if (!string.IsNullOrWhiteSpace(model.SearchProductName))
+                    {
+                        var keywords = model.SearchProductName.Trim();
+                        shouldInclude = product.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase) ||
+                                       combinationName.Contains(keywords, StringComparison.OrdinalIgnoreCase) ||
+                                       attributeNames.Any(name => name.Contains(keywords, StringComparison.OrdinalIgnoreCase));
+                    }
+                    
+                    if (shouldInclude)
+                    {
+                        var combinationPrice = combination.OverriddenPrice > 0 ? combination.OverriddenPrice : product.Price;
 
-                    searchResultItems.Add(new {
-                        id = product.Id,
-                        name = combinationName,
-                        sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku,
-                        price = combinationPrice,
-                        combinationId = combination.Id,
-                        hasAttributes = true
-                    });
+                        searchResultItems.Add(new {
+                            id = product.Id,
+                            name = combinationName,
+                            sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku,
+                            price = combinationPrice,
+                            combinationId = combination.Id,
+                            hasAttributes = true
+                        });
+                    }
                 }
             }
             else

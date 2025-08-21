@@ -406,6 +406,10 @@ public class OrderModel : BaseEntityModel
 
         public string OrderId { get; set; }
         public int OrderNumber { get; set; }
+        
+        // For inline search pagination
+        public int? page { get; set; }
+        public int? pageSize { get; set; }
 
         #region Nested classes
 

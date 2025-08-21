@@ -1688,6 +1688,137 @@ public class OrderController(
         });
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SearchProductsInline(DataSourceRequest command, OrderModel.AddOrderProductModel model,
+        [FromServices] IProductService productService)
+    {
+        var categoryIds = new List<string>();
+        if (!string.IsNullOrEmpty(model.SearchCategoryId))
+            categoryIds.Add(model.SearchCategoryId);
+
+        // Perform standard product search
+        var searchResult = await productService.SearchProducts(categoryIds: categoryIds,
+            storeId: "",
+            brandId: model.SearchBrandId,
+            collectionId: model.SearchCollectionId,
+            productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+            keywords: model.SearchProductName,
+            pageIndex: (model.page ?? 1) - 1,
+            pageSize: model.pageSize ?? 10,
+            showHidden: true);
+
+        var allProducts = searchResult.products.ToList();
+
+        // If there are keywords, also search through product attribute combination names
+        if (!string.IsNullOrWhiteSpace(model.SearchProductName))
+        {
+            var keywords = model.SearchProductName.Trim();
+            
+            // Search for products that have attribute combinations with matching attribute value names
+            var additionalSearchResult = await productService.SearchProducts(
+                categoryIds: categoryIds,
+                storeId: "",
+                brandId: model.SearchBrandId,
+                collectionId: model.SearchCollectionId,
+                productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+                pageIndex: 0, // Get all results for attribute filtering
+                pageSize: int.MaxValue,
+                showHidden: true);
+
+            var attributeMatchedProducts = additionalSearchResult.products
+                .Where(p => p.ProductAttributeCombinations.Any(combo =>
+                    combo.Attributes.Any(attr => 
+                        p.ProductAttributeMappings
+                            .Where(mapping => mapping.Id == attr.Key)
+                            .SelectMany(mapping => mapping.ProductAttributeValues)
+                            .Any(value => attr.Value.Contains(value.Id) && 
+                                        !string.IsNullOrEmpty(value.Name) &&
+                                        value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase))
+                    )
+                ))
+                .ToList();
+
+            // Combine and deduplicate results
+            var existingProductIds = allProducts.Select(p => p.Id).ToHashSet();
+            var newProducts = attributeMatchedProducts.Where(p => !existingProductIds.Contains(p.Id));
+            allProducts.AddRange(newProducts);
+        }
+
+        // Filter out grouped products
+        var filteredProducts = allProducts.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
+
+        // Apply pagination to combined results  
+        var pagedProducts = filteredProducts
+            .Skip(((model.page ?? 1) - 1) * (model.pageSize ?? 10))
+            .Take(model.pageSize ?? 10)
+            .ToList();
+
+        var productData = pagedProducts.Select(x => new {
+            id = x.Id,
+            name = x.Name,
+            sku = x.Sku,
+            price = x.Price
+        });
+
+        return Json(new { 
+            success = true, 
+            data = productData,
+            totalCount = filteredProducts.Count
+        });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> AddProductToOrderInline(string orderId, string productId, 
+        int quantity, decimal unitPrice, string warehouseId, string attributeCombinationId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            var model = new AddProductToOrderModel(
+                OrderId: orderId,
+                ProductId: productId,
+                UnitPriceInclTax: (double)unitPrice,
+                UnitPriceExclTax: (double)unitPrice, // Simplified for now
+                Quantity: quantity,
+                TaxRate: 0 // Simplified for now
+            );
+
+            var warnings = await orderViewModelService.AddProductToOrderDetails(model);
+            
+            if (!warnings.Any())
+            {
+                return Json(new { 
+                    success = true, 
+                    message = "Product added successfully",
+                    originalPrice = unitPrice
+                });
+            }
+            else
+            {
+                return Json(new { 
+                    success = false, 
+                    message = string.Join(", ", warnings)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            return Json(new { 
+                success = false, 
+                message = "Error adding product: " + ex.Message
+            });
+        }
+    }
+
     #endregion
 
     #region Addresses

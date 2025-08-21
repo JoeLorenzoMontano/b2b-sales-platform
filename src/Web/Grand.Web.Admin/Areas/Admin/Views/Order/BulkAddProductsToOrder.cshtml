@@ -276,11 +276,15 @@
                     title: "@Loc["Admin.Orders.Products.Quantity"]",
                     width: 120,
                     template: function(dataItem) {
-                        return `<input type="number" class="form-control form-control-sm quantity-input" 
-                                value="${dataItem.Quantity}" min="1" 
-                                data-order-item-id="${dataItem.Id}" 
-                                onblur="updateOrderItemQuantity('${dataItem.Id}', this.value)" 
-                                style="width: 80px;" />`;
+                        if (dataItem.CanEdit) {
+                            return `<input type="number" class="form-control form-control-sm quantity-input" 
+                                    value="${dataItem.OpenQty || dataItem.Quantity}" min="1" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onblur="updateOrderItemQuantity('${dataItem.Id}', this.value)" 
+                                    style="width: 80px;" />`;
+                        } else {
+                            return `<span class="text-muted">${dataItem.Quantity}</span>`;
+                        }
                     }
                 },
                 {
@@ -288,11 +292,15 @@
                     title: "@Loc["Admin.Orders.Products.UnitPrice"]",
                     width: 130,
                     template: function(dataItem) {
-                        return `<input type="number" class="form-control form-control-sm price-input" 
-                                value="${parseFloat(dataItem.UnitPriceInclTax).toFixed(2)}" step="0.01" min="0" 
-                                data-order-item-id="${dataItem.Id}" 
-                                onblur="updateOrderItemPrice('${dataItem.Id}', this.value)" 
-                                style="width: 100px;" />`;
+                        if (dataItem.CanEdit) {
+                            return `<input type="number" class="form-control form-control-sm price-input" 
+                                    value="${parseFloat(dataItem.UnitPriceInclTax).toFixed(2)}" step="0.01" min="0" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onblur="updateOrderItemPrice('${dataItem.Id}', this.value)" 
+                                    style="width: 100px;" />`;
+                        } else {
+                            return `<span class="text-muted">${dataItem.UnitPriceFormatted}</span>`;
+                        }
                     }
                 },
                 {
@@ -307,12 +315,16 @@
                     title: "Actions",
                     width: 80,
                     template: function(dataItem) {
-                        return `<button type="button" class="btn btn-sm btn-danger delete-order-item" 
-                                data-order-item-id="${dataItem.Id}" 
-                                onclick="deleteOrderItem('${dataItem.Id}')" 
-                                title="Delete">
-                                <i class="fa fa-trash"></i>
-                                </button>`;
+                        if (dataItem.CanEdit) {
+                            return `<button type="button" class="btn btn-sm btn-danger delete-order-item" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onclick="deleteOrderItem('${dataItem.Id}')" 
+                                    title="Delete">
+                                    <i class="fa fa-trash"></i>
+                                    </button>`;
+                        } else {
+                            return `<span class="text-muted">-</span>`;
+                        }
                     }
                 }
             ]

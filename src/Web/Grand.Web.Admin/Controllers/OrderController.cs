@@ -26,6 +26,7 @@ using Grand.Web.Common.Models;
 using Grand.Web.Common.Security.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Globalization;
 using System.Text;
 
@@ -163,9 +164,14 @@ public class OrderController(
                     ProductName = productName,
                     Sku = item.Sku,
                     Quantity = item.Quantity,
-                    UnitPriceInclTax = item.UnitPriceInclTax.ToString("C"),
+                    OpenQty = item.OpenQty,
+                    UnitPriceInclTax = item.UnitPriceInclTax, // Return numeric value, not formatted string
+                    UnitPriceFormatted = item.UnitPriceInclTax.ToString("C"),
                     SubTotal = subTotal,
-                    AttributeInfo = item.AttributeDescription
+                    AttributeInfo = item.AttributeDescription,
+                    CanEdit = order.ShippingStatusId == ShippingStatus.Pending || 
+                             order.ShippingStatusId == ShippingStatus.ShippingNotRequired ||
+                             order.ShippingStatusId == ShippingStatus.PreparedToShipped
                 });
             }
                 
@@ -1525,7 +1531,8 @@ public class OrderController(
     #region Bulk Product Addition
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
-    public async Task<IActionResult> BulkAddProductsToOrder(string orderId)
+    public async Task<IActionResult> BulkAddProductsToOrder(string orderId, 
+        [FromServices] IBrandService brandService)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -1536,6 +1543,18 @@ public class OrderController(
             return RedirectToAction("List");
 
         var model = await orderViewModelService.PrepareBulkAddProductsToOrderModel(order);
+        
+        // Populate brands dropdown
+        var brands = await brandService.GetAllBrands(showHidden: true);
+        foreach (var brand in brands)
+        {
+            model.AvailableBrands.Add(new SelectListItem
+            {
+                Text = brand.Name,
+                Value = brand.Id
+            });
+        }
+        
         return View(model);
     }
 

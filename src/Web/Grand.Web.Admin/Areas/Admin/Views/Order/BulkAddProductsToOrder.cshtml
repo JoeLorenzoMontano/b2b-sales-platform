@@ -280,13 +280,16 @@
                     template: function(dataItem) {
                         if (dataItem.CanEdit) {
                             var quantityInput = `<input type="number" class="form-control form-control-sm quantity-input" 
-                                    value="${dataItem.OpenQty}" min="0" 
+                                    value="${dataItem.Quantity}" min="1" 
                                     data-order-item-id="${dataItem.Id}" 
                                     onblur="updateOrderItemQuantity('${dataItem.Id}', this.value)" 
                                     style="width: 80px;" />`;
                             
-                            // Show total quantity and other info as context
-                            var additionalInfo = `<div style="font-size: 11px; color: #666;">Total Ordered: ${dataItem.Quantity}</div>`;
+                            // Show open/ship/cancel info as context like Order Edit does
+                            var additionalInfo = '';
+                            if (dataItem.OpenQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            }
                             if (dataItem.ShipQty > 0) {
                                 additionalInfo += `<div style="font-size: 11px; color: #666;">Shipped: ${dataItem.ShipQty}</div>`;
                             }
@@ -296,9 +299,11 @@
                             
                             return quantityInput + additionalInfo;
                         } else {
-                            var displayText = `<span class="text-muted">${dataItem.OpenQty}</span>`;
-                            // Show total and status info for read-only items too
-                            displayText += `<div style="font-size: 11px; color: #666;">Total Ordered: ${dataItem.Quantity}</div>`;
+                            var displayText = `<span class="text-muted">${dataItem.Quantity}</span>`;
+                            // Show open/ship/cancel info for read-only items too  
+                            if (dataItem.OpenQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            }
                             if (dataItem.ShipQty > 0) {
                                 displayText += `<div style="font-size: 11px; color: #666;">Shipped: ${dataItem.ShipQty}</div>`;
                             }
@@ -558,7 +563,8 @@
             return;
         }
 
-        updateOrderItem(orderItemId, { quantity: parseInt(newQuantity) });
+        // Use same approach as Order Edit Products tab
+        updateOrderItemField(orderItemId, 'quantity', newQuantity);
     }
 
     function updateOrderItemPrice(orderItemId, newPrice) {
@@ -570,7 +576,8 @@
             return;
         }
 
-        updateOrderItem(orderItemId, { unitPrice: parseFloat(newPrice) });
+        // Use same approach as Order Edit Products tab  
+        updateOrderItemField(orderItemId, 'price', newPrice);
     }
 
     function updateOrderItem(orderItemId, updateData) {
@@ -600,6 +607,41 @@
             },
             error: function() {
                 alert('Error occurred while updating order item.');
+                // Reset to original value
+                var grid = $('#existing-order-items-grid').data('kendoGrid');
+                grid.dataSource.read();
+            }
+        });
+    }
+
+    function updateOrderItemField(orderItemId, fieldType, value) {
+        var data = {
+            orderId: '@Model.OrderId',
+            orderItemId: orderItemId,
+            fieldType: fieldType,
+            value: value
+        };
+        
+        addAntiForgeryToken(data);
+
+        $.ajax({
+            url: "@Html.Raw(Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // Refresh the grid to show updated values
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    grid.dataSource.read();
+                } else {
+                    alert('Error updating order item: ' + (response.message || 'Unknown error'));
+                    // Reset to original value
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    grid.dataSource.read();
+                }
+            },
+            error: function() {
+                alert('Network error occurred while updating order item');
                 // Reset to original value
                 var grid = $('#existing-order-items-grid').data('kendoGrid');
                 grid.dataSource.read();

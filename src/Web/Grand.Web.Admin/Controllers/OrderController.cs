@@ -1999,17 +1999,9 @@ public class OrderController(
 
             bool updated = false;
 
-            if (quantity.HasValue && quantity.Value >= 0)
+            if (quantity.HasValue && quantity.Value > 0)
             {
-                // For BulkAddProductsToOrder, we update OpenQty instead of total Quantity
-                // Validate that new OpenQty doesn't exceed available quantity
-                var maxAllowedOpenQty = orderItem.Quantity - orderItem.ShipQty - orderItem.CancelQty;
-                if (quantity.Value > maxAllowedOpenQty)
-                {
-                    return Json(new { success = false, message = $"Open quantity cannot exceed {maxAllowedOpenQty} (Total: {orderItem.Quantity}, Shipped: {orderItem.ShipQty}, Canceled: {orderItem.CancelQty})" });
-                }
-                
-                orderItem.OpenQty = quantity.Value;
+                orderItem.Quantity = quantity.Value;
                 updated = true;
             }
 

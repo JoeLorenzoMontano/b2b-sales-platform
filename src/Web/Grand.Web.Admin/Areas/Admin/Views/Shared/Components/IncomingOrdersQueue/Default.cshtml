@@ -64,6 +64,20 @@
         border-color: #e68900;
         box-shadow: 0 0 0 0.2rem rgba(255, 152, 0, 0.25);
     }
+    .incoming-order-details-grid .form-control-sm {
+        padding: 2px 6px;
+        font-size: 0.875rem;
+        border-radius: 3px;
+        border: 1px solid #ddd;
+    }
+    .incoming-order-details-grid .form-control-sm:focus {
+        border-color: #ff9800;
+        box-shadow: 0 0 0 0.15rem rgba(255, 152, 0, 0.25);
+    }
+    .incoming-order-details-grid .quantity-input,
+    .incoming-order-details-grid .price-input {
+        text-align: center;
+    }
 </style>
 
 <script>
@@ -301,23 +315,73 @@
                 {
                     field: "Quantity",
                     title: "@Loc["Admin.Orders.Products.Quantity"]",
-                    width: 100,
+                    width: 120,
                     headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
-                    attributes: { style: "text-align:center" }
+                    attributes: { style: "text-align:center" },
+                    template: function(dataItem) {
+                        if (dataItem.CanEdit) {
+                            var quantityInput = `<input type="number" class="form-control form-control-sm quantity-input" 
+                                    value="${dataItem.Quantity}" min="1" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onblur="updateIncomingOrderItemQuantity('${dataItem.Id}', this.value)" 
+                                    style="width: 80px; margin: 0 auto;" />`;
+                            
+                            // Show open/ship/cancel info as context
+                            var additionalInfo = '';
+                            if (dataItem.OpenQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666; text-align: center; margin-top: 2px;">Open: ${dataItem.OpenQty}</div>`;
+                            }
+                            if (dataItem.ShipQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666; text-align: center;">Shipped: ${dataItem.ShipQty}</div>`;
+                            }
+                            if (dataItem.CancelQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666; text-align: center;">Canceled: ${dataItem.CancelQty}</div>`;
+                            }
+                            
+                            return quantityInput + additionalInfo;
+                        } else {
+                            var displayText = `<span>${dataItem.Quantity}</span>`;
+                            // Show open/ship/cancel info for read-only items too
+                            if (dataItem.OpenQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666; text-align: center; margin-top: 2px;">Open: ${dataItem.OpenQty}</div>`;
+                            }
+                            if (dataItem.ShipQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666; text-align: center;">Shipped: ${dataItem.ShipQty}</div>`;
+                            }
+                            if (dataItem.CancelQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666; text-align: center;">Canceled: ${dataItem.CancelQty}</div>`;
+                            }
+                            return displayText;
+                        }
+                    }
                 },
                 {
                     field: "UnitPriceInclTax",
                     title: "@Loc["Admin.Orders.Products.UnitPriceInclTax"]",
-                    width: 120,
+                    width: 140,
                     headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
-                    attributes: { style: "text-align:center" }
+                    attributes: { style: "text-align:center" },
+                    template: function(dataItem) {
+                        if (dataItem.CanEdit) {
+                            return `<input type="number" class="form-control form-control-sm price-input" 
+                                    value="${parseFloat(dataItem.UnitPriceInclTax).toFixed(2)}" step="0.01" min="0" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onblur="updateIncomingOrderItemPrice('${dataItem.Id}', this.value)" 
+                                    style="width: 100px; margin: 0 auto;" />`;
+                        } else {
+                            return `<span>${dataItem.UnitPriceFormatted}</span>`;
+                        }
+                    }
                 },
                 {
                     field: "SubTotal",
                     title: "@Loc["Admin.Orders.Products.Total"]",
                     width: 120,
                     headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
-                    attributes: { style: "text-align:center" }
+                    attributes: { style: "text-align:center" },
+                    template: function(dataItem) {
+                        return `<span id="incoming-subtotal-${dataItem.Id}">${dataItem.SubTotal}</span>`;
+                    }
                 }
             ],
             dataBound: function() {
@@ -435,6 +499,98 @@
                         }
                     });
                 });
+            }
+        });
+    }
+    
+    // Inline editing functions for incoming orders detail grid
+    function updateIncomingOrderItemQuantity(orderItemId, newQuantity) {
+        if (!newQuantity || newQuantity < 1) {
+            alert('Please enter a valid quantity.');
+            // Reset to original value by refreshing the grid
+            refreshIncomingOrderDetailGrid(orderItemId);
+            return;
+        }
+        updateIncomingOrderItemField(orderItemId, 'quantity', newQuantity);
+    }
+    
+    function updateIncomingOrderItemPrice(orderItemId, newPrice) {
+        if (!newPrice || newPrice < 0) {
+            alert('Please enter a valid price.');
+            // Reset to original value by refreshing the grid
+            refreshIncomingOrderDetailGrid(orderItemId);
+            return;
+        }
+        updateIncomingOrderItemField(orderItemId, 'price', newPrice);
+    }
+    
+    function updateIncomingOrderItemField(orderItemId, fieldType, value) {
+        // Find the order ID from the detail grid
+        var orderId = null;
+        
+        // Look through all expanded rows to find the one containing this order item
+        $('.incoming-order-details-grid').each(function() {
+            var detailGrid = $(this).data('kendoGrid');
+            if (detailGrid) {
+                var dataItems = detailGrid.dataSource.data();
+                for (var i = 0; i < dataItems.length; i++) {
+                    if (dataItems[i].Id === orderItemId) {
+                        // Extract order ID from the grid's transport URL or find it another way
+                        var gridElement = $(this);
+                        var controlPanel = gridElement.closest('.k-detail-cell').find('.incoming-order-control-panel');
+                        orderId = controlPanel.attr('data-order-id');
+                        break;
+                    }
+                }
+            }
+            if (orderId) return false; // Break out of each loop
+        });
+        
+        if (!orderId) {
+            alert('Unable to determine order ID for update.');
+            return;
+        }
+        
+        var data = {
+            orderId: orderId,
+            orderItemId: orderItemId,
+            fieldType: fieldType,
+            value: value
+        };
+        
+        addAntiForgeryToken(data);
+        $.ajax({
+            url: '@Html.Raw(Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin }))',
+            type: 'POST',
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // Refresh the specific detail grid that contains this order item
+                    refreshIncomingOrderDetailGrid(orderItemId);
+                } else {
+                    alert('Error updating order item: ' + (response.message || 'Unknown error'));
+                    refreshIncomingOrderDetailGrid(orderItemId);
+                }
+            },
+            error: function() {
+                alert('Error occurred while updating order item.');
+                refreshIncomingOrderDetailGrid(orderItemId);
+            }
+        });
+    }
+    
+    function refreshIncomingOrderDetailGrid(orderItemId) {
+        // Find and refresh the detail grid containing this order item
+        $('.incoming-order-details-grid').each(function() {
+            var detailGrid = $(this).data('kendoGrid');
+            if (detailGrid) {
+                var dataItems = detailGrid.dataSource.data();
+                for (var i = 0; i < dataItems.length; i++) {
+                    if (dataItems[i].Id === orderItemId) {
+                        detailGrid.dataSource.read();
+                        return false; // Found and refreshed, exit
+                    }
+                }
             }
         });
     }

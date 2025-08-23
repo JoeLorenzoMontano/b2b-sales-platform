@@ -421,24 +421,15 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
             {
                 var productwarehouse =
                     product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouse.Id);
-                var stockQuantity = (productwarehouse?.StockQuantity ?? 0).ToInt();
-                var reservedQuantity = (productwarehouse?.ReservedQuantity ?? 0).ToInt();
-                var availableStock = stockQuantity - reservedQuantity;
-                
-                // Only show warehouses with available stock (unless it's the selected warehouse)
-                var isSelected = updateCartItem != null && updateCartItem.WarehouseId == warehouse.Id;
-                if (availableStock > 0 || isSelected)
-                {
-                    model.ProductWarehouses.Add(new ProductDetailsModel.ProductWarehouseModel {
-                        Use = productwarehouse != null,
-                        StockQuantity = stockQuantity,
-                        ReservedQuantity = reservedQuantity,
-                        WarehouseId = warehouse.Id,
-                        Name = warehouse.Name,
-                        Code = warehouse.Code,
-                        Selected = isSelected
-                    });
-                }
+                model.ProductWarehouses.Add(new ProductDetailsModel.ProductWarehouseModel {
+                    Use = productwarehouse != null,
+                    StockQuantity = (productwarehouse?.StockQuantity ?? 0).ToInt(),
+                    ReservedQuantity = (productwarehouse?.ReservedQuantity ?? 0).ToInt(),
+                    WarehouseId = warehouse.Id,
+                    Name = warehouse.Name,
+                    Code = warehouse.Code,
+                    Selected = updateCartItem != null && updateCartItem.WarehouseId == warehouse.Id
+                });
             }
 
         //shipping info

@@ -15,20 +15,17 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
     private readonly CatalogSettings _catalogSettings;
     private readonly IRepository<Product> _productRepository;
     private readonly ISpecificationAttributeService _specificationAttributeService;
-    private readonly IStockQuantityService _stockQuantityService;
 
     public GetSearchProductsQueryHandler(
         IRepository<Product> productRepository,
         ISpecificationAttributeService specificationAttributeService,
         CatalogSettings catalogSettings,
-        AccessControlConfig accessControlConfig,
-        IStockQuantityService stockQuantityService)
+        AccessControlConfig accessControlConfig)
     {
         _productRepository = productRepository;
         _specificationAttributeService = specificationAttributeService;
         _catalogSettings = catalogSettings;
         _accessControlConfig = accessControlConfig;
-        _stockQuantityService = stockQuantityService;
     }
     public async Task<(IPagedList<Product> products, IList<string> filterableSpecificationAttributeOptionIds)> Handle(GetSearchProductsQuery request, CancellationToken cancellationToken)
     {
@@ -186,7 +183,6 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
         query = ApplyVendorFiltering(request, query);
         query = ApplyWarehouseFiltering(request, query);
         query = ApplyTagFiltering(request, query);
-        query = ApplyInventoryFiltering(request, query);
 
         return query;
     }
@@ -366,25 +362,6 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
     {
         if (!string.IsNullOrEmpty(request.ProductTag))
             query = query.Where(x => x.ProductTags.Any(y => y == request.ProductTag));
-        return query;
-    }
-
-    private IQueryable<Product> ApplyInventoryFiltering(GetSearchProductsQuery request, IQueryable<Product> query)
-    {
-        if (request.FilterByInventory && _catalogSettings.FilterProductsByInventory)
-        {
-            query = query.Where(p => 
-                // Products that track stock by product
-                (p.ManageInventoryMethodId == ManageInventoryMethod.ManageStock && p.StockQuantity > p.ReservedQuantity) ||
-                // Products that track stock by product attributes
-                (p.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes && 
-                 p.ProductAttributeCombinations.Any(c => c.StockQuantity > c.ReservedQuantity)) ||
-                // Products that use warehouse inventory
-                (p.UseMultipleWarehouses && p.ProductWarehouseInventory.Any(w => w.StockQuantity > w.ReservedQuantity)) ||
-                // Products that don't track inventory
-                p.ManageInventoryMethodId == ManageInventoryMethod.DontManageStock
-            );
-        }
         return query;
     }
 

@@ -38,5 +38,4 @@ public class GetSearchProductsQuery : IRequest<(IPagedList<Product> products, IL
     public ProductSortingEnum OrderBy { get; set; } = ProductSortingEnum.Position;
     public bool ShowHidden { get; set; }
     public bool? OverridePublished { get; set; }
-    public bool FilterByInventory { get; set; } = true;
 }

@@ -68,8 +68,10 @@
     // Function expected by the ProductSearchAdd component
     function refreshCurrentProductsGrid() {
         var grid = $('#existing-order-items-grid').data('kendoGrid');
-        if (grid) {
+        if (grid && grid.dataSource) {
             grid.dataSource.read();
+        } else {
+            console.warn('Grid or dataSource not available for refresh');
         }
     }
 </script>

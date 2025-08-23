@@ -278,7 +278,7 @@ function buildProductRow@(componentId.Replace("-", "_"))(product) {
         html += `</select></div>`;
     }
     
-    html += `<button class="add-product-btn" onclick="addProductToContext@(componentId.Replace("-", "_"))('${product.id}', '${product.uniqueId}', '${product.combinationId || ''}')">
+    html += `<button type="button" class="add-product-btn" onclick="addProductToContext@(componentId.Replace("-", "_"))('${product.id}', '${product.uniqueId}', '${product.combinationId || ''}')">
                 Add to @Model.ContextType
              </button>
         </div>

@@ -376,11 +376,8 @@
                             if (detailGrid) {
                                 detailGrid.dataSource.read();
                             }
-                            // Also refresh main incoming orders grid
-                            var mainGrid = $('#incoming-orders-grid').data('kendoGrid');
-                            if (mainGrid) {
-                                mainGrid.dataSource.read();
-                            }
+                            // Note: Removed main grid refresh to prevent row collapse when adding products
+                            // The main grid doesn't need to be refreshed when adding products to an order
                         };
                         
                         // Override the global refresh function for this context

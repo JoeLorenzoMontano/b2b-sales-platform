@@ -323,7 +323,9 @@
                             var quantityInput = `<input type="number" class="form-control form-control-sm quantity-input" 
                                     value="${dataItem.Quantity}" min="1" 
                                     data-order-item-id="${dataItem.Id}" 
-                                    onblur="updateIncomingOrderItemQuantity('${dataItem.Id}', this.value)" 
+                                    data-original-value="${dataItem.Quantity}"
+                                    onfocus="storeOriginalValue(this)"
+                                    onblur="updateIncomingOrderItemQuantity('${dataItem.Id}', this.value, this.dataset.originalValue)" 
                                     style="width: 80px; margin: 0 auto;" />`;
                             
                             // Show open/ship/cancel info as context
@@ -363,10 +365,13 @@
                     attributes: { style: "text-align:center" },
                     template: function(dataItem) {
                         if (dataItem.CanEdit) {
+                            var originalPrice = parseFloat(dataItem.UnitPriceInclTax).toFixed(2);
                             return `<input type="number" class="form-control form-control-sm price-input" 
-                                    value="${parseFloat(dataItem.UnitPriceInclTax).toFixed(2)}" step="0.01" min="0" 
+                                    value="${originalPrice}" step="0.01" min="0" 
                                     data-order-item-id="${dataItem.Id}" 
-                                    onblur="updateIncomingOrderItemPrice('${dataItem.Id}', this.value)" 
+                                    data-original-value="${originalPrice}"
+                                    onfocus="storeOriginalValue(this)"
+                                    onblur="updateIncomingOrderItemPrice('${dataItem.Id}', this.value, this.dataset.originalValue)" 
                                     style="width: 100px; margin: 0 auto;" />`;
                         } else {
                             return `<span>${dataItem.UnitPriceFormatted}</span>`;
@@ -504,7 +509,18 @@
     }
     
     // Inline editing functions for incoming orders detail grid
-    function updateIncomingOrderItemQuantity(orderItemId, newQuantity) {
+    function storeOriginalValue(input) {
+        // Store the current value when field gets focus
+        input.dataset.originalValue = input.value;
+    }
+    
+    function updateIncomingOrderItemQuantity(orderItemId, newQuantity, originalQuantity) {
+        // Check if value actually changed
+        if (newQuantity === originalQuantity) {
+            // No change, do nothing
+            return;
+        }
+        
         if (!newQuantity || newQuantity < 1) {
             alert('Please enter a valid quantity.');
             // Reset to original value by refreshing the grid
@@ -514,14 +530,24 @@
         updateIncomingOrderItemField(orderItemId, 'quantity', newQuantity);
     }
     
-    function updateIncomingOrderItemPrice(orderItemId, newPrice) {
+    function updateIncomingOrderItemPrice(orderItemId, newPrice, originalPrice) {
+        // Normalize prices to compare (both to 2 decimal places)
+        var normalizedNew = parseFloat(newPrice).toFixed(2);
+        var normalizedOriginal = parseFloat(originalPrice).toFixed(2);
+        
+        // Check if value actually changed
+        if (normalizedNew === normalizedOriginal) {
+            // No change, do nothing
+            return;
+        }
+        
         if (!newPrice || newPrice < 0) {
             alert('Please enter a valid price.');
             // Reset to original value by refreshing the grid
             refreshIncomingOrderDetailGrid(orderItemId);
             return;
         }
-        updateIncomingOrderItemField(orderItemId, 'price', newPrice);
+        updateIncomingOrderItemField(orderItemId, 'price', normalizedNew);
     }
     
     function updateIncomingOrderItemField(orderItemId, fieldType, value) {

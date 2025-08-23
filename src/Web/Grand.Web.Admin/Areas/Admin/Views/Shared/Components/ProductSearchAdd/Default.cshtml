@@ -7,48 +7,22 @@
 <!-- Search/Filter Section -->
 <div class="form-horizontal">
     <div class="form-body">
+        <!-- Single row layout: Product Name + Brand + Search button -->
         <div class="form-group popup">
-            <admin-label class="col-sm-2 control-label" asp-for="SearchProductName"/>
-            <div class="col-8 col-md-4 col-sm-4">
-                <admin-input asp-for="SearchProductName"/>
-            </div>
-            <div class="col-8 col-md-6 col-sm-4 mt-mobile-10">
-                <div class="btn-group btn-group-devided">
+            <div class="row align-items-end">
+                <div class="col-md-4 col-sm-6">
+                    <admin-label asp-for="SearchProductName"/>
+                    <admin-input asp-for="SearchProductName"/>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <admin-label asp-for="SearchBrandId"/>
+                    <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
+                </div>
+                <div class="col-md-2 col-sm-12 mt-mobile-10">
                     <button class="btn btn-success filter-submit" id="search-products-@componentId" type="button">
                         <i class="fa fa-search"></i> @Loc["Admin.Common.Search"]
                     </button>
-                    <button type="button" class="btn btn-default filter-extend-button" data-component="@componentId">
-                        <i class="fa fa-filter"></i>
-                    </button>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Brand filter in default filters -->
-        <div class="form-group popup">
-            <admin-label class="col-sm-2 control-label" asp-for="SearchBrandId"/>
-            <div class="col-8 col-md-4 col-sm-4">
-                <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
-            </div>
-        </div>
-        
-        <!-- Extended Filters -->
-        <div class="form-group extend-collapse extend-collapse-@componentId" style="display:none;">
-            <admin-label asp-for="SearchCategoryId"/>
-            <div class="col-md-9 col-sm-9">
-                <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories"/>
-            </div>
-        </div>
-        <div class="form-group extend-collapse extend-collapse-@componentId" style="display:none;">
-            <admin-label asp-for="SearchCollectionId"/>
-            <div class="col-md-9 col-sm-9">
-                <admin-select asp-for="SearchCollectionId" asp-items="Model.AvailableCollections"/>
-            </div>
-        </div>
-        <div class="form-group extend-collapse extend-collapse-@componentId" style="display:none;">
-            <admin-label asp-for="SearchProductTypeId"/>
-            <div class="col-md-9 col-sm-9">
-                <admin-select asp-for="SearchProductTypeId" asp-items="Model.AvailableProductTypes"/>
             </div>
         </div>
     </div>
@@ -57,7 +31,7 @@
 <!-- Product Search Results (LeafLink Style) -->
 <div class="form-group">
     <div class="col-md-12">
-        <h4>@Loc["Admin.Orders.Products.AddNew.Note1"]</h4>
+        <h4 id="search-results-header-@componentId" style="display: none;">@Loc["Admin.Orders.Products.AddNew.Note1"]</h4>
         <div id="product-search-results-@componentId" style="max-height: 600px; overflow-y: auto;"></div>
     </div>
 </div>
@@ -168,11 +142,6 @@
 <script>
 $(document).ready(function() {
     initializeProductSearch@(componentId.Replace("-", "_"))();
-    
-    // Filter extend button
-    $('button[data-component="@componentId"]').click(function() {
-        $('.extend-collapse-@componentId').toggle();
-    });
 });
 
 var currentSearchData@(componentId.Replace("-", "_")) = {};
@@ -199,10 +168,7 @@ function performProductSearch@(componentId.Replace("-", "_"))(page = 1) {
     currentPage@(componentId.Replace("-", "_")) = page;
     currentSearchData@(componentId.Replace("-", "_")) = {
         SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
-        SearchCategoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
         SearchBrandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
-        SearchCollectionId: $('#@Html.IdFor(model => model.SearchCollectionId)').val(),
-        SearchProductTypeId: $('#@Html.IdFor(model => model.SearchProductTypeId)').val(),
         page: page,
         pageSize: 10
     };
@@ -216,8 +182,10 @@ function performProductSearch@(componentId.Replace("-", "_"))(page = 1) {
         data: currentSearchData@(componentId.Replace("-", "_")),
         success: function(response) {
             if (response.success) {
+                $('#search-results-header-@componentId').show();
                 displaySearchResults@(componentId.Replace("-", "_"))(response.data, response.totalCount);
             } else {
+                $('#search-results-header-@componentId').show();
                 $('#product-search-results-@componentId').html('<div class="alert alert-warning">No products found matching your search criteria.</div>');
             }
         },

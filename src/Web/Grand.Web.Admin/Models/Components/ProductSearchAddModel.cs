@@ -9,10 +9,7 @@ public class ProductSearchAddModel : BaseModel
 {
     public ProductSearchAddModel()
     {
-        AvailableCategories = new List<SelectListItem>();
         AvailableBrands = new List<SelectListItem>();
-        AvailableCollections = new List<SelectListItem>();
-        AvailableProductTypes = new List<SelectListItem>();
     }
 
     /// <summary>
@@ -38,20 +35,8 @@ public class ProductSearchAddModel : BaseModel
     [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchProductName")]
     public string SearchProductName { get; set; }
 
-    [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchCategory")]
-    public string SearchCategoryId { get; set; }
-
     [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchBrand")]
     public string SearchBrandId { get; set; }
 
-    [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchCollection")]
-    public string SearchCollectionId { get; set; }
-
-    [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchProductType")]
-    public int SearchProductTypeId { get; set; }
-
-    public IList<SelectListItem> AvailableCategories { get; set; }
     public IList<SelectListItem> AvailableBrands { get; set; }
-    public IList<SelectListItem> AvailableCollections { get; set; }
-    public IList<SelectListItem> AvailableProductTypes { get; set; }
 }

@@ -76,17 +76,19 @@
                                 </div>
                             </div>
                             
+                            <!-- Brand filter in default filters -->
+                            <div class="form-group popup">
+                                <admin-label class="col-sm-2 control-label" asp-for="SearchBrandId"/>
+                                <div class="col-8 col-md-4 col-sm-4">
+                                    <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
+                                </div>
+                            </div>
+                            
                             <!-- Extended Filters -->
                             <div class="form-group extend-collapse" style="display:none;">
                                 <admin-label asp-for="SearchCategoryId"/>
                                 <div class="col-md-9 col-sm-9">
                                     <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories"/>
-                                </div>
-                            </div>
-                            <div class="form-group extend-collapse" style="display:none;">
-                                <admin-label asp-for="SearchBrandId"/>
-                                <div class="col-md-9 col-sm-9">
-                                    <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
                                 </div>
                             </div>
                             <div class="form-group extend-collapse" style="display:none;">
@@ -278,15 +280,15 @@
                     template: function(dataItem) {
                         if (dataItem.CanEdit) {
                             var quantityInput = `<input type="number" class="form-control form-control-sm quantity-input" 
-                                    value="${dataItem.Quantity}" min="1" 
+                                    value="${dataItem.OpenQty}" min="0" 
                                     data-order-item-id="${dataItem.Id}" 
                                     onblur="updateOrderItemQuantity('${dataItem.Id}', this.value)" 
                                     style="width: 80px;" />`;
                             
-                            // Add open/cancel quantity info below like in Order Edit
-                            var additionalInfo = '';
-                            if (dataItem.OpenQty > 0) {
-                                additionalInfo += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            // Show total quantity and other info as context
+                            var additionalInfo = `<div style="font-size: 11px; color: #666;">Total Ordered: ${dataItem.Quantity}</div>`;
+                            if (dataItem.ShipQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666;">Shipped: ${dataItem.ShipQty}</div>`;
                             }
                             if (dataItem.CancelQty > 0) {
                                 additionalInfo += `<div style="font-size: 11px; color: #666;">Canceled: ${dataItem.CancelQty}</div>`;
@@ -294,10 +296,11 @@
                             
                             return quantityInput + additionalInfo;
                         } else {
-                            var displayText = `<span class="text-muted">${dataItem.Quantity}</span>`;
-                            // Show open/cancel info for read-only items too
-                            if (dataItem.OpenQty > 0) {
-                                displayText += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            var displayText = `<span class="text-muted">${dataItem.OpenQty}</span>`;
+                            // Show total and status info for read-only items too
+                            displayText += `<div style="font-size: 11px; color: #666;">Total Ordered: ${dataItem.Quantity}</div>`;
+                            if (dataItem.ShipQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666;">Shipped: ${dataItem.ShipQty}</div>`;
                             }
                             if (dataItem.CancelQty > 0) {
                                 displayText += `<div style="font-size: 11px; color: #666;">Canceled: ${dataItem.CancelQty}</div>`;

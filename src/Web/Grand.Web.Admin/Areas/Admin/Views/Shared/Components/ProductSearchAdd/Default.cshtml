@@ -1,0 +1,338 @@
+@using Grand.Web.Admin.Models.Components
+@model ProductSearchAddModel
+@{
+    var componentId = "product-search-" + ViewData.TemplateInfo.HtmlFieldPrefix.Replace(".", "_");
+}
+
+<!-- Search/Filter Section -->
+<div class="form-horizontal">
+    <div class="form-body">
+        <div class="form-group popup">
+            <admin-label class="col-sm-2 control-label" asp-for="SearchProductName"/>
+            <div class="col-8 col-md-4 col-sm-4">
+                <admin-input asp-for="SearchProductName"/>
+            </div>
+            <div class="col-8 col-md-6 col-sm-4 mt-mobile-10">
+                <div class="btn-group btn-group-devided">
+                    <button class="btn btn-success filter-submit" id="search-products-@componentId" type="button">
+                        <i class="fa fa-search"></i> @Loc["Admin.Common.Search"]
+                    </button>
+                    <button type="button" class="btn btn-default filter-extend-button" data-component="@componentId">
+                        <i class="fa fa-filter"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Brand filter in default filters -->
+        <div class="form-group popup">
+            <admin-label class="col-sm-2 control-label" asp-for="SearchBrandId"/>
+            <div class="col-8 col-md-4 col-sm-4">
+                <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
+            </div>
+        </div>
+        
+        <!-- Extended Filters -->
+        <div class="form-group extend-collapse extend-collapse-@componentId" style="display:none;">
+            <admin-label asp-for="SearchCategoryId"/>
+            <div class="col-md-9 col-sm-9">
+                <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories"/>
+            </div>
+        </div>
+        <div class="form-group extend-collapse extend-collapse-@componentId" style="display:none;">
+            <admin-label asp-for="SearchCollectionId"/>
+            <div class="col-md-9 col-sm-9">
+                <admin-select asp-for="SearchCollectionId" asp-items="Model.AvailableCollections"/>
+            </div>
+        </div>
+        <div class="form-group extend-collapse extend-collapse-@componentId" style="display:none;">
+            <admin-label asp-for="SearchProductTypeId"/>
+            <div class="col-md-9 col-sm-9">
+                <admin-select asp-for="SearchProductTypeId" asp-items="Model.AvailableProductTypes"/>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Search Results (LeafLink Style) -->
+<div class="form-group">
+    <div class="col-md-12">
+        <h4>@Loc["Admin.Orders.Products.AddNew.Note1"]</h4>
+        <div id="product-search-results-@componentId" style="max-height: 600px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<style>
+    .product-search-item {
+        border: 1px solid #e4e5e7;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        padding: 15px;
+        background-color: #fff;
+    }
+    
+    .product-search-item:hover {
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .product-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .product-sku {
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+    }
+    
+    .product-controls {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .inline-field {
+        display: flex;
+        flex-direction: column;
+        min-width: 120px;
+    }
+    
+    .inline-field label {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 3px;
+        font-weight: 500;
+    }
+    
+    .inline-field input, .inline-field select {
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 5px 8px;
+        font-size: 0.9em;
+    }
+    
+    .add-product-btn {
+        background-color: #28a745;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        margin-top: 20px;
+    }
+    
+    .add-product-btn:hover {
+        background-color: #218838;
+    }
+    
+    .add-product-btn:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+    }
+    
+    .search-pagination {
+        text-align: center;
+        margin-top: 20px;
+    }
+    
+    .search-pagination button {
+        background: none;
+        border: 1px solid #ddd;
+        padding: 5px 10px;
+        margin: 0 2px;
+        cursor: pointer;
+    }
+    
+    .search-pagination button:hover, .search-pagination button.active {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .brand-badge {
+        display: inline-block;
+        background-color: #17a2b8;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: 500;
+        margin-left: 8px;
+    }
+</style>
+
+<script>
+$(document).ready(function() {
+    initializeProductSearch@(componentId.Replace("-", "_"))();
+    
+    // Filter extend button
+    $('button[data-component="@componentId"]').click(function() {
+        $('.extend-collapse-@componentId').toggle();
+    });
+});
+
+var currentSearchData@(componentId.Replace("-", "_")) = {};
+var currentPage@(componentId.Replace("-", "_")) = 1;
+var totalPages@(componentId.Replace("-", "_")) = 1;
+
+function initializeProductSearch@(componentId.Replace("-", "_"))() {
+    // Search button click
+    $('#search-products-@componentId').click(function() {
+        performProductSearch@(componentId.Replace("-", "_"))(1);
+        return false;
+    });
+    
+    // Search on Enter key
+    $('#@Html.IdFor(model => model.SearchProductName)').keydown(function(event) {
+        if (event.keyCode == 13) {
+            performProductSearch@(componentId.Replace("-", "_"))(1);
+            return false;
+        }
+    });
+}
+
+function performProductSearch@(componentId.Replace("-", "_"))(page = 1) {
+    currentPage@(componentId.Replace("-", "_")) = page;
+    currentSearchData@(componentId.Replace("-", "_")) = {
+        SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
+        SearchCategoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
+        SearchBrandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
+        SearchCollectionId: $('#@Html.IdFor(model => model.SearchCollectionId)').val(),
+        SearchProductTypeId: $('#@Html.IdFor(model => model.SearchProductTypeId)').val(),
+        page: page,
+        pageSize: 10
+    };
+    
+    addAntiForgeryToken(currentSearchData@(componentId.Replace("-", "_")));
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action(Model.SearchEndpoint, "Order", new { area = Constants.AreaAdmin }))",
+        type: "POST",
+        dataType: "json",
+        data: currentSearchData@(componentId.Replace("-", "_")),
+        success: function(response) {
+            if (response.success) {
+                displaySearchResults@(componentId.Replace("-", "_"))(response.data, response.totalCount);
+            } else {
+                $('#product-search-results-@componentId').html('<div class="alert alert-warning">No products found matching your search criteria.</div>');
+            }
+        },
+        error: function() {
+            $('#product-search-results-@componentId').html('<div class="alert alert-danger">Error occurred while searching products.</div>');
+        }
+    });
+}
+
+function displaySearchResults@(componentId.Replace("-", "_"))(products, totalCount) {
+    var html = '';
+    totalPages@(componentId.Replace("-", "_")) = Math.ceil(totalCount / 10);
+    
+    if (products && products.length > 0) {
+        products.forEach(function(product) {
+            html += buildProductRow@(componentId.Replace("-", "_"))(product);
+        });
+        
+        // Add pagination
+        if (totalPages@(componentId.Replace("-", "_")) > 1) {
+            html += '<div class="search-pagination">';
+            for (var i = 1; i <= totalPages@(componentId.Replace("-", "_")); i++) {
+                var activeClass = i === currentPage@(componentId.Replace("-", "_")) ? 'active' : '';
+                html += `<button class="${activeClass}" onclick="performProductSearch@(componentId.Replace("-", "_"))(${i})">${i}</button>`;
+            }
+            html += '</div>';
+        }
+    } else {
+        html = '<div class="alert alert-info">No products found matching your search criteria.</div>';
+    }
+    
+    $('#product-search-results-@componentId').html(html);
+}
+
+function buildProductRow@(componentId.Replace("-", "_"))(product) {
+    var brandDisplay = product.brandName ? ` <span class="brand-badge">${product.brandName}</span>` : '';
+    
+    var html = `<div class="product-search-item">
+        <div class="product-name">${product.name}${brandDisplay}</div>
+        ${product.attributeInfo ? `<div class="product-sku">${product.attributeInfo}</div>` : ''}
+        <div class="product-controls">
+            <div class="inline-field">
+                <label>Quantity</label>
+                <input type="number" class="form-control quantity-input-${product.uniqueId}" value="1" min="1" />
+            </div>
+            <div class="inline-field">
+                <label>Unit Price</label>
+                <input type="number" class="form-control price-input-${product.uniqueId}" value="${product.price || 0}" step="0.01" min="0" />
+            </div>`;
+    
+    if (product.warehouses && product.warehouses.length > 0) {
+        html += `<div class="inline-field">
+            <label>Warehouse</label>
+            <select class="form-control warehouse-select-${product.uniqueId}">`;
+        product.warehouses.forEach(function(warehouse) {
+            html += `<option value="${warehouse.id}">${warehouse.name}</option>`;
+        });
+        html += `</select></div>`;
+    }
+    
+    html += `<button class="add-product-btn" onclick="addProductToContext@(componentId.Replace("-", "_"))('${product.id}', '${product.uniqueId}', '${product.combinationId || ''}')">
+                Add to @Model.ContextType
+             </button>
+        </div>
+    </div>`;
+    
+    return html;
+}
+
+function addProductToContext@(componentId.Replace("-", "_"))(productId, uniqueId, combinationId) {
+    var quantity = parseInt($('.quantity-input-' + uniqueId).val());
+    var unitPrice = parseFloat($('.price-input-' + uniqueId).val());
+    var warehouseId = $('.warehouse-select-' + uniqueId).val() || '';
+    
+    if (!quantity || quantity < 1) {
+        alert('Please enter a valid quantity.');
+        return;
+    }
+    
+    if (unitPrice < 0) {
+        alert('Please enter a valid price.');
+        return;
+    }
+    
+    var data = {
+        '@Model.ContextType.ToLower()Id': '@Model.ContextId',
+        productId: productId,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        warehouseId: warehouseId,
+        attributeCombinationId: combinationId
+    };
+    
+    addAntiForgeryToken(data);
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action(Model.AddEndpoint, "Order", new { area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: data,
+        success: function(response) {
+            if (response.success) {
+                // Refresh current products grid if it exists
+                if (typeof refreshCurrentProductsGrid !== 'undefined') {
+                    refreshCurrentProductsGrid();
+                }
+                // Clear the added product's inputs
+                $('.quantity-input-' + uniqueId).val('1');
+                $('.price-input-' + uniqueId).val(data.unitPrice);
+            } else {
+                alert('Error adding product: ' + (response.message || 'Unknown error'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while adding product.');
+        }
+    });
+}
+</script>

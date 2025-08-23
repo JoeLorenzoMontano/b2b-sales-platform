@@ -2576,6 +2576,32 @@ public class OrderController(
         return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", fileName);
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetProductSearchComponent(string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found or access denied" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            // Return the ViewComponent directly - this will return HTML content
+            return ViewComponent("ProductSearchAdd", new { contextId = orderId, contextType = "order" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { 
+                success = false, 
+                message = "Error loading component: " + ex.Message 
+            });
+        }
+    }
+
     private string EscapeCsvField(string field)
     {
         if (string.IsNullOrEmpty(field))

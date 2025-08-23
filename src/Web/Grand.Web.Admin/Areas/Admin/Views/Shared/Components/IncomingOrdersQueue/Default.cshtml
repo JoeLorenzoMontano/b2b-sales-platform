@@ -332,21 +332,66 @@
                 }
                 
                 // Create a new control panel
-                var panel = $('<div class="incoming-order-control-panel row mt-3 mb-3" data-order-id="' + orderId + '"></div>');
+                var panel = $('<div class="incoming-order-control-panel" data-order-id="' + orderId + '"></div>');
                     
-                // Create the requested shipment date picker
+                // Add requested shipment date row
+                var dateRow = $('<div class="row mt-3 mb-3"></div>');
                 var dateSection = $('<div class="col-md-6 form-group row"></div>');
                 dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]:</label>');
                 dateSection.append('<div class="col-sm-8"><input type="date" id="requestedShipmentDate_' + orderId + '" class="form-control requested-shipment-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
-                panel.append(dateSection);
+                dateRow.append(dateSection);
                 
                 // Create the action buttons section to match fulfillment queue
                 var buttonSection = $('<div class="col-md-6 text-right"></div>');
-                // For incoming orders, we don't have a shipment button, but keep the structure
-                panel.append(buttonSection);
+                dateRow.append(buttonSection);
+                panel.append(dateRow);
+                
+                // Add ProductSearchAdd component section
+                var productSearchRow = $('<div class="row mt-3"></div>');
+                var productSearchSection = $('<div class="col-12"></div>');
+                productSearchSection.append('<h5>Add Products to Order</h5>');
+                productSearchSection.append('<div id="product-search-component-' + orderId + '"></div>');
+                productSearchRow.append(productSearchSection);
+                panel.append(productSearchRow);
                 
                 // Add the panel after the grid
                 gridElement.after(panel);
+                
+                // Load the ProductSearchAdd component via AJAX
+                $.ajax({
+                    url: '@Html.Raw(Url.Action("GetProductSearchComponent", "Order", new { area = Constants.AreaAdmin }))',
+                    type: 'POST',
+                    data: {
+                        orderId: orderId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(componentHtml) {
+                        // The controller now returns HTML directly
+                        $('#product-search-component-' + orderId).html(componentHtml);
+                        
+                        // Add refresh function for this specific order's grid
+                        window['refreshCurrentProductsGrid_' + orderId] = function() {
+                            // Refresh the detail grid for this specific order
+                            var detailGrid = gridElement.data('kendoGrid');
+                            if (detailGrid) {
+                                detailGrid.dataSource.read();
+                            }
+                            // Also refresh main incoming orders grid
+                            var mainGrid = $('#incoming-orders-grid').data('kendoGrid');
+                            if (mainGrid) {
+                                mainGrid.dataSource.read();
+                            }
+                        };
+                        
+                        // Override the global refresh function for this context
+                        if (typeof window.refreshCurrentProductsGrid === 'undefined') {
+                            window.refreshCurrentProductsGrid = window['refreshCurrentProductsGrid_' + orderId];
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#product-search-component-' + orderId).html('<div class="alert alert-danger">Error loading component: ' + error + '</div>');
+                    }
+                });
                     
                 // Load existing requested shipment date if available
                 $.ajax({

@@ -303,7 +303,7 @@ function addProductToContext@(componentId.Replace("-", "_"))(productId, uniqueId
     }
     
     var data = {
-        '@Model.ContextType.ToLower()Id': '@Model.ContextId',
+        orderId: '@Model.ContextId',
         productId: productId,
         quantity: quantity,
         unitPrice: unitPrice,

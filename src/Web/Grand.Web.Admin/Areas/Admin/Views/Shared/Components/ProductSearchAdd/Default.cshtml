@@ -76,7 +76,7 @@
         padding: 8px 12px;
     }
     
-    /* Selected product form styling */
+    /* Selected product form styling - slim design */
     #selected-product-form-@componentId .panel {
         border: 1px solid #28a745;
         border-radius: 4px;
@@ -84,13 +84,22 @@
     }
     
     #selected-product-form-@componentId .panel-body {
-        padding: 15px;
-        background-color: #f8f9fa;
+        padding: 12px 15px;
+        background-color: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
     }
     
     #selected-product-form-@componentId h5 {
-        margin: 0 0 15px 0;
+        margin: 0 0 10px 0;
         color: #333;
+        font-size: 1.1em;
+        font-weight: 500;
+    }
+    
+    #selected-product-form-@componentId .selected-product-name {
+        color: #333;
+        font-weight: 500; /* Medium weight, not bold */
     }
     
     /* Brand badge styling for autocomplete dropdown */
@@ -105,23 +114,26 @@
         margin-left: 5px;
     }
     
-    /* Autocomplete item template styling */
+    /* Autocomplete item template styling - slim design */
     .k-list-container .k-item {
-        padding: 8px 12px;
+        padding: 6px 12px;
         border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9em;
+        line-height: 1.3;
     }
     
     .k-list-container .k-item:hover {
         background-color: #e9ecef;
     }
     
-    .k-list-container .k-item strong {
+    .k-list-container .k-item .product-name {
         color: #333;
+        font-weight: normal; /* Regular weight, not bold */
     }
     
     .k-list-container .k-item .text-muted {
         color: #6c757d;
-        font-size: 0.85em;
+        font-size: 0.8em;
     }
     
     /* Success feedback styling */
@@ -130,18 +142,38 @@
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
     }
     
-    /* Form styling improvements */
+    /* Form styling improvements - compact design */
     #selected-product-form-@componentId .form-group {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
     
     #selected-product-form-@componentId .form-group label {
         font-weight: 500;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
+        color: #333;
+        font-size: 0.9em;
+    }
+    
+    #selected-product-form-@componentId .form-control {
+        padding: 6px 10px;
+        font-size: 0.9em;
+        height: auto;
     }
     
     #selected-product-form-@componentId .btn {
-        margin-right: 10px;
+        margin-right: 8px;
+        padding: 6px 12px;
+        font-size: 0.9em;
+    }
+    
+    #selected-product-form-@componentId .row {
+        margin-left: -5px;
+        margin-right: -5px;
+    }
+    
+    #selected-product-form-@componentId .col-md-3 {
+        padding-left: 5px;
+        padding-right: 5px;
     }
 </style>
 
@@ -186,7 +218,7 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         template: function(dataItem) {
             var brandDisplay = dataItem.brandName ? ` <span class="brand-badge">${dataItem.brandName}</span>` : '';
             var attributeDisplay = dataItem.attributeInfo ? `<br/><small class="text-muted">${dataItem.attributeInfo}</small>` : '';
-            return `<div><strong>${dataItem.name}${brandDisplay}</strong>${attributeDisplay}</div>`;
+            return `<div><span class="product-name">${dataItem.name}${brandDisplay}</span>${attributeDisplay}</div>`;
         },
         select: function(e) {
             var dataItem = e.dataItem;
@@ -222,7 +254,7 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
     // Set product title
     var brandDisplay = product.brandName ? ` <span class="brand-badge">${product.brandName}</span>` : '';
     var attributeDisplay = product.attributeInfo ? ` - ${product.attributeInfo}` : '';
-    $('#selected-product-title-@componentId').html(`Selected: <strong>${product.name}${brandDisplay}</strong>${attributeDisplay}`);
+    $('#selected-product-title-@componentId').html(`Selected: <span class="selected-product-name">${product.name}${brandDisplay}</span>${attributeDisplay}`);
     
     // Set default values
     $('#selected-quantity-@componentId').val(1);

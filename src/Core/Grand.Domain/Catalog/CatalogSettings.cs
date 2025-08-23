@@ -434,4 +434,9 @@ public class CatalogSettings : ISettings
     ///     categories page
     /// </summary>
     public int MaxCatalogPageSize { get; set; } = 10;
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether to filter products by inventory availability
+    /// </summary>
+    public bool FilterProductsByInventory { get; set; } = true;
 }

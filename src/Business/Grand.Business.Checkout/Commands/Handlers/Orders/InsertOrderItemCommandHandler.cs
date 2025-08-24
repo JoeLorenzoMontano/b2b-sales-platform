@@ -53,8 +53,8 @@ public class InsertOrderItemCommandHandler : IRequestHandler<InsertOrderItemComm
 
         await _orderService.UpdateOrder(request.Order);
 
-        //adjust inventory - reduce actual stock quantity when adding to existing orders
-        await ReduceStockQuantity(request.Product, request.OrderItem.Quantity, request.OrderItem.WarehouseId, request.OrderItem.Attributes);
+        //adjust inventory - reserve stock quantity when adding to existing orders  
+        await _inventoryManageService.AdjustReserved(request.Product, -request.OrderItem.Quantity, request.OrderItem.Attributes, request.OrderItem.WarehouseId);
 
         //check order status
         await _mediator.Send(new CheckOrderStatusCommand { Order = request.Order }, cancellationToken);
@@ -92,35 +92,4 @@ public class InsertOrderItemCommandHandler : IRequestHandler<InsertOrderItemComm
         return true;
     }
 
-    private async Task ReduceStockQuantity(Product product, double quantity, string warehouseId, IList<CustomAttribute> attributes)
-    {
-        if (product.ManageInventoryMethodId != ManageInventoryMethod.ManageStock && 
-            product.ManageInventoryMethodId != ManageInventoryMethod.ManageStockByAttributes)
-            return;
-
-        if (product.UseMultipleWarehouses && !string.IsNullOrEmpty(warehouseId))
-        {
-            // Multi-warehouse scenario - reduce stock in the specific warehouse
-            var warehouseInventory = product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouseId);
-            if (warehouseInventory != null)
-            {
-                var previousStock = warehouseInventory.StockQuantity;
-                warehouseInventory.StockQuantity = Math.Max(0, warehouseInventory.StockQuantity - quantity);
-                
-                // Update the product and track inventory change
-                await _inventoryManageService.UpdateStockProduct(product, trackInventory: true, 
-                    previousStockQuantity: previousStock, warehouseId: warehouseId);
-            }
-        }
-        else
-        {
-            // Single warehouse or no specific warehouse - reduce main stock quantity
-            var previousStock = product.StockQuantity;
-            product.StockQuantity = Math.Max(0, product.StockQuantity - quantity);
-            
-            // Update the product and track inventory change  
-            await _inventoryManageService.UpdateStockProduct(product, trackInventory: true, 
-                previousStockQuantity: previousStock, warehouseId: warehouseId);
-        }
-    }
 }

@@ -269,28 +269,69 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
     
     if (product.warehouses && product.warehouses.length > 0) {
         product.warehouses.forEach(function(warehouse) {
-            var inventoryText = warehouse.inventory !== undefined ? ` (Stock: ${warehouse.inventory})` : '';
-            warehouseSelect.append(`<option value="${warehouse.id}" data-inventory="${warehouse.inventory || 0}">${warehouse.name}${inventoryText}</option>`);
+            warehouseSelect.append(`<option value="${warehouse.id}" data-inventory="0">${warehouse.name}</option>`);
         });
         
-        // Set up inventory info display on warehouse change
+        // Set up real-time inventory loading on warehouse change - similar to existing warehouse refresh pattern
         warehouseSelect.off('change.inventory').on('change.inventory', function() {
-            var selectedOption = $(this).find('option:selected');
-            var inventory = selectedOption.data('inventory');
-            var warehouseName = selectedOption.text().split(' (Stock:')[0];
-            
+            var warehouseId = $(this).val();
             var infoDiv = $('#warehouse-inventory-info-@componentId');
-            if ($(this).val() && inventory !== undefined) {
-                var stockStatus = inventory > 0 ? 
-                    `<span style="color: #28a745;">✓ ${inventory} in stock</span>` : 
-                    `<span style="color: #dc3545;">⚠ Out of stock</span>`;
-                infoDiv.html(`${stockStatus}`);
+            
+            if (warehouseId) {
+                // Show loading indicator
+                infoDiv.html('<span style="color: #6c757d;">⟳ Loading inventory...</span>');
+                
+                // Call dedicated warehouse refresh endpoint
+                var requestData = {
+                    productId: selectedProduct@(componentId.Replace("-", "_")).id,
+                    warehouseId: warehouseId,
+                    attributeCombinationId: selectedProduct@(componentId.Replace("-", "_")).combinationId || ''
+                };
+                addAntiForgeryToken(requestData);
+                
+                $.ajax({
+                    url: "@Html.Raw(Url.Action("ProductSearchWarehouseChange", "Order", new { area = Constants.AreaAdmin }))",
+                    type: "POST",
+                    data: requestData,
+                    success: function(response) {
+                        if (response.success) {
+                            var inventory = response.inventory;
+                            var stockStatus = inventory > 0 ? 
+                                `<span style="color: #28a745;">✓ ${inventory} in stock</span>` : 
+                                `<span style="color: #dc3545;">⚠ Out of stock</span>`;
+                            infoDiv.html(stockStatus);
+                            
+                            // Update the option text to show inventory
+                            var selectedOption = $('#selected-warehouse-@componentId option:selected');
+                            var warehouseName = selectedOption.text().split(' (Stock:')[0].split(' - ')[0];
+                            selectedOption.text(`${warehouseName} - Stock: ${inventory}`);
+                        } else {
+                            infoDiv.html('<span style="color: #dc3545;">⚠ Error loading inventory</span>');
+                        }
+                    },
+                    error: function() {
+                        infoDiv.html('<span style="color: #dc3545;">⚠ Error loading inventory</span>');
+                    }
+                });
             } else {
                 infoDiv.html('');
             }
         });
     } else {
         warehouseSelect.append(`<option value="">No warehouses available</option>`);
+    }
+    
+    // Initial warehouse load - wait a moment to ensure all product data is initialized
+    if (product.warehouses && product.warehouses.length > 0) {
+        setTimeout(function() {
+            // Trigger warehouse change for the first warehouse if available
+            if (warehouseSelect.find('option[value!=""]').length > 0) {
+                var firstWarehouseId = warehouseSelect.find('option[value!=""]').first().val();
+                if (firstWarehouseId) {
+                    warehouseSelect.val(firstWarehouseId).trigger('change.inventory');
+                }
+            }
+        }, 100);
     }
     
     // Clear the autocomplete

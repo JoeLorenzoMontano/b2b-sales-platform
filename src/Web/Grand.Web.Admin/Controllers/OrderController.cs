@@ -1803,36 +1803,26 @@ public class OrderController(
 
         foreach (var product in filteredProducts)
         {
-            // Reload the product with complete data including warehouse inventory
-            var fullProduct = await productService.GetProductById(product.Id);
-            
-            // Debug: Log warehouse inventory loading
-            var warehouseCount = fullProduct.ProductWarehouseInventory?.Count ?? 0;
-            Console.WriteLine($"Product {fullProduct.Name} - Warehouses loaded: {warehouseCount}");
-            
-            // Get warehouse inventory information for this product
+            // Get basic warehouse information - inventory will be loaded on-demand when warehouse is selected
             var warehouseInventory = new List<object>();
             foreach (var warehouse in warehouses)
             {
-                // Get inventory for this product in this warehouse using the stock quantity service
-                var stockQuantity = stockQuantityService.GetTotalStockQuantity(fullProduct, warehouseId: warehouse.Id);
-                Console.WriteLine($"  Warehouse {warehouse.Name} - Stock: {stockQuantity}");
                 warehouseInventory.Add(new {
                     id = warehouse.Id,
                     name = warehouse.Name,
-                    inventory = stockQuantity
+                    inventory = 0 // Will be updated via AJAX when warehouse is selected
                 });
             }
 
-            if (fullProduct.ProductAttributeCombinations?.Any() == true)
+            if (product.ProductAttributeCombinations?.Any() == true)
             {
                 // Add each attribute combination as a separate searchable item
-                foreach (var combination in fullProduct.ProductAttributeCombinations)
+                foreach (var combination in product.ProductAttributeCombinations)
                 {
                     var attributeNames = new List<string>();
                     foreach (var attr in combination.Attributes)
                     {
-                        var mapping = fullProduct.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                        var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
                         if (mapping != null)
                         {
                             // Split the Value string if it contains multiple values (comma-separated)
@@ -1912,6 +1902,36 @@ public class OrderController(
             success = true, 
             data = pagedItems,
             totalCount = totalCount
+        });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> ProductSearchWarehouseChange(string productId, string warehouseId, string attributeCombinationId,
+        [FromServices] IProductService productService,
+        [FromServices] IStockQuantityService stockQuantityService)
+    {
+        var product = await productService.GetProductById(productId);
+        if (product == null)
+            return Json(new { success = false, message = "Product not found" });
+
+        // Get stock quantity for the specific warehouse
+        var stockQuantity = stockQuantityService.GetTotalStockQuantity(product, warehouseId: warehouseId);
+        
+        // If this is for a specific attribute combination, handle that
+        if (!string.IsNullOrEmpty(attributeCombinationId))
+        {
+            var combination = product.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == attributeCombinationId);
+            if (combination != null)
+            {
+                stockQuantity = stockQuantityService.GetTotalStockQuantityForCombination(product, combination, warehouseId: warehouseId);
+            }
+        }
+
+        return Json(new { 
+            success = true, 
+            inventory = stockQuantity,
+            warehouseId = warehouseId
         });
     }
 

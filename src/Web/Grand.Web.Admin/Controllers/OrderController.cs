@@ -1957,7 +1957,8 @@ public class OrderController(
                 UnitPriceInclTax: (double)unitPrice,
                 UnitPriceExclTax: (double)unitPrice, // Simplified for now
                 Quantity: quantity,
-                TaxRate: 0 // Simplified for now
+                TaxRate: 0, // Simplified for now
+                WarehouseId: warehouseId ?? ""
             );
 
             // If we have an attribute combination ID, we need to set up the selected attributes

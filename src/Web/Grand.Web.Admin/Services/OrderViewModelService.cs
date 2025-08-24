@@ -1339,10 +1339,11 @@ public class OrderViewModelService : IOrderViewModelService
         #endregion
 
         //warnings
+        var warehouseId = !string.IsNullOrEmpty(model.WarehouseId) ? model.WarehouseId : product.WarehouseId;
         var shoppingCartItem = new ShoppingCartItem {
             ShoppingCartTypeId = ShoppingCartType.ShoppingCart,
             Quantity = model.Quantity,
-            WarehouseId = product.WarehouseId,
+            WarehouseId = warehouseId,
             Attributes = customattributes
         };
 
@@ -1361,7 +1362,7 @@ public class OrderViewModelService : IOrderViewModelService
                 OrderItemGuid = Guid.NewGuid(),
                 ProductId = product.Id,
                 VendorId = product.VendorId,
-                WarehouseId = product.WarehouseId,
+                WarehouseId = warehouseId,
                 Sku = product.FormatSku(customattributes),
                 SeId = order.SeId,
                 UnitPriceInclTax = model.UnitPriceExclTax,

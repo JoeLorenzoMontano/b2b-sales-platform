@@ -186,6 +186,7 @@ $(document).ready(function() {
 });
 
 var selectedProduct@(componentId.Replace("-", "_")) = null;
+var currentInventory@(componentId.Replace("-", "_")) = 0;
 
 function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     // Initialize Kendo AutoComplete
@@ -296,6 +297,9 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
                     success: function(response) {
                         if (response.success) {
                             var inventory = response.inventory;
+                            // Store current inventory for validation
+                            currentInventory@(componentId.Replace("-", "_")) = inventory;
+                            
                             var stockStatus = inventory > 0 ? 
                                 `<span style="color: #28a745;">✓ ${inventory} in stock</span>` : 
                                 `<span style="color: #dc3545;">⚠ Out of stock</span>`;
@@ -306,10 +310,12 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
                             var warehouseName = selectedOption.text().split(' (Stock:')[0].split(' - ')[0];
                             selectedOption.text(`${warehouseName} - Stock: ${inventory}`);
                         } else {
+                            currentInventory@(componentId.Replace("-", "_")) = 0;
                             infoDiv.html('<span style="color: #dc3545;">⚠ Error loading inventory</span>');
                         }
                     },
                     error: function() {
+                        currentInventory@(componentId.Replace("-", "_")) = 0;
                         infoDiv.html('<span style="color: #dc3545;">⚠ Error loading inventory</span>');
                     }
                 });
@@ -340,6 +346,7 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
 
 function clearProductSelection@(componentId.Replace("-", "_"))() {
     selectedProduct@(componentId.Replace("-", "_")) = null;
+    currentInventory@(componentId.Replace("-", "_")) = 0;
     $('#selected-product-form-@componentId').hide();
     $('#product-autocomplete-@componentId').val('').focus();
     
@@ -374,18 +381,17 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
         return;
     }
     
-    // Check inventory if warehouse is selected
+    // Check inventory if warehouse is selected - use real-time inventory data
     if (warehouseId) {
-        var selectedWarehouse = selectedProduct@(componentId.Replace("-", "_")).warehouses.find(w => w.id === warehouseId);
-        if (selectedWarehouse && selectedWarehouse.inventory !== undefined) {
-            if (selectedWarehouse.inventory === 0) {
-                if (!confirm('Selected warehouse is out of stock. Continue anyway?')) {
-                    return;
-                }
-            } else if (quantity > selectedWarehouse.inventory) {
-                if (!confirm(`Requested quantity (${quantity}) exceeds available stock (${selectedWarehouse.inventory}). Continue anyway?`)) {
-                    return;
-                }
+        var inventory = currentInventory@(componentId.Replace("-", "_"));
+        
+        if (inventory === 0) {
+            if (!confirm('Selected warehouse is out of stock. Continue anyway?')) {
+                return;
+            }
+        } else if (quantity > inventory) {
+            if (!confirm(`Requested quantity (${quantity}) exceeds available stock (${inventory}). Continue anyway?`)) {
+                return;
             }
         }
     }

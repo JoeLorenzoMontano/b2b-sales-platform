@@ -41,10 +41,13 @@
                                 <input type="number" id="selected-price-@componentId" class="form-control" step="0.01" min="0" />
                             </div>
                         </div>
-                        <div class="col-md-3" id="warehouse-container-@componentId" style="display: none;">
+                        <div class="col-md-3" id="warehouse-container-@componentId">
                             <div class="form-group">
                                 <label>Warehouse</label>
-                                <select id="selected-warehouse-@componentId" class="form-control"></select>
+                                <select id="selected-warehouse-@componentId" class="form-control">
+                                    <option value="">Select Warehouse...</option>
+                                </select>
+                                <div id="warehouse-inventory-info-@componentId" class="mt-1" style="font-size: 0.85em; color: #666;"></div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -260,16 +263,35 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
     $('#selected-quantity-@componentId').val(1);
     $('#selected-price-@componentId').val(product.price || 0);
     
-    // Handle warehouses
+    // Handle warehouses with inventory information
+    var warehouseSelect = $('#selected-warehouse-@componentId');
+    warehouseSelect.empty();
+    warehouseSelect.append(`<option value="">Select Warehouse...</option>`);
+    
     if (product.warehouses && product.warehouses.length > 0) {
-        var warehouseSelect = $('#selected-warehouse-@componentId');
-        warehouseSelect.empty();
         product.warehouses.forEach(function(warehouse) {
-            warehouseSelect.append(`<option value="${warehouse.id}">${warehouse.name}</option>`);
+            var inventoryText = warehouse.inventory !== undefined ? ` (Stock: ${warehouse.inventory})` : '';
+            warehouseSelect.append(`<option value="${warehouse.id}" data-inventory="${warehouse.inventory || 0}">${warehouse.name}${inventoryText}</option>`);
         });
-        $('#warehouse-container-@componentId').show();
+        
+        // Set up inventory info display on warehouse change
+        warehouseSelect.off('change.inventory').on('change.inventory', function() {
+            var selectedOption = $(this).find('option:selected');
+            var inventory = selectedOption.data('inventory');
+            var warehouseName = selectedOption.text().split(' (Stock:')[0];
+            
+            var infoDiv = $('#warehouse-inventory-info-@componentId');
+            if ($(this).val() && inventory !== undefined) {
+                var stockStatus = inventory > 0 ? 
+                    `<span style="color: #28a745;">✓ ${inventory} in stock</span>` : 
+                    `<span style="color: #dc3545;">⚠ Out of stock</span>`;
+                infoDiv.html(`${stockStatus}`);
+            } else {
+                infoDiv.html('');
+            }
+        });
     } else {
-        $('#warehouse-container-@componentId').hide();
+        warehouseSelect.append(`<option value="">No warehouses available</option>`);
     }
     
     // Clear the autocomplete
@@ -280,6 +302,10 @@ function clearProductSelection@(componentId.Replace("-", "_"))() {
     selectedProduct@(componentId.Replace("-", "_")) = null;
     $('#selected-product-form-@componentId').hide();
     $('#product-autocomplete-@componentId').val('').focus();
+    
+    // Reset warehouse selection and info
+    $('#selected-warehouse-@componentId').val('');
+    $('#warehouse-inventory-info-@componentId').html('');
 }
 
 function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
@@ -300,6 +326,28 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
     if (unitPrice < 0) {
         alert('Please enter a valid price.');
         return;
+    }
+    
+    // Validate warehouse selection if warehouses are available
+    if (selectedProduct@(componentId.Replace("-", "_")).warehouses && selectedProduct@(componentId.Replace("-", "_")).warehouses.length > 0 && !warehouseId) {
+        alert('Please select a warehouse.');
+        return;
+    }
+    
+    // Check inventory if warehouse is selected
+    if (warehouseId) {
+        var selectedWarehouse = selectedProduct@(componentId.Replace("-", "_")).warehouses.find(w => w.id === warehouseId);
+        if (selectedWarehouse && selectedWarehouse.inventory !== undefined) {
+            if (selectedWarehouse.inventory === 0) {
+                if (!confirm('Selected warehouse is out of stock. Continue anyway?')) {
+                    return;
+                }
+            } else if (quantity > selectedWarehouse.inventory) {
+                if (!confirm(`Requested quantity (${quantity}) exceeds available stock (${selectedWarehouse.inventory}). Continue anyway?`)) {
+                    return;
+                }
+            }
+        }
     }
     
     var data = {

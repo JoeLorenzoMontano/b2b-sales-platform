@@ -1794,11 +1794,27 @@ public class OrderController(
             }
         }
 
+        // Get all warehouses for inventory lookup
+        var warehouses = await warehouseService.GetAllWarehouses();
+        
         // Create search result items that include attribute combinations
         var searchResultItems = new List<object>();
 
         foreach (var product in filteredProducts)
         {
+            // Get warehouse inventory information for this product
+            var warehouseInventory = new List<object>();
+            foreach (var warehouse in warehouses)
+            {
+                // Get inventory for this product in this warehouse
+                var inventory = product.ProductWarehouseInventory?.FirstOrDefault(pw => pw.WarehouseId == warehouse.Id);
+                warehouseInventory.Add(new {
+                    id = warehouse.Id,
+                    name = warehouse.Name,
+                    inventory = inventory?.StockQuantity ?? 0
+                });
+            }
+
             if (product.ProductAttributeCombinations?.Any() == true)
             {
                 // Add each attribute combination as a separate searchable item
@@ -1852,7 +1868,9 @@ public class OrderController(
                             price = combinationPrice,
                             combinationId = combination.Id,
                             hasAttributes = true,
-                            brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : ""
+                            brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                            warehouses = warehouseInventory,
+                            attributeInfo = string.Join(", ", attributeNames)
                         });
                     }
                 }
@@ -1867,7 +1885,9 @@ public class OrderController(
                     price = product.Price,
                     combinationId = (string)null,
                     hasAttributes = false,
-                    brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : ""
+                    brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                    warehouses = warehouseInventory,
+                    attributeInfo = (string)null
                 });
             }
         }

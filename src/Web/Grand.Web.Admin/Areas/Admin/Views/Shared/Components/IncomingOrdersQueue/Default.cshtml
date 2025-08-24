@@ -320,40 +320,15 @@
                     attributes: { style: "text-align:center" },
                     template: function(dataItem) {
                         if (dataItem.CanEdit) {
-                            var quantityInput = `<input type="number" class="form-control form-control-sm quantity-input" 
+                            return `<input type="number" class="form-control form-control-sm quantity-input" 
                                     value="${dataItem.Quantity}" min="1" 
                                     data-order-item-id="${dataItem.Id}" 
                                     data-original-value="${dataItem.Quantity}"
                                     onfocus="storeOriginalValue(this)"
                                     onblur="updateIncomingOrderItemQuantity('${dataItem.Id}', this.value, this.dataset.originalValue)" 
                                     style="width: 80px; margin: 0 auto;" />`;
-                            
-                            // Show open/ship/cancel info as context
-                            var additionalInfo = '';
-                            if (dataItem.OpenQty > 0) {
-                                additionalInfo += `<div style="font-size: 11px; color: #666; text-align: center; margin-top: 2px;">Open: ${dataItem.OpenQty}</div>`;
-                            }
-                            if (dataItem.ShipQty > 0) {
-                                additionalInfo += `<div style="font-size: 11px; color: #666; text-align: center;">Shipped: ${dataItem.ShipQty}</div>`;
-                            }
-                            if (dataItem.CancelQty > 0) {
-                                additionalInfo += `<div style="font-size: 11px; color: #666; text-align: center;">Canceled: ${dataItem.CancelQty}</div>`;
-                            }
-                            
-                            return quantityInput + additionalInfo;
                         } else {
-                            var displayText = `<span>${dataItem.Quantity}</span>`;
-                            // Show open/ship/cancel info for read-only items too
-                            if (dataItem.OpenQty > 0) {
-                                displayText += `<div style="font-size: 11px; color: #666; text-align: center; margin-top: 2px;">Open: ${dataItem.OpenQty}</div>`;
-                            }
-                            if (dataItem.ShipQty > 0) {
-                                displayText += `<div style="font-size: 11px; color: #666; text-align: center;">Shipped: ${dataItem.ShipQty}</div>`;
-                            }
-                            if (dataItem.CancelQty > 0) {
-                                displayText += `<div style="font-size: 11px; color: #666; text-align: center;">Canceled: ${dataItem.CancelQty}</div>`;
-                            }
-                            return displayText;
+                            return `<span>${dataItem.Quantity}</span>`;
                         }
                     }
                 },

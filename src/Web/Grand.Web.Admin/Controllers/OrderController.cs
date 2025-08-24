@@ -1803,12 +1803,20 @@ public class OrderController(
 
         foreach (var product in filteredProducts)
         {
+            // Reload the product with complete data including warehouse inventory
+            var fullProduct = await productService.GetProductById(product.Id);
+            
+            // Debug: Log warehouse inventory loading
+            var warehouseCount = fullProduct.ProductWarehouseInventory?.Count ?? 0;
+            Console.WriteLine($"Product {fullProduct.Name} - Warehouses loaded: {warehouseCount}");
+            
             // Get warehouse inventory information for this product
             var warehouseInventory = new List<object>();
             foreach (var warehouse in warehouses)
             {
                 // Get inventory for this product in this warehouse using the stock quantity service
-                var stockQuantity = stockQuantityService.GetTotalStockQuantity(product, warehouseId: warehouse.Id);
+                var stockQuantity = stockQuantityService.GetTotalStockQuantity(fullProduct, warehouseId: warehouse.Id);
+                Console.WriteLine($"  Warehouse {warehouse.Name} - Stock: {stockQuantity}");
                 warehouseInventory.Add(new {
                     id = warehouse.Id,
                     name = warehouse.Name,
@@ -1816,15 +1824,15 @@ public class OrderController(
                 });
             }
 
-            if (product.ProductAttributeCombinations?.Any() == true)
+            if (fullProduct.ProductAttributeCombinations?.Any() == true)
             {
                 // Add each attribute combination as a separate searchable item
-                foreach (var combination in product.ProductAttributeCombinations)
+                foreach (var combination in fullProduct.ProductAttributeCombinations)
                 {
                     var attributeNames = new List<string>();
                     foreach (var attr in combination.Attributes)
                     {
-                        var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                        var mapping = fullProduct.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
                         if (mapping != null)
                         {
                             // Split the Value string if it contains multiple values (comma-separated)

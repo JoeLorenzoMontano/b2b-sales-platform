@@ -1718,7 +1718,8 @@ public class OrderController(
     [HttpPost]
     public async Task<IActionResult> SearchProductsInline(DataSourceRequest command, OrderModel.AddOrderProductModel model,
         [FromServices] IProductService productService,
-        [FromServices] IBrandService brandService)
+        [FromServices] IBrandService brandService,
+        [FromServices] IStockQuantityService stockQuantityService)
     {
         var categoryIds = new List<string>();
         if (!string.IsNullOrEmpty(model.SearchCategoryId))
@@ -1806,12 +1807,12 @@ public class OrderController(
             var warehouseInventory = new List<object>();
             foreach (var warehouse in warehouses)
             {
-                // Get inventory for this product in this warehouse
-                var inventory = product.ProductWarehouseInventory?.FirstOrDefault(pw => pw.WarehouseId == warehouse.Id);
+                // Get inventory for this product in this warehouse using the stock quantity service
+                var stockQuantity = stockQuantityService.GetTotalStockQuantity(product, warehouseId: warehouse.Id);
                 warehouseInventory.Add(new {
                     id = warehouse.Id,
                     name = warehouse.Name,
-                    inventory = inventory?.StockQuantity ?? 0
+                    inventory = stockQuantity
                 });
             }
 

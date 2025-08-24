@@ -254,10 +254,9 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
     // Show the selected product form
     $('#selected-product-form-@componentId').show();
     
-    // Set product title
+    // Set product title - product.name already includes attribute information
     var brandDisplay = product.brandName ? ` <span class="brand-badge">${product.brandName}</span>` : '';
-    var attributeDisplay = product.attributeInfo ? ` - ${product.attributeInfo}` : '';
-    $('#selected-product-title-@componentId').html(`Selected: <span class="selected-product-name">${product.name}${brandDisplay}</span>${attributeDisplay}`);
+    $('#selected-product-title-@componentId').html(`Selected: <span class="selected-product-name">${product.name}${brandDisplay}</span>`);
     
     // Set default values
     $('#selected-quantity-@componentId').val(1);

@@ -2031,7 +2031,7 @@ public class OrderController(
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
     public async Task<IActionResult> UpdateOrderItem(string orderId, string orderItemId, 
-        int? quantity, decimal? unitPrice)
+        int? quantity, decimal? unitPrice, [FromServices] IMediator mediator)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -2052,6 +2052,9 @@ public class OrderController(
             if (quantity.HasValue && quantity.Value > 0)
             {
                 orderItem.Quantity = quantity.Value;
+                orderItem.OpenQty = quantity.Value;
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
                 updated = true;
             }
 
@@ -2059,12 +2062,15 @@ public class OrderController(
             {
                 orderItem.UnitPriceInclTax = (double)unitPrice.Value;
                 orderItem.UnitPriceExclTax = (double)unitPrice.Value; // Simplified - should calculate based on tax
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
                 updated = true;
             }
 
             if (updated)
             {
-                await orderService.UpdateOrder(order);
+                // Use UpdateOrderItemCommand to ensure proper inventory management
+                await mediator.Send(new UpdateOrderItemCommand { Order = order, OrderItem = orderItem });
                 return Json(new { success = true, message = "Order item updated successfully" });
             }
 

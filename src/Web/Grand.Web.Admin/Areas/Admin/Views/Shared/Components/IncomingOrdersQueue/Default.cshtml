@@ -78,6 +78,15 @@
     .incoming-order-details-grid .price-input {
         text-align: center;
     }
+    .incoming-order-details-grid .delete-order-item {
+        padding: 2px 6px;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+    .incoming-order-details-grid .delete-order-item:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
 </style>
 
 <script>
@@ -362,6 +371,24 @@
                     template: function(dataItem) {
                         return `<span id="incoming-subtotal-${dataItem.Id}">${dataItem.SubTotal}</span>`;
                     }
+                },
+                {
+                    title: "Actions",
+                    width: 80,
+                    headerAttributes: { style: "text-align:center; background-color: #ff9800; color: white;" },
+                    attributes: { style: "text-align:center" },
+                    template: function(dataItem) {
+                        if (dataItem.CanEdit) {
+                            return `<button type="button" class="btn btn-sm btn-danger delete-order-item" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onclick="deleteIncomingOrderItem('${dataItem.Id}')" 
+                                    title="Delete">
+                                    <i class="fa fa-trash"></i>
+                                    </button>`;
+                        } else {
+                            return `<span>-</span>`;
+                        }
+                    }
                 }
             ],
             dataBound: function() {
@@ -594,5 +621,58 @@
                 }
             }
         });
+    }
+    
+    function deleteIncomingOrderItem(orderItemId) {
+        if (confirm('Are you sure you want to delete this order item?')) {
+            // Find the order ID from the detail grid
+            var orderId = null;
+            
+            // Look through all expanded rows to find the one containing this order item
+            $('.incoming-order-details-grid').each(function() {
+                var detailGrid = $(this).data('kendoGrid');
+                if (detailGrid) {
+                    var dataItems = detailGrid.dataSource.data();
+                    for (var i = 0; i < dataItems.length; i++) {
+                        if (dataItems[i].Id === orderItemId) {
+                            // Extract order ID from the control panel
+                            var gridElement = $(this);
+                            var controlPanel = gridElement.closest('.k-detail-cell').find('.incoming-order-control-panel');
+                            orderId = controlPanel.attr('data-order-id');
+                            break;
+                        }
+                    }
+                }
+                if (orderId) return false; // Break out of each loop
+            });
+            
+            if (!orderId) {
+                alert('Unable to determine order ID for deletion.');
+                return;
+            }
+            
+            var data = {
+                orderId: orderId,
+                orderItemId: orderItemId
+            };
+            
+            addAntiForgeryToken(data);
+            $.ajax({
+                url: '@Html.Raw(Url.Action("DeleteOrderItemInline", "Order", new { area = Constants.AreaAdmin }))',
+                type: 'POST',
+                data: data,
+                success: function(response) {
+                    if (response.success) {
+                        // Refresh the specific detail grid that contained this order item
+                        refreshIncomingOrderDetailGrid(orderItemId);
+                    } else {
+                        alert('Error deleting order item: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function() {
+                    alert('Error occurred while deleting order item.');
+                }
+            });
+        }
     }
 </script>

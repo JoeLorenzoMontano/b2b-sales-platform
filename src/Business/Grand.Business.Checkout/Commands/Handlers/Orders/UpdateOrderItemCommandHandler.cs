@@ -57,9 +57,9 @@ public class UpdateOrderItemCommandHandler : IRequestHandler<UpdateOrderItemComm
                 var qtyDifference = originalOrderItem.Quantity - request.OrderItem.Quantity;
                 var product = await _productService.GetProductById(request.OrderItem.ProductId, fromDb: true);
                 
-                // Debug logging to track quantity changes
+                // Log inventory adjustment for quantity changes
                 await _orderService.InsertOrderNote(new OrderNote {
-                    Note = $"DEBUG: Quantity change - Original: {originalOrderItem.Quantity}, New: {request.OrderItem.Quantity}, Difference: {qtyDifference}, Product: {product?.Name ?? "Unknown"}",
+                    Note = $"Inventory adjustment: {product?.Name ?? "Product"} quantity changed from {originalOrderItem.Quantity} to {request.OrderItem.Quantity} (difference: {qtyDifference:+#;-#;0})",
                     DisplayToCustomer = false,
                     OrderId = request.Order.Id
                 });

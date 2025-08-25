@@ -224,11 +224,35 @@
                 {
                     field: "ProductName",
                     title: "@Loc["Admin.Catalog.Products.Fields.Name"]",
-                    width: 300,
+                    width: 250,
                     template: function(dataItem) {
                         return dataItem.ProductName + (dataItem.AttributeInfo ? '<br><small>' + dataItem.AttributeInfo + '</small>' : '');
                     },
                     encoded: false
+                },
+                {
+                    field: "WarehouseName",
+                    title: "Warehouse",
+                    width: 120,
+                    template: function(dataItem) {
+                        return dataItem.WarehouseName || 'Default';
+                    }
+                },
+                {
+                    field: "UnitPriceInclTax",
+                    title: "@Loc["Admin.Orders.Products.UnitPrice"]",
+                    width: 110,
+                    template: function(dataItem) {
+                        if (dataItem.CanEdit) {
+                            return `<input type="number" class="form-control form-control-sm price-input" 
+                                    value="${parseFloat(dataItem.UnitPriceInclTax).toFixed(2)}" step="0.01" min="0" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onblur="updateOrderItemPrice('${dataItem.Id}', this.value)" 
+                                    style="width: 90px;" />`;
+                        } else {
+                            return `<span>${dataItem.UnitPriceFormatted}</span>`;
+                        }
+                    }
                 },
                 {
                     field: "Quantity",
@@ -268,22 +292,6 @@
                                 displayText += `<div style="font-size: 11px; color: #666;">Canceled: ${dataItem.CancelQty}</div>`;
                             }
                             return displayText;
-                        }
-                    }
-                },
-                {
-                    field: "UnitPriceInclTax",
-                    title: "@Loc["Admin.Orders.Products.UnitPrice"]",
-                    width: 130,
-                    template: function(dataItem) {
-                        if (dataItem.CanEdit) {
-                            return `<input type="number" class="form-control form-control-sm price-input" 
-                                    value="${parseFloat(dataItem.UnitPriceInclTax).toFixed(2)}" step="0.01" min="0" 
-                                    data-order-item-id="${dataItem.Id}" 
-                                    onblur="updateOrderItemPrice('${dataItem.Id}', this.value)" 
-                                    style="width: 100px;" />`;
-                        } else {
-                            return `<span>${dataItem.UnitPriceFormatted}</span>`;
                         }
                     }
                 },

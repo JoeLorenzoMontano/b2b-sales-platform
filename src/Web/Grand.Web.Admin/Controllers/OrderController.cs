@@ -133,7 +133,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
     [HttpPost]
-    public async Task<IActionResult> GetOrderItemsForIncoming(string orderId, [FromServices] IProductService productService)
+    public async Task<IActionResult> GetOrderItemsForIncoming(string orderId, [FromServices] IProductService productService, [FromServices] IWarehouseService warehouseService)
     {
         try
         {
@@ -154,6 +154,10 @@ public class OrderController(
                 var product = await productService.GetProductById(item.ProductId);
                 var productName = product != null ? product.Name : "Product #" + item.ProductId;
                 
+                // Get warehouse name from warehouse service
+                var warehouse = !string.IsNullOrEmpty(item.WarehouseId) ? await warehouseService.GetWarehouseById(item.WarehouseId) : null;
+                var warehouseName = warehouse?.Name ?? (string.IsNullOrEmpty(item.WarehouseId) ? "Default" : "Unknown");
+                
                 // Calculate subtotal for this line item
                 var subTotal = (item.Quantity * item.UnitPriceInclTax).ToString("C");
                 
@@ -163,6 +167,8 @@ public class OrderController(
                     ProductId = item.ProductId,
                     ProductName = productName,
                     Sku = item.Sku,
+                    WarehouseId = item.WarehouseId,
+                    WarehouseName = warehouseName,
                     Quantity = item.Quantity,
                     OpenQty = item.OpenQty,
                     ShipQty = item.ShipQty,

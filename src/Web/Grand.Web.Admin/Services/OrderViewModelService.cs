@@ -1254,7 +1254,7 @@ public class OrderViewModelService : IOrderViewModelService
     public virtual async Task<IList<string>> AddProductToOrderDetails(AddProductToOrderModel model)
     {
         var order = await _orderService.GetOrderById(model.OrderId);
-        var product = await _productService.GetProductById(model.ProductId);
+        var product = await _productService.GetProductById(model.ProductId, fromDb: true);
         var customer = await _customerService.GetCustomerById(order.CustomerId);
 
         var warnings = new List<string>();

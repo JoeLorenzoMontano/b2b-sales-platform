@@ -55,13 +55,13 @@ public class UpdateOrderItemCommandHandler : IRequestHandler<UpdateOrderItemComm
             if (originalOrderItem.Quantity != request.OrderItem.Quantity)
             {
                 var qtyDifference = originalOrderItem.Quantity - request.OrderItem.Quantity;
-                var product = await _productService.GetProductById(request.OrderItem.ProductId);
+                var product = await _productService.GetProductById(request.OrderItem.ProductId, fromDb: true);
                 
                 // Add null check to prevent ArgumentNullException
                 if (product != null)
                 {
-                    // Adjust actual stock quantities instead of just reserved quantities
-                    await AdjustInventoryForQuantityChange(product, qtyDifference, request.OrderItem.WarehouseId, request.OrderItem.Attributes);
+                    // Adjust reserved quantities for inventory changes (not actual stock)
+                    await _inventoryManageService.AdjustReserved(product, qtyDifference, request.OrderItem.Attributes, request.OrderItem.WarehouseId);
                 }
                 else
                 {
@@ -97,39 +97,4 @@ public class UpdateOrderItemCommandHandler : IRequestHandler<UpdateOrderItemComm
         return true;
     }
 
-    private async Task AdjustInventoryForQuantityChange(Product product, double qtyDifference, string warehouseId, IList<CustomAttribute> attributes)
-    {
-        if (product.ManageInventoryMethodId != ManageInventoryMethod.ManageStock && 
-            product.ManageInventoryMethodId != ManageInventoryMethod.ManageStockByAttributes)
-            return;
-
-        // qtyDifference = old quantity - new quantity
-        // If positive: quantity decreased, so restore inventory (add back to stock)
-        // If negative: quantity increased, so reduce inventory (subtract from stock)
-
-        if (product.UseMultipleWarehouses && !string.IsNullOrEmpty(warehouseId))
-        {
-            // Multi-warehouse scenario - adjust stock in the specific warehouse
-            var warehouseInventory = product.ProductWarehouseInventory?.FirstOrDefault(x => x.WarehouseId == warehouseId);
-            if (warehouseInventory != null)
-            {
-                var previousStock = warehouseInventory.StockQuantity;
-                warehouseInventory.StockQuantity = Math.Max(0, warehouseInventory.StockQuantity + qtyDifference);
-                
-                // Update the product and track inventory change
-                await _inventoryManageService.UpdateStockProduct(product, trackInventory: true, 
-                    previousStockQuantity: previousStock, warehouseId: warehouseId);
-            }
-        }
-        else
-        {
-            // Single warehouse - adjust main stock quantity
-            var previousStock = product.StockQuantity;
-            product.StockQuantity = Math.Max(0, product.StockQuantity + qtyDifference);
-            
-            // Update the product and track inventory change
-            await _inventoryManageService.UpdateStockProduct(product, trackInventory: true, 
-                previousStockQuantity: previousStock, warehouseId: warehouseId);
-        }
-    }
 }

@@ -29,6 +29,12 @@
                                 <li>
                                     <input type="button" id="exportexcel-selected" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.Selected"]"/>
                                 </li>
+                                <li>
+                                    <input type="submit" name="exportcsv-all" asp-action="ExportCsvAll" class="btn default" style="width: 100%;" value="Export to CSV (all)"/>
+                                </li>
+                                <li>
+                                    <input type="button" id="exportcsv-selected" class="btn default" style="width: 100%;" value="Export to CSV (selected)"/>
+                                </li>
                                 <!-- QuickBooks Export Button (Hidden)
                                 <li>
                                     <input type="submit" name="exportcsv-all" asp-action="ExportCsv" class="btn default" style="width: 100%;" value="Export to CSV for QuickBooks"/>
@@ -574,6 +580,10 @@
 
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>
+<form asp-area="@Constants.AreaAdmin" asp-controller="Order" asp-action="ExportCsvSelected" method="post" id="export-csv-selected-form">
+
+    <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
+</form>
 <script>
 
     $(document).ready(function () {
@@ -582,6 +592,14 @@
             var ids = selectedIds.join(",");
             $('#export-excel-selected-form #selectedIds').val(ids);
             $('#export-excel-selected-form').submit();
+            return false;
+        });
+        
+        $('#exportcsv-selected').click(function (e) {
+            e.preventDefault();
+            var ids = selectedIds.join(",");
+            $('#export-csv-selected-form #selectedIds').val(ids);
+            $('#export-csv-selected-form').submit();
             return false;
         });
     });

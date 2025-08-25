@@ -75,5 +75,6 @@ public class StartupApplication : IStartupApplication
     private static void RegisterExportImport(IServiceCollection serviceCollection)
     {
         serviceCollection.AddScoped<ISchemaProperty<Order>, OrderSchemaProperty>();
+        serviceCollection.AddScoped<OrderCsvSchemaProperty>();
     }
 }

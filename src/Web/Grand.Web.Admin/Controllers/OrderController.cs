@@ -10,6 +10,8 @@ using Grand.Business.Core.Interfaces.Common.Pdf;
 using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
+using Grand.Business.Common.Services.ExportImport;
+using Grand.Business.Checkout.Services.ExportImpot;
 using Grand.Domain.Permissions;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
@@ -610,6 +612,58 @@ public class OrderController(
             orders = orders.Where(x => x.StoreId == contextAccessor.WorkContext.CurrentCustomer.StaffStoreId).ToList();
         var bytes = await exportManager.Export(orders);
         return File(bytes, "text/xls", "orders.xlsx");
+    }
+
+    #endregion
+
+    #region CSV Export (New Feature)
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportCsvAll(OrderListModel model,
+        [FromServices] CsvExportProvider csvProvider,
+        [FromServices] OrderCsvSchemaProperty csvSchema)
+    {
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+
+        //load orders
+        var orders = await orderViewModelService.PrepareOrders(model);
+        try
+        {
+            var properties = await csvSchema.GetProperties();
+            var bytes = csvProvider.ExportToByte(properties, orders);
+            return File(bytes, "text/csv", "orders.csv");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportCsvSelected(string selectedIds,
+        [FromServices] CsvExportProvider csvProvider,
+        [FromServices] OrderCsvSchemaProperty csvSchema)
+    {
+        var orders = new List<Order>();
+        if (selectedIds != null)
+        {
+            var ids = selectedIds
+                .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x)
+                .ToArray();
+            orders.AddRange(await orderService.GetOrdersByIds(ids));
+        }
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            orders = orders.Where(x => x.StoreId == contextAccessor.WorkContext.CurrentCustomer.StaffStoreId).ToList();
+        
+        var properties = await csvSchema.GetProperties();
+        var bytes = csvProvider.ExportToByte(properties, orders);
+        return File(bytes, "text/csv", "orders.csv");
     }
 
     #endregion

@@ -2100,8 +2100,9 @@ public class OrderController(
             if (orderItem == null)
                 return Json(new { success = false, message = "Order item not found" });
 
-            order.OrderItems.Remove(orderItem);
-            await orderService.UpdateOrder(order);
+            var result = await mediator.Send(new DeleteOrderItemCommand { Order = order, OrderItem = orderItem });
+            if (result.error)
+                return Json(new { success = false, message = result.message });
             
             return Json(new { success = true, message = "Order item deleted successfully" });
         }

@@ -708,21 +708,6 @@
         }
     }
 
-    // Initialize customer search autocomplete once on document ready
-    $(document).ready(function() {
-        // Initialize customer search autocomplete
-        $('#customerSearchInput').autocomplete({
-            delay: 500,
-            minLength: 3,
-            source: '@(Url.Action("CustomerSearchAutoComplete", "Customer", new { area = Constants.AreaAdmin }))',
-            select: function(event, ui) {
-                // Customer selected, now get their addresses
-                selectCustomerForOrder(ui.item.id, ui.item.label);
-                return false;
-            }
-        });
-    });
-
     // Create Order functionality
     function openCreateOrderModal() {
         // Clear previous search
@@ -731,9 +716,39 @@
         // Show the modal
         $('#customerSearchModal').modal('show');
         
-        // Focus on the search input after modal is shown
+        // Initialize autocomplete when modal is shown (ensures DOM element is visible)
         $('#customerSearchModal').on('shown.bs.modal', function () {
+            // Destroy existing autocomplete if any
+            if ($('#customerSearchInput').hasClass('ui-autocomplete-input')) {
+                $('#customerSearchInput').autocomplete('destroy');
+            }
+            
+            // Initialize autocomplete
+            $('#customerSearchInput').autocomplete({
+                delay: 500,
+                minLength: 3,
+                source: '@(Url.Action("CustomerSearchAutoComplete", "Customer", new { area = Constants.AreaAdmin }))',
+                select: function(event, ui) {
+                    console.log('Customer selected:', ui.item);
+                    // Customer selected, now get their addresses
+                    selectCustomerForOrder(ui.item.id, ui.item.label);
+                    return false;
+                },
+                response: function(event, ui) {
+                    console.log('Autocomplete response:', ui.content);
+                },
+                search: function(event, ui) {
+                    console.log('Autocomplete search triggered');
+                }
+            });
+            
+            // Focus on the search input
             $('#customerSearchInput').focus();
+        });
+        
+        // Clean up event handler when modal is hidden
+        $('#customerSearchModal').on('hidden.bs.modal', function () {
+            $(this).off('shown.bs.modal');
         });
     }
 

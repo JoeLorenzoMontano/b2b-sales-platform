@@ -213,7 +213,13 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
             },
             schema: {
                 data: function(response) {
-                    return response.success ? response.data : [];
+                    if (response.success) {
+                        // Filter to only show published products
+                        return response.data.filter(function(item) {
+                            return item.published === true;
+                        });
+                    }
+                    return [];
                 }
             },
             serverFiltering: true

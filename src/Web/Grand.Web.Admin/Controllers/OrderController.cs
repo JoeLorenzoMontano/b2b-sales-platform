@@ -1927,6 +1927,7 @@ public class OrderController(
                             price = combinationPrice,
                             combinationId = combination.Id,
                             hasAttributes = true,
+                            published = product.Published,
                             brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
                             warehouses = warehouseInventory,
                             attributeInfo = string.Join(", ", attributeNames)
@@ -1944,6 +1945,7 @@ public class OrderController(
                     price = product.Price,
                     combinationId = (string)null,
                     hasAttributes = false,
+                    published = product.Published,
                     brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
                     warehouses = warehouseInventory,
                     attributeInfo = (string)null

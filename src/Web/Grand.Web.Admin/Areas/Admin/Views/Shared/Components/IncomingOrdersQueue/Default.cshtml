@@ -708,11 +708,8 @@
         }
     }
 
-    // Create Order functionality
-    function openCreateOrderModal() {
-        // Clear previous search
-        $('#customerSearchInput').val('');
-        
+    // Initialize customer search autocomplete once on document ready
+    $(document).ready(function() {
         // Initialize customer search autocomplete
         $('#customerSearchInput').autocomplete({
             delay: 500,
@@ -724,9 +721,20 @@
                 return false;
             }
         });
+    });
+
+    // Create Order functionality
+    function openCreateOrderModal() {
+        // Clear previous search
+        $('#customerSearchInput').val('');
         
         // Show the modal
         $('#customerSearchModal').modal('show');
+        
+        // Focus on the search input after modal is shown
+        $('#customerSearchModal').on('shown.bs.modal', function () {
+            $('#customerSearchInput').focus();
+        });
     }
 
     function selectCustomerForOrder(customerId, customerLabel) {

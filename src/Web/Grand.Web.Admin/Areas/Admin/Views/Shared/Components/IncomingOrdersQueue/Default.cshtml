@@ -119,6 +119,46 @@
         background-color: #dc3545;
         border-color: #dc3545;
     }
+
+    /* Customer Search Modal Autocomplete Styles */
+    .ui-autocomplete {
+        position: absolute;
+        top: 0;
+        left: 0;
+        cursor: default;
+        z-index: 9999 !important; /* Ensure it appears above modal */
+        background-color: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .ui-autocomplete .ui-menu-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .ui-autocomplete .ui-menu-item:hover,
+    .ui-autocomplete .ui-menu-item.ui-state-focus {
+        background-color: #e9ecef;
+        color: #333;
+    }
+
+    .ui-autocomplete .ui-menu-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Ensure modal doesn't interfere with autocomplete positioning */
+    #customerSearchModal .modal-body {
+        position: relative;
+        z-index: 1;
+    }
 </style>
 
 <script>
@@ -736,9 +776,20 @@
                 },
                 response: function(event, ui) {
                     console.log('Autocomplete response:', ui.content);
+                    console.log('Autocomplete widget created:', $('#customerSearchInput').hasClass('ui-autocomplete-input'));
+                    console.log('Autocomplete menu element:', $('.ui-autocomplete').length);
                 },
                 search: function(event, ui) {
                     console.log('Autocomplete search triggered');
+                },
+                open: function(event, ui) {
+                    console.log('Autocomplete menu opened');
+                    console.log('Menu element:', $('.ui-autocomplete'));
+                    console.log('Menu position:', $('.ui-autocomplete').position());
+                    console.log('Menu visibility:', $('.ui-autocomplete').is(':visible'));
+                },
+                close: function(event, ui) {
+                    console.log('Autocomplete menu closed');
                 }
             });
             

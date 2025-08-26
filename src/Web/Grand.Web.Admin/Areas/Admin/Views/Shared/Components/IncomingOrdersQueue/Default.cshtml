@@ -916,12 +916,6 @@
                     // Refresh the incoming orders grid
                     $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
                     showNotificationIncoming("Order created successfully and added to incoming queue", "success", 5000);
-                    if (data.orderId) {
-                        // Optionally open the order for editing
-                        setTimeout(function() {
-                            window.open("@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/" + data.orderId, '_blank');
-                        }, 1000);
-                    }
                 } else {
                     showNotificationIncoming(data.message || "Error creating order", "error", 5000);
                 }

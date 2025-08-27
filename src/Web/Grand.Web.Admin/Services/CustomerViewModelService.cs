@@ -860,13 +860,41 @@ public class CustomerViewModelService : ICustomerViewModelService
         //countries
         model.Address.AvailableCountries.Add(new SelectListItem
             { Text = _translationService.GetResource("Admin.Address.SelectCountry"), Value = "" });
-        foreach (var c in await _countryService.GetAllCountries(showHidden: true))
+
+        var countries = await _countryService.GetAllCountries(showHidden: true);
+        
+        // Set default country to USA for new addresses (when address is null and no country is set)
+        if (address == null && string.IsNullOrEmpty(model.Address.CountryId))
+        {
+            var usaCountry = countries.FirstOrDefault(c => c.TwoLetterIsoCode == "US");
+            if (usaCountry != null)
+            {
+                model.Address.CountryId = usaCountry.Id;
+            }
+        }
+
+        foreach (var c in countries)
             model.Address.AvailableCountries.Add(new SelectListItem
                 { Text = c.Name, Value = c.Id, Selected = c.Id == model.Address.CountryId });
         //states
         var states = !string.IsNullOrEmpty(model.Address.CountryId)
             ? (await _countryService.GetCountryById(model.Address.CountryId))?.StateProvinces
             : new List<StateProvince>();
+
+        // Set default state to Oregon for new addresses in USA
+        if (address == null && string.IsNullOrEmpty(model.Address.StateProvinceId) && states?.Count > 0)
+        {
+            var usaCountry = countries.FirstOrDefault(c => c.TwoLetterIsoCode == "US");
+            if (usaCountry != null && model.Address.CountryId == usaCountry.Id)
+            {
+                var oregonState = states.FirstOrDefault(s => s.Abbreviation == "OR");
+                if (oregonState != null)
+                {
+                    model.Address.StateProvinceId = oregonState.Id;
+                }
+            }
+        }
+
         if (states?.Count > 0)
             foreach (var s in states)
                 model.Address.AvailableStates.Add(new SelectListItem

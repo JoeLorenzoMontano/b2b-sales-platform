@@ -586,13 +586,23 @@ public class OrderController(
                             CustomerCompany = order.BillingAddress?.Company
                         };
 
-                        // Get customer groups
+                        // Get customer groups that are not system groups
                         if (!string.IsNullOrEmpty(order.CustomerId))
                         {
                             var customer = await customerService.GetCustomerById(order.CustomerId);
-                            if (customer != null)
+                            if (customer != null && customer.Groups.Any())
                             {
-                                orderModel.CustomerGroups = string.Join(", ", customer.Groups.ToArray());
+                                // Get all customer groups by IDs
+                                var customerGroups = await groupService.GetAllByIds(customer.Groups.ToArray());
+                                
+                                // Filter out system groups
+                                var nonSystemGroups = customerGroups.Where(x => !x.IsSystem).ToList();
+                                
+                                if (nonSystemGroups.Any())
+                                {
+                                    // Join the group names with commas
+                                    orderModel.CustomerGroups = string.Join(", ", nonSystemGroups.Select(x => x.Name));
+                                }
                             }
                         }
 

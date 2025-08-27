@@ -440,7 +440,7 @@ function clearProductSelection@(componentId.Replace("-", "_"))() {
     selectedProduct@(componentId.Replace("-", "_")) = null;
     currentInventory@(componentId.Replace("-", "_")) = 0;
     $('#selected-product-form-@componentId').hide();
-    $('#product-autocomplete-@componentId').val('').focus();
+    $('#product-autocomplete-@componentId').val('');
     
     // Reset warehouse selection and info
     $('#selected-warehouse-@componentId').val('');

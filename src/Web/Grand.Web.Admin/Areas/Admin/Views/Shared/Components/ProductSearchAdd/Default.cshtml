@@ -187,6 +187,7 @@ $(document).ready(function() {
 
 var selectedProduct@(componentId.Replace("-", "_")) = null;
 var currentInventory@(componentId.Replace("-", "_")) = 0;
+var initialDataLoaded@(componentId.Replace("-", "_")) = false;
 
 function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     // Initialize Kendo AutoComplete
@@ -235,14 +236,21 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
             var dataItem = e.dataItem;
             selectProduct@(componentId.Replace("-", "_"))(dataItem);
         },
-        open: function(e) {
-            // When dropdown opens and input is empty, trigger search to show all products
-            var inputValue = $('#product-autocomplete-@componentId').val();
-            if (!inputValue || inputValue.length === 0) {
+        focus: function(e) {
+            // Load data on first focus to ensure dropdown can open
+            if (!initialDataLoaded@(componentId.Replace("-", "_"))) {
                 var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
                 if (autocomplete && autocomplete.dataSource) {
-                    autocomplete.dataSource.read();
+                    initialDataLoaded@(componentId.Replace("-", "_")) = true;
+                    autocomplete.search("");
                 }
+            }
+        },
+        open: function(e) {
+            // Fallback: ensure data is loaded when dropdown opens
+            var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
+            if (autocomplete && autocomplete.dataSource && !autocomplete.dataSource.data().length) {
+                autocomplete.dataSource.read();
             }
         }
     });
@@ -251,6 +259,7 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     $('#@Html.IdFor(model => model.SearchBrandId)').change(function() {
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
+            initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
             autocomplete.dataSource.read();
         }
     });

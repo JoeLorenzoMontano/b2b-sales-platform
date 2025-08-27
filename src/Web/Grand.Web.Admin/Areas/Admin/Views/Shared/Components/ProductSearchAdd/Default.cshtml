@@ -191,8 +191,9 @@ var currentInventory@(componentId.Replace("-", "_")) = 0;
 function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     // Initialize Kendo AutoComplete
     $('#product-autocomplete-@componentId').kendoAutoComplete({
-        minLength: 2,
+        minLength: 0,
         delay: 300,
+        suggest: true,
         dataSource: {
             transport: {
                 read: {
@@ -204,7 +205,7 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
                             SearchProductName: $('#product-autocomplete-@componentId').val(),
                             SearchBrandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
                             page: 1,
-                            pageSize: 20
+                            pageSize: 50
                         };
                         addAntiForgeryToken(searchData);
                         return searchData;
@@ -233,6 +234,16 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         select: function(e) {
             var dataItem = e.dataItem;
             selectProduct@(componentId.Replace("-", "_"))(dataItem);
+        },
+        open: function(e) {
+            // When dropdown opens and input is empty, trigger search to show all products
+            var inputValue = $('#product-autocomplete-@componentId').val();
+            if (!inputValue || inputValue.length === 0) {
+                var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
+                if (autocomplete && autocomplete.dataSource) {
+                    autocomplete.dataSource.read();
+                }
+            }
         }
     });
     

@@ -10,6 +10,7 @@ public class ProductSearchAddModel : BaseModel
     public ProductSearchAddModel()
     {
         AvailableBrands = new List<SelectListItem>();
+        AvailableCategories = new List<SelectListItem>();
     }
 
     /// <summary>
@@ -38,5 +39,10 @@ public class ProductSearchAddModel : BaseModel
     [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchBrand")]
     public string SearchBrandId { get; set; }
 
+    [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchCategory")]
+    public string SearchCategoryId { get; set; }
+
     public IList<SelectListItem> AvailableBrands { get; set; }
+
+    public IList<SelectListItem> AvailableCategories { get; set; }
 }

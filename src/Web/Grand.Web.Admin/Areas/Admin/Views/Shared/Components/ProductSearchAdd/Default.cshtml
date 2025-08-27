@@ -6,16 +6,20 @@
 
 <!-- Search/Filter Section -->
 <div class="form-section">
-    <!-- Autocomplete layout: Product Name + Brand filter -->
+    <!-- Autocomplete layout: Product Name + Brand filter + Category filter -->
     <div class="form-group">
         <div class="row">
-            <div class="col-md-6 col-sm-6">
+            <div class="col-md-6 col-sm-12">
                 <admin-label asp-for="SearchProductName"/>
                 <input id="product-autocomplete-@componentId" class="form-control" placeholder="Type to search products..." />
             </div>
-            <div class="col-md-4 col-sm-6">
+            <div class="col-md-3 col-sm-6">
                 <admin-label asp-for="SearchBrandId"/>
                 <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <admin-label asp-for="SearchCategoryId"/>
+                <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories"/>
             </div>
         </div>
     </div>
@@ -205,6 +209,7 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
                         var searchData = {
                             SearchProductName: $('#product-autocomplete-@componentId').val(),
                             SearchBrandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
+                            SearchCategoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
                             page: 1,
                             pageSize: 50
                         };
@@ -257,6 +262,15 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     
     // Brand filter change should refresh autocomplete data source
     $('#@Html.IdFor(model => model.SearchBrandId)').change(function() {
+        var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
+        if (autocomplete) {
+            initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
+            autocomplete.dataSource.read();
+        }
+    });
+    
+    // Category filter change should refresh autocomplete data source
+    $('#@Html.IdFor(model => model.SearchCategoryId)').change(function() {
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
             initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter

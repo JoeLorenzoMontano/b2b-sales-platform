@@ -450,8 +450,8 @@ public class OrderController(
             {
                 try
                 {
-                    // Only include orders that are not verified yet
-                    if (!order.IsVerifiedOrder)
+                    // Only include orders that are not verified yet and don't need reverification
+                    if (!order.IsVerifiedOrder && !order.NeedsReverification)
                     {
                         var orderModel = new OrderModel
                         {
@@ -533,6 +533,110 @@ public class OrderController(
         {
             // Log the error to help with debugging
             System.Diagnostics.Debug.WriteLine($"Error in IncomingOrdersList: {ex.Message}");
+            
+            // Return an empty result instead of an error
+            return Json(new DataSourceResult
+            {
+                Data = new List<OrderModel>(),
+                Total = 0
+            });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> ReverificationOrdersList(DataSourceRequest command, OrderListModel model,
+        [FromServices] ICustomerService customerService)
+    {
+        try
+        {
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+                model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+            
+            // Get orders that need reverification (previously verified but then modified)
+            var orders = await orderService.SearchOrders(
+                storeId: model.StoreId,
+                pageIndex: 0,
+                pageSize: 50, // Show more reverification orders since they need attention
+                createdFromUtc: DateTime.UtcNow.AddDays(-30) // Get orders from the last 30 days
+            );
+            
+            var reverificationOrders = new List<OrderModel>();
+            
+            foreach (var order in orders)
+            {
+                try
+                {
+                    // Only include orders that need reverification
+                    if (!order.IsVerifiedOrder && order.NeedsReverification)
+                    {
+                        var orderModel = new OrderModel
+                        {
+                            Id = order.Id,
+                            OrderNumber = order.OrderNumber,
+                            OrderStatusId = order.OrderStatusId,
+                            OrderStatus = ((OrderStatusSystem)order.OrderStatusId).ToString(),
+                            PaymentStatus = order.PaymentStatusId.ToString(),
+                            ShippingStatus = order.ShippingStatusId.ToString(),
+                            CustomerEmail = order.BillingAddress?.Email,
+                            CustomerFullName = GetCustomerDisplayName(order),
+                            CustomerId = order.CustomerId,
+                            OrderTotal = order.OrderTotal.ToString("C"),
+                            CreatedOn = order.CreatedOnUtc,
+                            CustomerCompany = order.BillingAddress?.Company
+                        };
+
+                        // Get customer groups
+                        if (!string.IsNullOrEmpty(order.CustomerId))
+                        {
+                            var customer = await customerService.GetCustomerById(order.CustomerId);
+                            if (customer != null)
+                            {
+                                orderModel.CustomerGroups = string.Join(", ", customer.Groups.ToArray());
+                            }
+                        }
+
+                        // Get warehouses from order items
+                        var warehouseIds = order.OrderItems.Where(x => !string.IsNullOrEmpty(x.WarehouseId))
+                                                         .Select(x => x.WarehouseId)
+                                                         .Distinct()
+                                                         .ToList();
+                        if (warehouseIds.Any())
+                        {
+                            var warehouseNames = new List<string>();
+                            foreach (var warehouseId in warehouseIds)
+                            {
+                                var warehouse = await warehouseService.GetWarehouseById(warehouseId);
+                                if (warehouse != null)
+                                {
+                                    warehouseNames.Add(warehouse.Name);
+                                }
+                            }
+                            orderModel.Warehouses = string.Join(", ", warehouseNames);
+                        }
+
+                        reverificationOrders.Add(orderModel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log individual order error but continue processing other orders
+                    System.Diagnostics.Debug.WriteLine($"Error processing order {order.Id} in ReverificationOrdersList: {ex.Message}");
+                }
+            }
+            
+            var gridModel = new DataSourceResult
+            {
+                Data = reverificationOrders.ToList(),
+                Total = reverificationOrders.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            // Log the error to help with debugging
+            System.Diagnostics.Debug.WriteLine($"Error in ReverificationOrdersList: {ex.Message}");
             
             // Return an empty result instead of an error
             return Json(new DataSourceResult
@@ -803,6 +907,52 @@ public class OrderController(
         catch (Exception ex)
         {
             return Json(new { success = false, message = $"Error verifying order: {ex.Message}" });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> ReverifyOrder(string orderId)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new { success = false, message = "Order not found" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            {
+                if (await CheckSalesManager(order))
+                    return Json(new { success = false, message = "Access denied" });
+            }
+
+            if (!order.NeedsReverification)
+                return Json(new { success = false, message = "Order does not need reverification" });
+
+            if (order.IsVerifiedOrder)
+                return Json(new { success = false, message = "Order is already verified" });
+
+            // Update the order verification status
+            order.IsVerifiedOrder = true;
+            order.NeedsReverification = false;
+            order.UpdatedOnUtc = DateTime.UtcNow;
+            await orderService.UpdateOrder(order);
+
+            // Add order note
+            var orderNote = new OrderNote
+            {
+                Note = "Order re-verified after modifications and moved to fulfillment queue",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            };
+            await orderService.InsertOrderNote(orderNote);
+
+            return Json(new { success = true, message = "Order re-verified successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error re-verifying order: {ex.Message}" });
         }
     }
 
@@ -1280,6 +1430,25 @@ public class OrderController(
 
             // Save the changes
             await mediator.Send(new UpdateOrderItemCommand { Order = order, OrderItem = orderItem });
+
+            // If order was previously verified, mark for reverification
+            if (order.IsVerifiedOrder)
+            {
+                order.NeedsReverification = true;
+                order.IsVerifiedOrder = false;
+                order.UpdatedOnUtc = DateTime.UtcNow;
+                await orderService.UpdateOrder(order);
+                
+                // Add order note for audit trail
+                var orderNote = new OrderNote
+                {
+                    Note = $"Order moved to reverification queue due to {fieldType} modification",
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow,
+                    OrderId = order.Id
+                };
+                await orderService.InsertOrderNote(orderNote);
+            }
 
             // Prepare response with updated values
             var primaryCurrency = await currencyService.GetPrimaryStoreCurrency();
@@ -2067,6 +2236,25 @@ public class OrderController(
             
             if (!warnings.Any())
             {
+                // If order was previously verified, mark for reverification
+                if (order.IsVerifiedOrder)
+                {
+                    order.NeedsReverification = true;
+                    order.IsVerifiedOrder = false;
+                    order.UpdatedOnUtc = DateTime.UtcNow;
+                    await orderService.UpdateOrder(order);
+                    
+                    // Add order note for audit trail
+                    var orderNote = new OrderNote
+                    {
+                        Note = "Order moved to reverification queue due to product addition",
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow,
+                        OrderId = order.Id
+                    };
+                    await orderService.InsertOrderNote(orderNote);
+                }
+                
                 return Json(new { 
                     success = true, 
                     message = "Product added successfully",
@@ -2133,6 +2321,26 @@ public class OrderController(
             {
                 // Use UpdateOrderItemCommand to ensure proper inventory management
                 await mediator.Send(new UpdateOrderItemCommand { Order = order, OrderItem = orderItem });
+                
+                // If order was previously verified, mark for reverification
+                if (order.IsVerifiedOrder)
+                {
+                    order.NeedsReverification = true;
+                    order.IsVerifiedOrder = false;
+                    order.UpdatedOnUtc = DateTime.UtcNow;
+                    await orderService.UpdateOrder(order);
+                    
+                    // Add order note for audit trail
+                    var orderNote = new OrderNote
+                    {
+                        Note = "Order moved to reverification queue due to item modification",
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow,
+                        OrderId = order.Id
+                    };
+                    await orderService.InsertOrderNote(orderNote);
+                }
+                
                 return Json(new { success = true, message = "Order item updated successfully" });
             }
 
@@ -2165,6 +2373,25 @@ public class OrderController(
             var result = await mediator.Send(new DeleteOrderItemCommand { Order = order, OrderItem = orderItem });
             if (result.error)
                 return Json(new { success = false, message = result.message });
+            
+            // If order was previously verified, mark for reverification
+            if (order.IsVerifiedOrder)
+            {
+                order.NeedsReverification = true;
+                order.IsVerifiedOrder = false;
+                order.UpdatedOnUtc = DateTime.UtcNow;
+                await orderService.UpdateOrder(order);
+                
+                // Add order note for audit trail
+                var orderNote = new OrderNote
+                {
+                    Note = "Order moved to reverification queue due to item deletion",
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow,
+                    OrderId = order.Id
+                };
+                await orderService.InsertOrderNote(orderNote);
+            }
             
             return Json(new { success = true, message = "Order item deleted successfully" });
         }

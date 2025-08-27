@@ -269,6 +269,11 @@ public class Order : BaseEntity
     public bool IsVerifiedOrder { get; set; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether the order needs reverification due to modifications
+    /// </summary>
+    public bool NeedsReverification { get; set; }
+
+    /// <summary>
     ///     Gets or sets the cycle length
     /// </summary>
     public int RecurringCycleLength { get; set; }

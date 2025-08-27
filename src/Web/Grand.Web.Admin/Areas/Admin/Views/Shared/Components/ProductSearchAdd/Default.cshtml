@@ -253,7 +253,8 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
                         try {
                             var data = autocomplete.dataSource.data();
                             if (data && data.length > 0) {
-                                autocomplete.open();
+                                // For AutoComplete, use search() to show suggestions
+                                autocomplete.search("");
                             }
                         } catch (e) {
                             console.warn('ProductSearchAdd: Error opening autocomplete after focus data load:', e);
@@ -293,17 +294,19 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
                         try {
                             var data = autocomplete.dataSource.data();
                             if (data && data.length > 0) {
-                                autocomplete.open();
+                                // For AutoComplete, use search() to show suggestions
+                                autocomplete.search("");
                             }
                         } catch (e) {
                             console.warn('ProductSearchAdd: Error opening autocomplete after data load:', e);
                         }
                     }, 100);
                 } else {
-                    // Data is already loaded, just open the dropdown
+                    // Data is already loaded, just show suggestions
                     var data = autocomplete.dataSource.data();
                     if (data && data.length > 0) {
-                        autocomplete.open();
+                        // For AutoComplete, use search() to show suggestions
+                        autocomplete.search("");
                     }
                 }
             } catch (e) {
@@ -317,7 +320,10 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
             initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
-            autocomplete.dataSource.read();
+            // Only reload data if the input has content or was previously focused
+            if ($('#product-autocomplete-@componentId').val() || $('#product-autocomplete-@componentId').is(':focus')) {
+                autocomplete.dataSource.read();
+            }
         }
     });
     
@@ -326,7 +332,10 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
             initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
-            autocomplete.dataSource.read();
+            // Only reload data if the input has content or was previously focused
+            if ($('#product-autocomplete-@componentId').val() || $('#product-autocomplete-@componentId').is(':focus')) {
+                autocomplete.dataSource.read();
+            }
         }
     });
     

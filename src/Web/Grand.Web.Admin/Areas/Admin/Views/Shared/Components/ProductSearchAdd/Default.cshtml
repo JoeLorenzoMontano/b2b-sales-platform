@@ -248,6 +248,12 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
                 if (autocomplete && autocomplete.dataSource) {
                     initialDataLoaded@(componentId.Replace("-", "_")) = true;
                     autocomplete.search("");
+                    // Open dropdown after data loads
+                    setTimeout(function() {
+                        if (autocomplete.dataSource.data().length > 0) {
+                            autocomplete.open();
+                        }
+                    }, 100);
                 }
             }
         },
@@ -256,6 +262,26 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
             var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
             if (autocomplete && autocomplete.dataSource && !autocomplete.dataSource.data().length) {
                 autocomplete.dataSource.read();
+            }
+        }
+    });
+    
+    // Add click event handler to ensure dropdown opens on click
+    $('#product-autocomplete-@componentId').click(function() {
+        var autocomplete = $(this).data('kendoAutoComplete');
+        if (autocomplete) {
+            // If data isn't loaded yet, load it and open
+            if (!initialDataLoaded@(componentId.Replace("-", "_"))) {
+                initialDataLoaded@(componentId.Replace("-", "_")) = true;
+                autocomplete.search("");
+                setTimeout(function() {
+                    if (autocomplete.dataSource.data().length > 0) {
+                        autocomplete.open();
+                    }
+                }, 100);
+            } else if (autocomplete.dataSource.data().length > 0) {
+                // Data is already loaded, just open the dropdown
+                autocomplete.open();
             }
         }
     });

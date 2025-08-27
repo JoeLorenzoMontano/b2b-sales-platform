@@ -250,8 +250,13 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
                     autocomplete.search("");
                     // Open dropdown after data loads
                     setTimeout(function() {
-                        if (autocomplete.dataSource.data().length > 0) {
-                            autocomplete.open();
+                        try {
+                            var data = autocomplete.dataSource.data();
+                            if (data && data.length > 0) {
+                                autocomplete.open();
+                            }
+                        } catch (e) {
+                            console.warn('ProductSearchAdd: Error opening autocomplete after focus data load:', e);
                         }
                     }, 100);
                 }
@@ -260,8 +265,17 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         open: function(e) {
             // Fallback: ensure data is loaded when dropdown opens
             var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
-            if (autocomplete && autocomplete.dataSource && !autocomplete.dataSource.data().length) {
-                autocomplete.dataSource.read();
+            if (autocomplete && autocomplete.dataSource) {
+                try {
+                    var data = autocomplete.dataSource.data();
+                    if (!data || data.length === 0) {
+                        autocomplete.dataSource.read();
+                    }
+                } catch (e) {
+                    console.warn('ProductSearchAdd: Error in open event handler:', e);
+                    // Fallback: try to read data anyway
+                    autocomplete.dataSource.read();
+                }
             }
         }
     });
@@ -269,19 +283,31 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     // Add click event handler to ensure dropdown opens on click
     $('#product-autocomplete-@componentId').click(function() {
         var autocomplete = $(this).data('kendoAutoComplete');
-        if (autocomplete) {
-            // If data isn't loaded yet, load it and open
-            if (!initialDataLoaded@(componentId.Replace("-", "_"))) {
-                initialDataLoaded@(componentId.Replace("-", "_")) = true;
-                autocomplete.search("");
-                setTimeout(function() {
-                    if (autocomplete.dataSource.data().length > 0) {
+        if (autocomplete && autocomplete.dataSource) {
+            try {
+                // If data isn't loaded yet, load it and open
+                if (!initialDataLoaded@(componentId.Replace("-", "_"))) {
+                    initialDataLoaded@(componentId.Replace("-", "_")) = true;
+                    autocomplete.search("");
+                    setTimeout(function() {
+                        try {
+                            var data = autocomplete.dataSource.data();
+                            if (data && data.length > 0) {
+                                autocomplete.open();
+                            }
+                        } catch (e) {
+                            console.warn('ProductSearchAdd: Error opening autocomplete after data load:', e);
+                        }
+                    }, 100);
+                } else {
+                    // Data is already loaded, just open the dropdown
+                    var data = autocomplete.dataSource.data();
+                    if (data && data.length > 0) {
                         autocomplete.open();
                     }
-                }, 100);
-            } else if (autocomplete.dataSource.data().length > 0) {
-                // Data is already loaded, just open the dropdown
-                autocomplete.open();
+                }
+            } catch (e) {
+                console.warn('ProductSearchAdd: Error in click handler:', e);
             }
         }
     });

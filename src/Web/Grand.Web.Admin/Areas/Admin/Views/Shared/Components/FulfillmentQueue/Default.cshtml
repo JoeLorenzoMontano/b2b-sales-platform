@@ -583,13 +583,6 @@
                     if (response.success) {
                         // Hide modal
                         $('#create-document-modal').modal('hide');
-                        
-                        // Show success message
-                        if (typeof displayGrandeNotification === 'function') {
-                            displayGrandeNotification("Document created successfully", "success", 5000);
-                        } else {
-                            alert("Document created successfully");
-                        }
                     } else {
                         // Show error in modal
                         $('#create-document-error').text(response.error || "An error occurred").show();

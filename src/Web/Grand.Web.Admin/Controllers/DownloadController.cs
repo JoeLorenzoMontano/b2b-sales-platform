@@ -43,6 +43,28 @@ public class DownloadController : BaseAdminController
         };
     }
 
+    public async Task<IActionResult> DownloadFile(string downloadId)
+    {
+        var download = await _downloadService.GetDownloadById(downloadId);
+        if (download == null)
+            return Content("No download record found with the specified id");
+
+        if (download.UseDownloadUrl)
+            return new RedirectResult(download.DownloadUrl);
+
+        //use stored data
+        if (download.DownloadBinary == null)
+            return Content($"Download data is not available any more. Download GD={download.Id}");
+
+        var fileName = !string.IsNullOrWhiteSpace(download.Filename) ? download.Filename : download.Id;
+        var contentType = !string.IsNullOrWhiteSpace(download.ContentType)
+            ? download.ContentType
+            : "application/octet-stream";
+        return new FileContentResult(download.DownloadBinary, contentType) {
+            FileDownloadName = fileName + download.Extension
+        };
+    }
+
     [HttpPost]
 
     //do not validate request token (XSRF)

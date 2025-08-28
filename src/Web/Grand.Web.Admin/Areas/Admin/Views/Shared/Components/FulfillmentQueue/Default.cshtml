@@ -164,7 +164,7 @@
                         attributes: { style: "text-align:center" },
                         template: function(dataItem) {
                             return '<div class="fulfillment-actions">' +
-                                '<a href="@Html.Raw(Url.Action("PdfInvoice", "Order", new { area = Constants.AreaAdmin }))" + "?orderId=' + dataItem.Id + '" ' +
+                                '<a href="@Html.Raw(Url.Action("PdfInvoice", "Order", new { area = Constants.AreaAdmin }))?orderId=' + dataItem.Id + '" ' +
                                 'class="btn btn-primary btn-sm mr-1" target="_blank" title="Generate PDF Invoice">' +
                                 '<i class="fa fa-file-pdf-o"></i></a>' +
                                 '<button type="button" class="btn btn-info btn-sm view-docs-btn" ' +

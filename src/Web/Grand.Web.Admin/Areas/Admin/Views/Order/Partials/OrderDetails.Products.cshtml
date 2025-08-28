@@ -609,8 +609,41 @@ function refreshCurrentProductsGrid() {
     window.location.reload();
 }
 
+// Check for existing shipments and hide ProductSearchAdd if shipments exist
+function checkShipments() {
+    $.ajax({
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+        dataType: "json",
+        success: function(data) {
+            if (data && data.Total > 0) {
+                // Hide ProductSearchAdd section and show warning
+                $('.add-products-section').hide();
+                $('.add-products-section').after(
+                    '<div class="shipment-warning alert alert-warning mt-3">' +
+                    '<i class="fa fa-warning"></i> ' +
+                    'Cannot add products when shipments exist. Please delete existing shipments first to add new products.' +
+                    '</div>'
+                );
+            } else {
+                // Show ProductSearchAdd section if no shipments
+                $('.add-products-section').show();
+                $('.shipment-warning').remove();
+            }
+        },
+        error: function() {
+            // On error, show ProductSearchAdd (fail safe)
+            $('.add-products-section').show();
+        }
+    });
+}
+
 // Ensure Products tab is activated if hash indicates it (fallback for page loads)
 $(document).ready(function() {
+    // Check shipments on page load
+    checkShipments();
+    
     if (window.location.hash === '#tab-3') {
         // Small delay to ensure tabstrip is initialized
         setTimeout(function() {

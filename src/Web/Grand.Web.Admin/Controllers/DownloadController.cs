@@ -21,6 +21,7 @@ public class DownloadController : BaseAdminController
         _contextAccessor = contextAccessor;
     }
 
+    [Route("DownloadFile/{downloadGuid:guid}")]
     public async Task<IActionResult> DownloadFile(Guid downloadGuid)
     {
         var download = await _downloadService.GetDownloadByGuid(downloadGuid);
@@ -43,6 +44,7 @@ public class DownloadController : BaseAdminController
         };
     }
 
+    [Route("DownloadFile/{downloadId}")]
     public async Task<IActionResult> DownloadFile(string downloadId)
     {
         var download = await _downloadService.GetDownloadById(downloadId);

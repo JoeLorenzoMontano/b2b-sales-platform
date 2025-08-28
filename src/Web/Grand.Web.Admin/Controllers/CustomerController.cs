@@ -1255,27 +1255,59 @@ public class CustomerController : BaseAdminController
     #region Customer Search Autocomplete
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
-    public async Task<IActionResult> CustomerSearchAutoComplete(string term)
+    public async Task<IActionResult> CustomerSearchAutoComplete(string term, string addressKeyword = null)
     {
-        System.Diagnostics.Debug.WriteLine($"CustomerSearchAutoComplete called with term: {term}");
+        System.Diagnostics.Debug.WriteLine($"CustomerSearchAutoComplete called with term: {term}, addressKeyword: {addressKeyword}");
         
         const int searchTermMinimumLength = 3;
-        if (string.IsNullOrWhiteSpace(term) || term.Length < searchTermMinimumLength)
+        
+        // Check if either term or addressKeyword has sufficient length
+        bool hasValidTerm = !string.IsNullOrWhiteSpace(term) && term.Length >= searchTermMinimumLength;
+        bool hasValidAddress = !string.IsNullOrWhiteSpace(addressKeyword) && addressKeyword.Length >= searchTermMinimumLength;
+        
+        if (!hasValidTerm && !hasValidAddress)
             return Json(new List<object>());
 
         var customers = await _customerService.GetAllCustomers(
-            email: term,
+            email: hasValidTerm ? term : null,
+            firstName: hasValidTerm ? term : null,
+            lastName: hasValidTerm ? term : null,
+            addressKeyword: hasValidAddress ? addressKeyword : null,
             pageSize: 15);
             
-        System.Diagnostics.Debug.WriteLine($"Found {customers.Count()} customers matching the term '{term}'");
-
+        System.Diagnostics.Debug.WriteLine($"Found {customers.Count()} customers matching search criteria");
+        
         var result = customers.Select(c => new
         {
             id = c.Id,
-            label = $"{c.Email} - {c.GetFullName()}"
+            label = FormatCustomerLabel(c, hasValidAddress)
         }).ToList();
-
         return Json(result);
+    }
+    
+    private string FormatCustomerLabel(Customer customer, bool includeAddressInfo)
+    {
+        var label = $"{customer.Email} - {customer.GetFullName()}";
+        
+        if (includeAddressInfo && customer.Addresses.Any())
+        {
+            var primaryAddress = customer.Addresses.FirstOrDefault();
+            if (primaryAddress != null)
+            {
+                var addressParts = new List<string>();
+                if (!string.IsNullOrEmpty(primaryAddress.Company))
+                    addressParts.Add(primaryAddress.Company);
+                if (!string.IsNullOrEmpty(primaryAddress.City))
+                    addressParts.Add(primaryAddress.City);
+                if (!string.IsNullOrEmpty(primaryAddress.StateProvince))
+                    addressParts.Add(primaryAddress.StateProvince);
+                    
+                if (addressParts.Any())
+                    label += $" ({string.Join(", ", addressParts)})";
+            }
+        }
+        
+        return label;
     }
 
     #endregion

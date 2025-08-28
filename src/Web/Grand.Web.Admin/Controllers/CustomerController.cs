@@ -1268,14 +1268,47 @@ public class CustomerController : BaseAdminController
         if (!hasValidTerm && !hasValidAddress)
             return Json(new List<object>());
 
-        var customers = await _customerService.GetAllCustomers(
-            email: hasValidTerm ? term : null,
-            firstName: hasValidTerm ? term : null,
-            lastName: hasValidTerm ? term : null,
-            addressKeyword: hasValidAddress ? addressKeyword : null,
-            pageSize: 15);
+        var allCustomers = new List<Customer>();
+        
+        // For term search, use OR logic by making separate calls for each field
+        if (hasValidTerm)
+        {
+            // Search by email
+            var emailCustomers = await _customerService.GetAllCustomers(
+                email: term,
+                pageSize: 15);
+            allCustomers.AddRange(emailCustomers);
             
-        System.Diagnostics.Debug.WriteLine($"Found {customers.Count()} customers matching search criteria");
+            // Search by firstName
+            var firstNameCustomers = await _customerService.GetAllCustomers(
+                firstName: term,
+                pageSize: 15);
+            allCustomers.AddRange(firstNameCustomers);
+            
+            // Search by lastName
+            var lastNameCustomers = await _customerService.GetAllCustomers(
+                lastName: term,
+                pageSize: 15);
+            allCustomers.AddRange(lastNameCustomers);
+        }
+        
+        // For address search, make separate call
+        if (hasValidAddress)
+        {
+            var addressCustomers = await _customerService.GetAllCustomers(
+                addressKeyword: addressKeyword,
+                pageSize: 15);
+            allCustomers.AddRange(addressCustomers);
+        }
+        
+        // Remove duplicates and limit results
+        var customers = allCustomers
+            .GroupBy(c => c.Id)
+            .Select(g => g.First())
+            .Take(15)
+            .ToList();
+            
+        System.Diagnostics.Debug.WriteLine($"Found {customers.Count} unique customers matching search criteria");
         
         var result = customers.Select(c => new
         {

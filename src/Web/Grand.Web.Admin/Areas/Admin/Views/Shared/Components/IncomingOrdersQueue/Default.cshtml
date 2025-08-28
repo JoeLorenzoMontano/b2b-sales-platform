@@ -751,15 +751,14 @@
 
     // Create Order functionality
     function openCreateOrderModal() {
-        // Clear previous search
-        $('#customerSearchInput').val('');
-        $('#addressSearchInput').val('');
+        // Comprehensive cleanup before opening modal
+        cleanupCustomerSearchModal();
         
         // Show the modal
         $('#customerSearchModal').modal('show');
         
         // Initialize autocomplete when modal is shown (ensures DOM element is visible)
-        $('#customerSearchModal').on('shown.bs.modal', function () {
+        $('#customerSearchModal').on('shown.bs.modal.customerSearch', function () {
             // Destroy existing autocomplete if any
             if ($('#customerSearchInput').hasClass('ui-autocomplete-input')) {
                 $('#customerSearchInput').autocomplete('destroy');
@@ -772,15 +771,35 @@
             $('#customerSearchInput').focus();
         });
         
-        // Clean up event handler when modal is hidden
-        $('#customerSearchModal').on('hidden.bs.modal', function () {
-            $(this).off('shown.bs.modal');
+        // Comprehensive cleanup when modal is hidden
+        $('#customerSearchModal').on('hidden.bs.modal.customerSearch', function () {
+            cleanupCustomerSearchModal();
         });
+    }
+    
+    // Comprehensive cleanup function for customer search modal
+    function cleanupCustomerSearchModal() {
+        // Clear search results
+        $('.customer-search-results').remove();
+        
+        // Clear input values
+        $('#customerSearchInput, #addressSearchInput').val('');
+        
+        // Remove existing event handlers with namespace
+        $('#customerSearchInput, #addressSearchInput').off('input.customerSearch');
+        $('#customerSearchModal').off('shown.bs.modal.customerSearch hidden.bs.modal.customerSearch');
+        
+        // Clear any existing timeout
+        if (window.customerSearchTimeout) {
+            clearTimeout(window.customerSearchTimeout);
+            window.customerSearchTimeout = null;
+        }
     }
 
     // Initialize enhanced customer search with both name/email and address search
     function initializeCustomerSearch() {
-        var searchTimeout;
+        // Use global timeout variable for proper cleanup
+        window.customerSearchTimeout = null;
         
         function performSearch() {
             var customerTerm = $('#customerSearchInput').val() || '';
@@ -790,6 +809,8 @@
             var hasValidCustomerTerm = customerTerm.length >= 3;
             var hasValidAddressKeyword = addressKeyword.length >= 3;
             
+            console.log('performSearch called:', { customerTerm, addressKeyword, hasValidCustomerTerm, hasValidAddressKeyword });
+            
             if (!hasValidCustomerTerm && !hasValidAddressKeyword) {
                 // Clear results if neither field has sufficient input
                 $('.customer-search-results').remove();
@@ -797,12 +818,13 @@
             }
             
             // Clear any existing timeout
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
+            if (window.customerSearchTimeout) {
+                clearTimeout(window.customerSearchTimeout);
             }
             
             // Set new timeout for search
-            searchTimeout = setTimeout(function() {
+            window.customerSearchTimeout = setTimeout(function() {
+                console.log('Making AJAX request with params:', { term: customerTerm, addressKeyword: addressKeyword });
                 $.ajax({
                     url: '@(Url.Action("CustomerSearchAutoComplete", "Customer", new { area = Constants.AreaAdmin }))',
                     type: 'GET',
@@ -811,11 +833,11 @@
                         addressKeyword: addressKeyword  // Always send the actual input value
                     },
                     success: function(data) {
-                        console.log('Search results:', data);
+                        console.log('Search results received:', data);
                         displaySearchResults(data);
                     },
-                    error: function() {
-                        console.error('Error performing customer search');
+                    error: function(xhr, status, error) {
+                        console.error('Error performing customer search:', { status, error, response: xhr.responseText });
                     }
                 });
             }, 500); // 500ms delay
@@ -826,8 +848,11 @@
             $('.customer-search-results').remove();
             
             if (!results || results.length === 0) {
+                console.log('No results to display');
                 return;
             }
+            
+            console.log('Displaying', results.length, 'results');
             
             // Create results container
             var resultsHtml = '<div class="customer-search-results list-group mt-2">';
@@ -848,15 +873,17 @@
             });
         }
         
-        // Bind events to both search inputs
-        $('#customerSearchInput, #addressSearchInput').on('input', performSearch);
+        // Bind events to both search inputs with namespace for proper cleanup
+        $('#customerSearchInput, #addressSearchInput').on('input.customerSearch', performSearch);
         
         // Clear results when inputs are cleared
-        $('#customerSearchInput, #addressSearchInput').on('input', function() {
+        $('#customerSearchInput, #addressSearchInput').on('input.customerSearch', function() {
             if (!$('#customerSearchInput').val() && !$('#addressSearchInput').val()) {
                 $('.customer-search-results').remove();
             }
         });
+        
+        console.log('Customer search initialized with namespaced events');
     }
 
     function selectCustomerForOrder(customerId, customerLabel) {

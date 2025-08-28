@@ -43,6 +43,57 @@ public class DownloadController : BaseAdminController
         };
     }
 
+    [Route("PreviewFile/{downloadGuid:guid}")]
+    public async Task<IActionResult> PreviewFile(Guid downloadGuid)
+    {
+        var download = await _downloadService.GetDownloadByGuid(downloadGuid);
+        if (download == null)
+            return Content("No download record found with the specified id");
+
+        if (download.UseDownloadUrl)
+            return new RedirectResult(download.DownloadUrl);
+
+        //use stored data
+        if (download.DownloadBinary == null)
+            return Content($"Download data is not available any more. Download GD={download.Id}");
+
+        var fileName = !string.IsNullOrWhiteSpace(download.Filename) ? download.Filename : download.Id;
+        var contentType = !string.IsNullOrWhiteSpace(download.ContentType)
+            ? download.ContentType
+            : "application/octet-stream";
+
+        // Set inline disposition for preview functionality
+        var fullFileName = fileName + download.Extension;
+        Response.Headers.Append("Content-Disposition", $"inline; filename=\"{fullFileName}\"");
+        
+        return File(download.DownloadBinary, contentType);
+    }
+
+    [Route("PreviewFile/{downloadId}")]
+    public async Task<IActionResult> PreviewFile(string downloadId)
+    {
+        var download = await _downloadService.GetDownloadById(downloadId);
+        if (download == null)
+            return Content("No download record found with the specified id");
+
+        if (download.UseDownloadUrl)
+            return new RedirectResult(download.DownloadUrl);
+
+        //use stored data
+        if (download.DownloadBinary == null)
+            return Content($"Download data is not available any more. Download GD={download.Id}");
+
+        var fileName = !string.IsNullOrWhiteSpace(download.Filename) ? download.Filename : download.Id;
+        var contentType = !string.IsNullOrWhiteSpace(download.ContentType)
+            ? download.ContentType
+            : "application/octet-stream";
+
+        // Set inline disposition for preview functionality
+        var fullFileName = fileName + download.Extension;
+        Response.Headers.Append("Content-Disposition", $"inline; filename=\"{fullFileName}\"");
+        
+        return File(download.DownloadBinary, contentType);
+    }
     [HttpPost]
 
     //do not validate request token (XSRF)

@@ -73,7 +73,7 @@ $(document).ready(function () {
                 attributes: { style: "text-align:center" },
                 template: function(dataItem) {
                     if (dataItem.DownloadId && dataItem.DownloadId.trim() !== "") {
-                        return '<a href="@Html.Raw(Url.Action("DownloadFile", "Download", new { area = Constants.AreaAdmin, downloadId = "__DOWNLOAD_ID__" }))".replace("__DOWNLOAD_ID__", dataItem.DownloadId) ' +
+                        return '<a href="@Html.Raw(Url.Action("PreviewFile", "Download", new { area = Constants.AreaAdmin, downloadId = "__DOWNLOAD_ID__" }))".replace("__DOWNLOAD_ID__", dataItem.DownloadId) ' +
                                'target="_blank" class="btn btn-sm btn-outline-primary" title="Preview Attachment">' +
                                '<i class="fa fa-eye"></i></a>';
                     } else {

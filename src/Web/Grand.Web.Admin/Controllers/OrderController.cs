@@ -968,7 +968,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> SendToReverification(string orderId)
+    public async Task<IActionResult> SendToReverification(string orderId, [FromServices] IShipmentService shipmentService)
     {
         try
         {
@@ -987,6 +987,9 @@ public class OrderController(
 
             if (order.NeedsReverification)
                 return Json(new { success = false, message = "Order already needs reverification" });
+
+            // Delete all shipments before sending to reverification
+            await DeleteOrderShipmentsForReverification(order, shipmentService);
 
             // Update the order to require reverification
             order.IsVerifiedOrder = false;
@@ -1427,7 +1430,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> UpdateOrderItemField(string orderId, string orderItemId, string fieldType, string value, [FromServices] ICurrencyService currencyService)
+    public async Task<IActionResult> UpdateOrderItemField(string orderId, string orderItemId, string fieldType, string value, [FromServices] ICurrencyService currencyService, [FromServices] IShipmentService shipmentService)
     {
         try
         {
@@ -1493,6 +1496,9 @@ public class OrderController(
             // If order was previously verified, mark for reverification
             if (order.IsVerifiedOrder)
             {
+                // Delete all shipments before reverification
+                await DeleteOrderShipmentsForReverification(order, shipmentService);
+                
                 order.NeedsReverification = true;
                 order.IsVerifiedOrder = false;
                 order.UpdatedOnUtc = DateTime.UtcNow;
@@ -1535,7 +1541,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> DeleteOrderItem(string id, string orderItemId)
+    public async Task<IActionResult> DeleteOrderItem(string id, string orderItemId, [FromServices] IShipmentService shipmentService)
     {
         var order = await orderService.GetOrderById(id);
         if (order == null || await CheckSalesManager(order))
@@ -2229,7 +2235,7 @@ public class OrderController(
     [HttpPost]
     public async Task<IActionResult> AddProductToOrderInline(string orderId, string productId, 
         int quantity, decimal unitPrice, string warehouseId, string attributeCombinationId,
-        [FromServices] IProductService productService)
+        [FromServices] IProductService productService, [FromServices] IShipmentService shipmentService)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -2301,6 +2307,9 @@ public class OrderController(
                 // If order was previously verified, mark for reverification
                 if (order.IsVerifiedOrder)
                 {
+                    // Delete all shipments before reverification
+                    await DeleteOrderShipmentsForReverification(order, shipmentService);
+                    
                     order.NeedsReverification = true;
                     order.IsVerifiedOrder = false;
                     order.UpdatedOnUtc = DateTime.UtcNow;
@@ -2416,7 +2425,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> DeleteOrderItemInline(string orderId, string orderItemId)
+    public async Task<IActionResult> DeleteOrderItemInline(string orderId, string orderItemId, [FromServices] IShipmentService shipmentService)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -2439,6 +2448,9 @@ public class OrderController(
             // If order was previously verified, mark for reverification
             if (order.IsVerifiedOrder)
             {
+                // Delete all shipments before reverification
+                await DeleteOrderShipmentsForReverification(order, shipmentService);
+                
                 order.NeedsReverification = true;
                 order.IsVerifiedOrder = false;
                 order.UpdatedOnUtc = DateTime.UtcNow;
@@ -3006,6 +3018,46 @@ public class OrderController(
             return Json(new { 
                 success = false, 
                 message = "Error loading component: " + ex.Message 
+            });
+        }
+    }
+
+    /// <summary>
+    /// Deletes all shipments associated with an order when it's sent to reverification
+    /// </summary>
+    /// <param name="order">The order whose shipments should be deleted</param>
+    /// <param name="shipmentService">The shipment service</param>
+    private async Task DeleteOrderShipmentsForReverification(Order order, IShipmentService shipmentService)
+    {
+        // Get all shipments for this order
+        var shipments = await shipmentService.GetShipmentsByOrder(order.Id);
+        
+        if (!shipments.Any()) return;
+        
+        // Delete each shipment
+        foreach (var shipment in shipments)
+        {
+            await shipmentService.DeleteShipment(shipment);
+            
+            // Add order note for each deleted shipment
+            await orderService.InsertOrderNote(new OrderNote
+            {
+                Note = $"Shipment #{shipment.ShipmentNumber} deleted due to order reverification",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            });
+        }
+        
+        // Add summary order note if multiple shipments were deleted
+        if (shipments.Count() > 1)
+        {
+            await orderService.InsertOrderNote(new OrderNote
+            {
+                Note = $"Total of {shipments.Count()} shipments deleted due to order reverification",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
             });
         }
     }

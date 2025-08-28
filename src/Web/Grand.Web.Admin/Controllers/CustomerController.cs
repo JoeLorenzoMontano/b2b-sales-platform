@@ -1259,7 +1259,7 @@ public class CustomerController : BaseAdminController
     {
         System.Diagnostics.Debug.WriteLine($"CustomerSearchAutoComplete called with term: {term}, addressKeyword: {addressKeyword}");
         
-        const int searchTermMinimumLength = 3;
+        const int searchTermMinimumLength = 1;
         
         // Check if either term or addressKeyword has sufficient length
         bool hasValidTerm = !string.IsNullOrWhiteSpace(term) && term.Length >= searchTermMinimumLength;

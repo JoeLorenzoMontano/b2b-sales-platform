@@ -26,6 +26,7 @@ public class GetCustomerQuery : IRequest<IQueryable<Customer>>
     public string Company { get; set; } = null;
     public string Phone { get; set; } = null;
     public string ZipPostalCode { get; set; } = null;
+    public string AddressKeyword { get; set; } = null;
     public bool LoadOnlyWithShoppingCart { get; set; } = false;
     public ShoppingCartType? Sct { get; set; } = null;
     public int PageIndex { get; set; } = 0;

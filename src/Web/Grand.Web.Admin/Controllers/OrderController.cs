@@ -1085,6 +1085,9 @@ public class OrderController(
     public async Task<IActionResult> PdfInvoice(string orderId)
     {
         var order = await orderService.GetOrderById(orderId);
+        if (order == null)
+            return RedirectToAction("List");
+            
         if ((await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
              order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) ||
             await CheckSalesManager(order)) return RedirectToAction("List");

@@ -73,4 +73,8 @@ public class CustomerListModel : BaseModel
     public string SearchZipPostalCode { get; set; }
 
     public bool ZipPostalCodeEnabled { get; set; }
+
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.SearchAddress")]
+
+    public string SearchAddressKeyword { get; set; }
 }

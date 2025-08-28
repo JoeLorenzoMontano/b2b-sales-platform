@@ -1,3 +1,4 @@
+@using System.Linq
 @using Grand.Business.Core.Interfaces.Catalog.Products
 @using Grand.Business.Core.Interfaces.Checkout.GiftVouchers
 @using Grand.Business.Core.Interfaces.Checkout.Orders
@@ -121,7 +122,7 @@
     @{
         var i = 0;
     }
-    @foreach (var order in Model.Item1)
+    @foreach (var order in Model.Item1.Where(o => o != null))
     {
         var priceIncludesTax = order.CustomerTaxDisplayTypeId == TaxDisplayType.IncludingTax;
         var store = await _storeService.GetStoreById(order.StoreId);

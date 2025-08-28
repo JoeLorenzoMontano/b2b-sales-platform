@@ -35,6 +35,7 @@ public interface ICustomerService
     /// <param name="company">Company; null to load all customers</param>
     /// <param name="phone">Phone; null to load all customers</param>
     /// <param name="zipPostalCode">Phone; null to load all customers</param>
+    /// <param name="addressKeyword">Address keyword to search in all address fields; null to load all customers</param>
     /// <param name="loadOnlyWithShoppingCart">Value indicating whether to load customers only with shopping cart</param>
     /// <param name="sct">
     ///     Value indicating what shopping cart type to filter; user when 'loadOnlyWithShoppingCart' param is
@@ -51,7 +52,7 @@ public interface ICustomerService
         string[] defaultImpersonatedByEmployeeIds = null, string[] cityNames = null,
         string email = null, string username = null,
         string firstName = null, string lastName = null,
-        string company = null, string phone = null, string zipPostalCode = null,
+        string company = null, string phone = null, string zipPostalCode = null, string addressKeyword = null,
         bool loadOnlyWithShoppingCart = false, ShoppingCartType? sct = null,
         int pageIndex = 0, int pageSize = int.MaxValue, Expression<Func<Customer, object>> orderBySelector = null);
 

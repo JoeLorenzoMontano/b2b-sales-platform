@@ -76,6 +76,22 @@ public class GetCustomerQueryHandler : IRequestHandler<GetCustomerQuery, IQuerya
                 y.Key == SystemCustomerFieldNames.ZipPostalCode && y.Value != null &&
                 y.Value.ToLower().Contains(request.ZipPostalCode.ToLower())));
 
+        //search by address keyword
+        if (!string.IsNullOrWhiteSpace(request.AddressKeyword))
+        {
+            var keyword = request.AddressKeyword.ToLower();
+            query = query.Where(c => c.Addresses.Any(addr =>
+                (addr.Address1 != null && addr.Address1.ToLower().Contains(keyword)) ||
+                (addr.Address2 != null && addr.Address2.ToLower().Contains(keyword)) ||
+                (addr.City != null && addr.City.ToLower().Contains(keyword)) ||
+                (addr.ZipPostalCode != null && addr.ZipPostalCode.ToLower().Contains(keyword)) ||
+                (addr.PhoneNumber != null && addr.PhoneNumber.ToLower().Contains(keyword)) ||
+                (addr.Company != null && addr.Company.ToLower().Contains(keyword)) ||
+                (addr.CountryId != null && addr.CountryId.ToLower().Contains(keyword)) ||
+                (addr.StateProvinceId != null && addr.StateProvinceId.ToLower().Contains(keyword))
+            ));
+        }
+
         if (request.LoadOnlyWithShoppingCart)
             query = request.Sct.HasValue
                 ? query.Where(c => c.ShoppingCartItems.Any(x => x.ShoppingCartTypeId == request.Sct.Value))

@@ -83,7 +83,7 @@ public class CustomerService : ICustomerService
         string[] defaultImpersonatedByEmployeeIds = null, string[] cityNames = null,
         string email = null, string username = null,
         string firstName = null, string lastName = null,
-        string company = null, string phone = null, string zipPostalCode = null,
+        string company = null, string phone = null, string zipPostalCode = null, string addressKeyword = null,
         bool loadOnlyWithShoppingCart = false, ShoppingCartType? sct = null,
         int pageIndex = 0, int pageSize = 2147483647, Expression<Func<Customer, object>> orderBySelector = null)
     {
@@ -106,6 +106,7 @@ public class CustomerService : ICustomerService
             Company = company,
             Phone = phone,
             ZipPostalCode = zipPostalCode,
+            AddressKeyword = addressKeyword,
             LoadOnlyWithShoppingCart = loadOnlyWithShoppingCart,
             Sct = sct,
             PageIndex = pageIndex,

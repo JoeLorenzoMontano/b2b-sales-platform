@@ -215,6 +215,7 @@ public class CustomerViewModelService : ICustomerViewModelService
             company: model.SearchCompany,
             phone: model.SearchPhone,
             zipPostalCode: model.SearchZipPostalCode,
+            addressKeyword: model.SearchAddressKeyword,
             loadOnlyWithShoppingCart: false,
             salesEmployeeId: salesEmployeeId,
             pageIndex: pageIndex - 1,

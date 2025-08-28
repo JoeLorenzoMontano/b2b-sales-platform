@@ -52,19 +52,25 @@
                         <div class="form-body">
                             <div class="main-header col-12 px-0">
                                 <div class="row align-items-end">
-                                    <div class="col-md-4 col-ms-6 col-12">
+                                    <div class="col-md-3 col-ms-6 col-12">
                                         <div class="form-group mb-0">
                                             <admin-label asp-for="SearchFirstName" class="control-label"/>
                                             <admin-input asp-for="SearchFirstName"/>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 col-ms-6 col-12">
+                                    <div class="col-md-3 col-ms-6 col-12">
                                         <div class="form-group mb-0">
                                             <admin-label asp-for="SearchEmail" class="control-label"/>
                                             <admin-input asp-for="SearchEmail"/>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 col-sm-12 col-12">
+                                    <div class="col-md-3 col-ms-6 col-12">
+                                        <div class="form-group mb-0">
+                                            <admin-label asp-for="SearchAddressKeyword" class="control-label"/>
+                                            <admin-input asp-for="SearchAddressKeyword"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-12 col-12">
                                         <div class="form-actions">
                                             <div class="btn-group">
                                                 <button class="btn btn-success filter-submit" id="search-customers">
@@ -361,6 +367,12 @@
                         return false;
                     }
                 });
+                $("#@Html.IdFor(model => model.SearchAddressKeyword)").keydown(function (event) {
+                    if (event.keyCode == 13) {
+                        $("#search-customers").click();
+                        return false;
+                    }
+                });
                 $("#@Html.IdFor(model => model.SearchLastName)").keydown(function (event) {
                     if (event.keyCode == 13) {
                         $("#search-customers").click();
@@ -490,7 +502,8 @@
                     SearchLastName: $('#@Html.IdFor(model => model.SearchLastName)').val(),
                     SearchCompany: $('#@Html.IdFor(model => model.SearchCompany)').val(),
                     SearchPhone: $('#@Html.IdFor(model => model.SearchPhone)').val(),
-                    SearchZipPostalCode: $('#@Html.IdFor(model => model.SearchZipPostalCode)').val()
+                    SearchZipPostalCode: $('#@Html.IdFor(model => model.SearchZipPostalCode)').val(),
+                    SearchAddressKeyword: $('#@Html.IdFor(model => model.SearchAddressKeyword)').val()
                 };
                 addAntiForgeryToken(data);
                 return data;

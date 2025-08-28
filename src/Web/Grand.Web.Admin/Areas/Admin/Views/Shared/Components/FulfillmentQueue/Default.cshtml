@@ -538,8 +538,19 @@
     $(document).on('submit', '#create-document-form', function(e) {
         e.preventDefault();
         
-        var formData = $(this).serialize();
         var orderId = $('#create-document-modal').data('order-id');
+        
+        // Manually construct data object with form fields
+        var data = {
+            Name: $('#documentName').val(),
+            Description: $('#documentDescription').val(),
+            ObjectId: $('#documentObjectId').val(),
+            ReferenceId: parseInt($('input[name="ReferenceId"]').val()),
+            Published: $('input[name="Published"]').val() === 'true'
+        };
+        
+        // Add anti-forgery token
+        addAntiForgeryToken(data);
         
         // Show loading state
         var submitBtn = $('#create-document-submit');
@@ -549,7 +560,7 @@
         $.ajax({
             url: '@Url.Action("CreateDocumentInline", "Document", new { area = Constants.AreaAdmin })',
             type: 'POST',
-            data: formData,
+            data: data,
             success: function(response) {
                 if (response.success) {
                     // Hide modal

@@ -279,9 +279,6 @@
                         var row = button.closest('tr');
                         row.addClass('highlight-success');
                         
-                        // Show success message using alert (standard GrandNode2 pattern)
-                        alert('Order verified successfully and moved to Fulfillment Queue');
-                        
                         // Refresh the incoming orders grid to remove the verified order
                         var incomingGrid = $('#incoming-orders-grid').data('kendoGrid');
                         if (incomingGrid) {

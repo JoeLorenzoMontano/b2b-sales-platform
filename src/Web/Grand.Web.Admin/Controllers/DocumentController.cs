@@ -94,6 +94,7 @@ public class DocumentController : BaseAdminController
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateDocumentInline(string Name, string Description, string ObjectId, int ReferenceId, string DownloadId = "", bool Published = true)
     {
         try

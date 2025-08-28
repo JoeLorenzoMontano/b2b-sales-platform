@@ -201,9 +201,6 @@
                         var row = button.closest('tr');
                         row.addClass('highlight-success');
                         
-                        // Show success message using alert (standard GrandNode2 pattern)
-                        alert('Order re-verified successfully and moved to Fulfillment Queue');
-                        
                         // Refresh the reverification queue grid to remove the re-verified order
                         var reverificationGrid = $('#reverification-queue-grid').data('kendoGrid');
                         if (reverificationGrid) {

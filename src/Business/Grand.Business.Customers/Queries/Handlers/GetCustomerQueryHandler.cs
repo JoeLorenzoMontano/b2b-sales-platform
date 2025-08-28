@@ -81,6 +81,9 @@ public class GetCustomerQueryHandler : IRequestHandler<GetCustomerQuery, IQuerya
         {
             var keyword = request.AddressKeyword.ToLower();
             query = query.Where(c => c.Addresses.Any(addr =>
+                (addr.FirstName != null && addr.FirstName.ToLower().Contains(keyword)) ||
+                (addr.LastName != null && addr.LastName.ToLower().Contains(keyword)) ||
+                (addr.Email != null && addr.Email.ToLower().Contains(keyword)) ||
                 (addr.Address1 != null && addr.Address1.ToLower().Contains(keyword)) ||
                 (addr.Address2 != null && addr.Address2.ToLower().Contains(keyword)) ||
                 (addr.City != null && addr.City.ToLower().Contains(keyword)) ||

@@ -65,6 +65,21 @@ $(document).ready(function () {
                 headerAttributes: { style: "text-align:center" },
                 attributes: { style: "text-align:center" },
                 template: '# if(Published) {# <i class="fa fa-check" aria-hidden="true" style="color:green"></i> #} else {# <i class="fa fa-times" aria-hidden="true" style="color:red"></i> #} #'
+            }, {
+                field: "DownloadId",
+                title: "Preview",
+                width: 100,
+                headerAttributes: { style: "text-align:center" },
+                attributes: { style: "text-align:center" },
+                template: function(dataItem) {
+                    if (dataItem.DownloadId && dataItem.DownloadId.trim() !== "") {
+                        return '<a href="@Html.Raw(Url.Action("DownloadFile", "Download", new { area = Constants.AreaAdmin, downloadId = "__DOWNLOAD_ID__" }))".replace("__DOWNLOAD_ID__", dataItem.DownloadId) ' +
+                               'target="_blank" class="btn btn-sm btn-outline-primary" title="Preview Attachment">' +
+                               '<i class="fa fa-eye"></i></a>';
+                    } else {
+                        return '<span class="text-muted" style="font-size: 0.85em;">No attachment</span>';
+                    }
+                }
         }]
     });
 });

@@ -1,6 +1,8 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Marketing.Documents;
+using Grand.Domain.Common;
+using Grand.Domain.Documents;
 using Grand.Domain.Permissions;
 using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
@@ -88,6 +90,47 @@ public class DocumentController : BaseAdminController
 
         model = await _documentViewModelService.PrepareDocumentModel(model, null, null);
         return View(model);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> CreateDocumentInline(string Name, string Description, string ObjectId, int ReferenceId, string DownloadId = "", bool Published = true)
+    {
+        try
+        {
+            // Validate required fields
+            if (string.IsNullOrEmpty(Name))
+            {
+                return Json(new { success = false, error = "Document name is required." });
+            }
+
+            if (string.IsNullOrEmpty(ObjectId))
+            {
+                return Json(new { success = false, error = "Order ID is required." });
+            }
+
+            // Create document model
+            var model = new DocumentModel
+            {
+                Name = Name,
+                Description = Description ?? "",
+                ObjectId = ObjectId,
+                ReferenceId = ReferenceId,
+                Published = Published,
+                StatusId = (int)DocumentStatus.Open,
+                DisplayOrder = 0,
+                DownloadId = DownloadId ?? ""
+            };
+
+            // Create the document
+            var document = await _documentViewModelService.InsertDocument(model);
+
+            return Json(new { success = true, documentId = document.Id });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, error = ex.Message });
+        }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]

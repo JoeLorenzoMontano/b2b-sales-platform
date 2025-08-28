@@ -202,7 +202,7 @@ function saveFilterState@(componentId.Replace("-", "_"))() {
             contextId: '@Model.ContextId',
             timestamp: Date.now()
         };
-        localStorage.setItem('ProductSearchAdd_Filters_@Model.ContextId', JSON.stringify(filterState));
+        sessionStorage.setItem('ProductSearchAdd_Filters_@Model.ContextId', JSON.stringify(filterState));
     } catch (e) {
         console.warn('ProductSearchAdd: Could not save filter state:', e);
     }
@@ -210,7 +210,7 @@ function saveFilterState@(componentId.Replace("-", "_"))() {
 
 function restoreFilterState@(componentId.Replace("-", "_"))() {
     try {
-        var saved = localStorage.getItem('ProductSearchAdd_Filters_@Model.ContextId');
+        var saved = sessionStorage.getItem('ProductSearchAdd_Filters_@Model.ContextId');
         if (saved) {
             var filterState = JSON.parse(saved);
             // Only restore if saved within last 4 hours (to avoid stale state)
@@ -228,8 +228,26 @@ function restoreFilterState@(componentId.Replace("-", "_"))() {
     }
 }
 
+function clearOtherContextFilters@(componentId.Replace("-", "_"))() {
+    try {
+        var currentContextId = '@Model.ContextId';
+        // Get all sessionStorage keys
+        for (var i = 0; i < sessionStorage.length; i++) {
+            var key = sessionStorage.key(i);
+            if (key && key.startsWith('ProductSearchAdd_Filters_') && !key.endsWith(currentContextId)) {
+                sessionStorage.removeItem(key);
+            }
+        }
+    } catch (e) {
+        console.warn('ProductSearchAdd: Could not clear other context filters:', e);
+    }
+}
+
 function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
-    // Restore saved filter values from localStorage
+    // Clear any existing filter state for different contexts
+    clearOtherContextFilters@(componentId.Replace("-", "_"))();
+    
+    // Restore saved filter values for this context
     restoreFilterState@(componentId.Replace("-", "_"))();
     
     // Initialize Kendo AutoComplete

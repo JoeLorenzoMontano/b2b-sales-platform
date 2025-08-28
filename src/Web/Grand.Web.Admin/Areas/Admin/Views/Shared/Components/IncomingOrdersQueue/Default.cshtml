@@ -824,14 +824,20 @@
             
             // Set new timeout for search
             window.customerSearchTimeout = setTimeout(function() {
-                console.log('Making AJAX request with params:', { term: customerTerm, addressKeyword: addressKeyword });
+                // Build data object conditionally - only include parameters with valid values
+                var data = {};
+                if (hasValidCustomerTerm) {
+                    data.term = customerTerm;
+                }
+                if (hasValidAddressKeyword) {
+                    data.addressKeyword = addressKeyword;
+                }
+                
+                console.log('Making AJAX request with params:', data);
                 $.ajax({
                     url: '@(Url.Action("CustomerSearchAutoComplete", "Customer", new { area = Constants.AreaAdmin }))',
                     type: 'GET',
-                    data: {
-                        term: customerTerm,  // Always send the actual input value
-                        addressKeyword: addressKeyword  // Always send the actual input value
-                    },
+                    data: data,
                     success: function(data) {
                         console.log('Search results received:', data);
                         displaySearchResults(data);

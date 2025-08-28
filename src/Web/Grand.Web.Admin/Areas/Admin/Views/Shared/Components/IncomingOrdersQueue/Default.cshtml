@@ -783,14 +783,16 @@
         var searchTimeout;
         
         function performSearch() {
-            var customerTerm = $('#customerSearchInput').val();
-            var addressKeyword = $('#addressSearchInput').val();
+            var customerTerm = $('#customerSearchInput').val() || '';
+            var addressKeyword = $('#addressSearchInput').val() || '';
             
             // Check if either field has at least 3 characters
-            var hasValidCustomerTerm = customerTerm && customerTerm.length >= 3;
-            var hasValidAddressKeyword = addressKeyword && addressKeyword.length >= 3;
+            var hasValidCustomerTerm = customerTerm.length >= 3;
+            var hasValidAddressKeyword = addressKeyword.length >= 3;
             
             if (!hasValidCustomerTerm && !hasValidAddressKeyword) {
+                // Clear results if neither field has sufficient input
+                $('.customer-search-results').remove();
                 return;
             }
             
@@ -805,8 +807,8 @@
                     url: '@(Url.Action("CustomerSearchAutoComplete", "Customer", new { area = Constants.AreaAdmin }))',
                     type: 'GET',
                     data: {
-                        term: hasValidCustomerTerm ? customerTerm : '',
-                        addressKeyword: hasValidAddressKeyword ? addressKeyword : ''
+                        term: customerTerm,  // Always send the actual input value
+                        addressKeyword: addressKeyword  // Always send the actual input value
                     },
                     success: function(data) {
                         console.log('Search results:', data);

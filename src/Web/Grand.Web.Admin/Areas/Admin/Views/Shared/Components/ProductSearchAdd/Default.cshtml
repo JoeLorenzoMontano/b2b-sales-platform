@@ -193,7 +193,45 @@ var selectedProduct@(componentId.Replace("-", "_")) = null;
 var currentInventory@(componentId.Replace("-", "_")) = 0;
 var initialDataLoaded@(componentId.Replace("-", "_")) = false;
 
+// Filter state management functions
+function saveFilterState@(componentId.Replace("-", "_"))() {
+    try {
+        var filterState = {
+            brandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
+            categoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
+            contextId: '@Model.ContextId',
+            timestamp: Date.now()
+        };
+        localStorage.setItem('ProductSearchAdd_Filters_@Model.ContextId', JSON.stringify(filterState));
+    } catch (e) {
+        console.warn('ProductSearchAdd: Could not save filter state:', e);
+    }
+}
+
+function restoreFilterState@(componentId.Replace("-", "_"))() {
+    try {
+        var saved = localStorage.getItem('ProductSearchAdd_Filters_@Model.ContextId');
+        if (saved) {
+            var filterState = JSON.parse(saved);
+            // Only restore if saved within last 4 hours (to avoid stale state)
+            if (filterState.timestamp && (Date.now() - filterState.timestamp) < (4 * 60 * 60 * 1000)) {
+                if (filterState.brandId) {
+                    $('#@Html.IdFor(model => model.SearchBrandId)').val(filterState.brandId);
+                }
+                if (filterState.categoryId) {
+                    $('#@Html.IdFor(model => model.SearchCategoryId)').val(filterState.categoryId);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('ProductSearchAdd: Could not restore filter state:', e);
+    }
+}
+
 function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
+    // Restore saved filter values from localStorage
+    restoreFilterState@(componentId.Replace("-", "_"))();
+    
     // Initialize Kendo AutoComplete
     $('#product-autocomplete-@componentId').kendoAutoComplete({
         minLength: 0,
@@ -317,6 +355,9 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     
     // Brand filter change should refresh autocomplete data source
     $('#@Html.IdFor(model => model.SearchBrandId)').change(function() {
+        // Save filter state to localStorage
+        saveFilterState@(componentId.Replace("-", "_"))();
+        
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
             initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
@@ -329,6 +370,9 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     
     // Category filter change should refresh autocomplete data source
     $('#@Html.IdFor(model => model.SearchCategoryId)').change(function() {
+        // Save filter state to localStorage
+        saveFilterState@(componentId.Replace("-", "_"))();
+        
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
             initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
@@ -514,6 +558,9 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
         data: data,
         success: function(response) {
             if (response.success) {
+                // Save filter state before potential component reload
+                saveFilterState@(componentId.Replace("-", "_"))();
+                
                 // Refresh current products grid if it exists
                 if (typeof refreshCurrentProductsGrid !== 'undefined') {
                     refreshCurrentProductsGrid();

@@ -1295,12 +1295,12 @@ public class CustomerController : BaseAdminController
             if (primaryAddress != null)
             {
                 var addressParts = new List<string>();
-                if (!string.IsNullOrEmpty(primaryAddress.Company))
-                    addressParts.Add(primaryAddress.Company);
+                if (!string.IsNullOrEmpty(primaryAddress.FirstName))
+                    addressParts.Add(primaryAddress.FirstName);
+                if (!string.IsNullOrEmpty(primaryAddress.LastName))
+                    addressParts.Add(primaryAddress.LastName);
                 if (!string.IsNullOrEmpty(primaryAddress.City))
                     addressParts.Add(primaryAddress.City);
-                if (!string.IsNullOrEmpty(primaryAddress.StateProvince))
-                    addressParts.Add(primaryAddress.StateProvince);
                     
                 if (addressParts.Any())
                     label += $" ({string.Join(", ", addressParts)})";

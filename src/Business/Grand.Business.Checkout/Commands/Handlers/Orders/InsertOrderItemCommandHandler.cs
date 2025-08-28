@@ -61,7 +61,7 @@ public class InsertOrderItemCommandHandler : IRequestHandler<InsertOrderItemComm
 
         //add a note
         await _orderService.InsertOrderNote(new OrderNote {
-            Note = "A new order item has been added",
+            Note = $"A new order item has been added - {request.Product.Name} - Qty: {request.OrderItem.Quantity}",
             DisplayToCustomer = false,
             OrderId = request.Order.Id
         });

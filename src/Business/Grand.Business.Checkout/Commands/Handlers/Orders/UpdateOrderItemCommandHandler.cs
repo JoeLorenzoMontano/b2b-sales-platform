@@ -95,8 +95,9 @@ public class UpdateOrderItemCommandHandler : IRequestHandler<UpdateOrderItemComm
         await _mediator.Send(new CheckOrderStatusCommand { Order = request.Order }, cancellationToken);
 
         //add a note
+        var product = await _productService.GetProductById(request.OrderItem.ProductId, fromDb: true);
         await _orderService.InsertOrderNote(new OrderNote {
-            Note = "Order item has been edited",
+            Note = $"Order item has been edited - {product?.Name ?? "Product"}",
             DisplayToCustomer = false,
             OrderId = request.Order.Id
         });

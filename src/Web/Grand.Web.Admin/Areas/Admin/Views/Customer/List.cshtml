@@ -359,8 +359,8 @@
                 })
 
                 // Auto-search with debounce for SearchEmail
-                $("#@Html.IdFor(model => model.SearchEmail)").on('keyup input', function (event) {
-                    if (event.keyCode == 13) {
+                $("#@Html.IdFor(model => model.SearchEmail)").on('keyup', function (event) {
+                    if (event.which == 13 || event.keyCode == 13) {
                         // Immediate search on Enter
                         clearTimeout(searchTimeout);
                         $("#search-customers").click();
@@ -369,6 +369,9 @@
                         // Debounced search on typing
                         debounceSearch();
                     }
+                }).on('input', function () {
+                    // Debounced search on input events (paste, cut, etc.)
+                    debounceSearch();
                 });
                 $("#@Html.IdFor(model => model.SearchUsername)").keydown(function (event) {
                     if (event.keyCode == 13) {
@@ -377,8 +380,8 @@
                     }
                 });
                 // Auto-search with debounce for SearchFirstName
-                $("#@Html.IdFor(model => model.SearchFirstName)").on('keyup input', function (event) {
-                    if (event.keyCode == 13) {
+                $("#@Html.IdFor(model => model.SearchFirstName)").on('keyup', function (event) {
+                    if (event.which == 13 || event.keyCode == 13) {
                         // Immediate search on Enter
                         clearTimeout(searchTimeout);
                         $("#search-customers").click();
@@ -387,10 +390,13 @@
                         // Debounced search on typing
                         debounceSearch();
                     }
+                }).on('input', function () {
+                    // Debounced search on input events (paste, cut, etc.)
+                    debounceSearch();
                 });
                 // Auto-search with debounce for SearchAddressKeyword
-                $("#@Html.IdFor(model => model.SearchAddressKeyword)").on('keyup input', function (event) {
-                    if (event.keyCode == 13) {
+                $("#@Html.IdFor(model => model.SearchAddressKeyword)").on('keyup', function (event) {
+                    if (event.which == 13 || event.keyCode == 13) {
                         // Immediate search on Enter
                         clearTimeout(searchTimeout);
                         $("#search-customers").click();
@@ -399,6 +405,9 @@
                         // Debounced search on typing
                         debounceSearch();
                     }
+                }).on('input', function () {
+                    // Debounced search on input events (paste, cut, etc.)
+                    debounceSearch();
                 });
                 $("#@Html.IdFor(model => model.SearchLastName)").keydown(function (event) {
                     if (event.keyCode == 13) {

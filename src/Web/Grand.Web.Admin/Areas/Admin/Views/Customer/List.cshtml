@@ -167,15 +167,6 @@
 
     <script>
         $(document).ready(function () {
-            
-            // Debounce helper function for auto-search
-            let searchTimeout;
-            function debounceSearch(delay = 500) {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    $('#search-customers').click();
-                }, delay);
-            }
 
             $('.extend-collapse').hide();
             $('.filter-extend-button').click(function () {
@@ -305,6 +296,15 @@
             var selectedIds = [];
 
             $(document).ready(function () {
+
+                // Debounce helper function for auto-search
+                let searchTimeout;
+                function debounceSearch(delay = 500) {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(function() {
+                        $('#search-customers').click();
+                    }, delay);
+                }
 
                 //search button
                 $('#search-customers').click(function () {

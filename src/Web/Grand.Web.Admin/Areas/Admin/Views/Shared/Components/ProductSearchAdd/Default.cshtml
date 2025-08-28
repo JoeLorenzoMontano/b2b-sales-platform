@@ -210,19 +210,31 @@ function saveFilterState@(componentId.Replace("-", "_"))() {
 
 function restoreFilterState@(componentId.Replace("-", "_"))() {
     try {
-        var saved = sessionStorage.getItem('ProductSearchAdd_Filters_@Model.ContextId');
-        if (saved) {
-            var filterState = JSON.parse(saved);
-            // Only restore if saved within last 4 hours (to avoid stale state)
-            if (filterState.timestamp && (Date.now() - filterState.timestamp) < (4 * 60 * 60 * 1000)) {
-                if (filterState.brandId) {
-                    $('#@Html.IdFor(model => model.SearchBrandId)').val(filterState.brandId);
-                }
-                if (filterState.categoryId) {
-                    $('#@Html.IdFor(model => model.SearchCategoryId)').val(filterState.categoryId);
+        // ALWAYS clear filters first to override server-rendered selected values
+        $('#@Html.IdFor(model => model.SearchBrandId)').val('').trigger('change');
+        $('#@Html.IdFor(model => model.SearchCategoryId)').val('').trigger('change');
+        
+        // Check if this is a component reload (not a fresh page load)
+        var isComponentReload = sessionStorage.getItem('ProductSearchAdd_ComponentReload_@Model.ContextId') === 'true';
+        
+        if (isComponentReload) {
+            var saved = sessionStorage.getItem('ProductSearchAdd_Filters_@Model.ContextId');
+            if (saved) {
+                var filterState = JSON.parse(saved);
+                // Only restore if saved within last 4 hours (to avoid stale state)
+                if (filterState.timestamp && (Date.now() - filterState.timestamp) < (4 * 60 * 60 * 1000)) {
+                    if (filterState.brandId) {
+                        $('#@Html.IdFor(model => model.SearchBrandId)').val(filterState.brandId);
+                    }
+                    if (filterState.categoryId) {
+                        $('#@Html.IdFor(model => model.SearchCategoryId)').val(filterState.categoryId);
+                    }
                 }
             }
         }
+        
+        // Clear the component reload flag after use
+        sessionStorage.removeItem('ProductSearchAdd_ComponentReload_@Model.ContextId');
     } catch (e) {
         console.warn('ProductSearchAdd: Could not restore filter state:', e);
     }
@@ -576,8 +588,13 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
         data: data,
         success: function(response) {
             if (response.success) {
-                // Save filter state before potential component reload
+                // Save filter state and mark as component reload before potential component reload
                 saveFilterState@(componentId.Replace("-", "_"))();
+                try {
+                    sessionStorage.setItem('ProductSearchAdd_ComponentReload_@Model.ContextId', 'true');
+                } catch (e) {
+                    console.warn('ProductSearchAdd: Could not set component reload flag:', e);
+                }
                 
                 // Refresh current products grid if it exists
                 if (typeof refreshCurrentProductsGrid !== 'undefined') {

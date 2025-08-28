@@ -528,6 +528,11 @@
         $('#create-document-form')[0].reset();
         $('#create-document-modal .alert').hide();
         
+        // Reset upload indicators
+        $('#upload-progress').hide();
+        $('#upload-success').hide();
+        $('#upload-progress .progress-bar').css('width', '0%');
+        
         // Show modal
         $('#create-document-modal').modal('show');
     }
@@ -537,49 +542,121 @@
         e.preventDefault();
         
         var orderId = $('#create-document-modal').data('order-id');
-        
-        // Manually construct data object with form fields
-        var data = {
-            Name: $('#documentName').val(),
-            Description: $('#documentDescription').val(),
-            ObjectId: $('#documentObjectId').val(),
-            ReferenceId: parseInt($('input[name="ReferenceId"]').val()),
-            Published: $('input[name="Published"]').val() === 'true'
-        };
-        
-        // Add anti-forgery token
-        addAntiForgeryToken(data);
+        var fileInput = $('#documentFile')[0];
+        var selectedFile = fileInput.files[0];
         
         // Show loading state
         var submitBtn = $('#create-document-submit');
         var originalText = submitBtn.html();
-        submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Creating...');
+        submitBtn.prop('disabled', true);
+        
+        // Hide previous errors/success messages
+        $('#create-document-error').hide();
+        $('#upload-success').hide();
+        
+        // Function to create document (with or without file)
+        function createDocument(downloadId) {
+            // Manually construct data object with form fields
+            var data = {
+                Name: $('#documentName').val(),
+                Description: $('#documentDescription').val(),
+                ObjectId: $('#documentObjectId').val(),
+                ReferenceId: parseInt($('input[name="ReferenceId"]').val()),
+                Published: $('input[name="Published"]').val() === 'true'
+            };
+            
+            // Add downloadId if file was uploaded
+            if (downloadId) {
+                data.DownloadId = downloadId;
+            }
+            
+            // Add anti-forgery token
+            addAntiForgeryToken(data);
+            
+            submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Creating...');
+            
+            $.ajax({
+                url: '@Url.Action("CreateDocumentInline", "Document", new { area = Constants.AreaAdmin })',
+                type: 'POST',
+                data: data,
+                success: function(response) {
+                    if (response.success) {
+                        // Hide modal
+                        $('#create-document-modal').modal('hide');
+                        
+                        // Show success message
+                        if (typeof displayGrandeNotification === 'function') {
+                            displayGrandeNotification("Document created successfully", "success", 5000);
+                        } else {
+                            alert("Document created successfully");
+                        }
+                    } else {
+                        // Show error in modal
+                        $('#create-document-error').text(response.error || "An error occurred").show();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#create-document-error').text("An error occurred: " + error).show();
+                },
+                complete: function() {
+                    // Restore button
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
+        
+        // If no file selected, create document directly
+        if (!selectedFile) {
+            createDocument();
+            return;
+        }
+        
+        // Validate file size (10MB limit)
+        if (selectedFile.size > 10 * 1024 * 1024) {
+            $('#create-document-error').text("File size must be less than 10MB").show();
+            submitBtn.prop('disabled', false);
+            return;
+        }
+        
+        // Upload file first
+        submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
+        $('#upload-progress').show();
+        
+        var formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('downloadType', '1'); // DownloadType.Document
+        formData.append('referenceId', orderId);
         
         $.ajax({
-            url: '@Url.Action("CreateDocumentInline", "Document", new { area = Constants.AreaAdmin })',
+            url: '@Url.Action("AsyncUpload", "Download", new { area = Constants.AreaAdmin })',
             type: 'POST',
-            data: data,
-            success: function(response) {
-                if (response.success) {
-                    // Hide modal
-                    $('#create-document-modal').modal('hide');
-                    
-                    // Show success message
-                    if (typeof displayGrandeNotification === 'function') {
-                        displayGrandeNotification("Document created successfully", "success", 5000);
-                    } else {
-                        alert("Document created successfully");
+            data: formData,
+            processData: false,
+            contentType: false,
+            xhr: function() {
+                var xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        var percentComplete = (e.loaded / e.total) * 100;
+                        $('#upload-progress .progress-bar').css('width', percentComplete + '%');
                     }
+                });
+                return xhr;
+            },
+            success: function(response) {
+                $('#upload-progress').hide();
+                if (response.success) {
+                    $('#upload-success').show();
+                    // Create document with the uploaded file's download ID
+                    createDocument(response.downloadId);
                 } else {
-                    // Show error in modal
-                    $('#create-document-error').text(response.error || "An error occurred").show();
+                    $('#create-document-error').text("File upload failed: " + (response.message || "Unknown error")).show();
+                    submitBtn.prop('disabled', false).html(originalText);
                 }
             },
             error: function(xhr, status, error) {
-                $('#create-document-error').text("An error occurred: " + error).show();
-            },
-            complete: function() {
-                // Restore button
+                $('#upload-progress').hide();
+                $('#create-document-error').text("File upload failed: " + error).show();
                 submitBtn.prop('disabled', false).html(originalText);
             }
         });
@@ -590,7 +667,7 @@
 <div class="modal fade" id="create-document-modal" tabindex="-1" role="dialog" aria-labelledby="createDocumentModalLabel">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form id="create-document-form">
+            <form id="create-document-form" enctype="multipart/form-data">
                 <div class="modal-header">
                     <h4 class="modal-title" id="createDocumentModalLabel">
                         <i class="fa fa-file-plus"></i> Create Document
@@ -617,8 +694,21 @@
                         <textarea class="form-control" name="Description" id="documentDescription" rows="3" maxlength="500" placeholder="Optional description"></textarea>
                     </div>
                     
-                    <div class="alert alert-info">
-                        <i class="fa fa-info-circle"></i> To add file attachments, edit the document after creation from the Documents tab.
+                    <div class="form-group">
+                        <label for="documentFile">File Attachment (Optional)</label>
+                        <div class="file-upload-container">
+                            <input type="file" class="form-control-file" id="documentFile" name="documentFile" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                            <small class="form-text text-muted">Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG, GIF. Max size: 10MB</small>
+                            <div class="upload-progress" id="upload-progress" style="display: none;">
+                                <div class="progress mt-2">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Uploading...</small>
+                            </div>
+                            <div class="upload-success" id="upload-success" style="display: none;">
+                                <small class="text-success"><i class="fa fa-check"></i> File uploaded successfully</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

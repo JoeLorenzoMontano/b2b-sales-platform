@@ -3027,6 +3027,7 @@ public class OrderController(
 
     /// <summary>
     /// Deletes all shipments associated with an order when it's sent to reverification
+    /// and resets OpenQty values to allow re-fulfillment
     /// </summary>
     /// <param name="order">The order whose shipments should be deleted</param>
     /// <param name="shipmentService">The shipment service</param>
@@ -3037,9 +3038,35 @@ public class OrderController(
         
         if (!shipments.Any()) return;
         
-        // Delete each shipment
+        var totalItemsRestored = 0;
+        
+        // Delete each shipment and restore OpenQty values
         foreach (var shipment in shipments)
         {
+            // Before deleting, restore OpenQty for each shipment item
+            foreach (var shipmentItem in shipment.ShipmentItems)
+            {
+                var orderItem = order.OrderItems.FirstOrDefault(oi => oi.Id == shipmentItem.OrderItemId);
+                if (orderItem != null)
+                {
+                    orderItem.OpenQty += shipmentItem.Quantity;
+                    orderItem.ShipQty -= shipmentItem.Quantity;
+                    
+                    // Ensure OpenQty doesn't exceed original Quantity
+                    if (orderItem.OpenQty > orderItem.Quantity)
+                        orderItem.OpenQty = orderItem.Quantity;
+                    
+                    // Ensure ShipQty doesn't go below 0
+                    if (orderItem.ShipQty < 0)
+                        orderItem.ShipQty = 0;
+                    
+                    // Update status based on OpenQty
+                    orderItem.Status = orderItem.OpenQty > 0 ? OrderItemStatus.Open : OrderItemStatus.Close;
+                    
+                    totalItemsRestored++;
+                }
+            }
+            
             await shipmentService.DeleteShipment(shipment);
             
             // Add order note for each deleted shipment
@@ -3052,7 +3079,32 @@ public class OrderController(
             });
         }
         
-        // Add summary order note if multiple shipments were deleted
+        // Safety check: Ensure all order items have consistent OpenQty values
+        foreach (var orderItem in order.OrderItems)
+        {
+            // If an item shows as completely fulfilled but should be open, reset it
+            if (orderItem.OpenQty == 0 && orderItem.ShipQty < orderItem.Quantity)
+            {
+                orderItem.OpenQty = orderItem.Quantity - orderItem.ShipQty;
+                orderItem.Status = OrderItemStatus.Open;
+            }
+        }
+        
+        // Update the order to persist OpenQty changes
+        await orderService.UpdateOrder(order);
+        
+        // Add summary order notes
+        if (totalItemsRestored > 0)
+        {
+            await orderService.InsertOrderNote(new OrderNote
+            {
+                Note = $"Restored {totalItemsRestored} order items to unfulfilled state for re-fulfillment",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            });
+        }
+        
         if (shipments.Count() > 1)
         {
             await orderService.InsertOrderNote(new OrderNote

@@ -55,20 +55,20 @@ public class UpdateOrderItemCommandHandler : IRequestHandler<UpdateOrderItemComm
             if (originalOrderItem.Quantity != request.OrderItem.Quantity)
             {
                 var qtyDifference = originalOrderItem.Quantity - request.OrderItem.Quantity;
-                var product = await _productService.GetProductById(request.OrderItem.ProductId, fromDb: true);
+                var productResult = await _productService.GetProductById(request.OrderItem.ProductId, fromDb: true);
                 
                 // Log inventory adjustment for quantity changes
                 await _orderService.InsertOrderNote(new OrderNote {
-                    Note = $"Inventory adjustment: {product?.Name ?? "Product"} quantity changed from {originalOrderItem.Quantity} to {request.OrderItem.Quantity} (difference: {qtyDifference:+#;-#;0})",
+                    Note = $"Inventory adjustment: {productResult?.Name ?? "Product"} quantity changed from {originalOrderItem.Quantity} to {request.OrderItem.Quantity} (difference: {qtyDifference:+#;-#;0})",
                     DisplayToCustomer = false,
                     OrderId = request.Order.Id
                 });
                 
                 // Add null check to prevent ArgumentNullException
-                if (product != null)
+                if (productResult != null)
                 {
                     // Adjust reserved quantities for inventory changes (not actual stock)
-                    await _inventoryManageService.AdjustReserved(product, qtyDifference, request.OrderItem.Attributes, request.OrderItem.WarehouseId);
+                    await _inventoryManageService.AdjustReserved(productResult, qtyDifference, request.OrderItem.Attributes, request.OrderItem.WarehouseId);
                 }
                 else
                 {

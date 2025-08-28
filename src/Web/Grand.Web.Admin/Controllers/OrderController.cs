@@ -2256,6 +2256,9 @@ public class OrderController(
                 TaxRate: 0, // Simplified for now
                 WarehouseId: warehouseId ?? ""
             );
+            
+            // Initialize SelectedAttributes to prevent null reference errors
+            model.SelectedAttributes = new List<CustomAttributeModel>();
 
             // Initialize SelectedAttributes to prevent null reference errors
             model.SelectedAttributes = new List<CustomAttributeModel>();

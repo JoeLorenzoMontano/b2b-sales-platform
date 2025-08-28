@@ -966,6 +966,52 @@ public class OrderController(
         }
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SendToReverification(string orderId)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new { success = false, message = "Order not found" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            {
+                if (await CheckSalesManager(order))
+                    return Json(new { success = false, message = "Access denied" });
+            }
+
+            if (!order.IsVerifiedOrder)
+                return Json(new { success = false, message = "Order is not in verified state" });
+
+            if (order.NeedsReverification)
+                return Json(new { success = false, message = "Order already needs reverification" });
+
+            // Update the order to require reverification
+            order.IsVerifiedOrder = false;
+            order.NeedsReverification = true;
+            order.UpdatedOnUtc = DateTime.UtcNow;
+            await orderService.UpdateOrder(order);
+
+            // Add order note
+            var orderNote = new OrderNote
+            {
+                Note = "Order sent back to reverification queue for product modifications",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            };
+            await orderService.InsertOrderNote(orderNote);
+
+            return Json(new { success = true, message = "Order sent to reverification successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error sending order to reverification: {ex.Message}" });
+        }
+    }
+
     #endregion
 
     #endregion
@@ -2201,6 +2247,9 @@ public class OrderController(
                 TaxRate: 0, // Simplified for now
                 WarehouseId: warehouseId ?? ""
             );
+
+            // Initialize SelectedAttributes to prevent null reference errors
+            model.SelectedAttributes = new List<CustomAttributeModel>();
 
             // If we have an attribute combination ID, we need to set up the selected attributes
             if (!string.IsNullOrEmpty(attributeCombinationId))

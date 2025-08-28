@@ -225,6 +225,8 @@
                     
                     // Create the action buttons
                     var buttonSection = $('<div class="col-md-6 text-right"></div>');
+                    buttonSection.append('<button type="button" class="btn btn-warning send-to-reverification-btn mr-2" ' +
+                        'data-order-id="' + orderId + '"><i class="fa fa-undo"></i> Send to Reverification</button>');
                     buttonSection.append('<button type="button" class="btn btn-success create-shipment-btn" ' +
                         'data-order-id="' + orderId + '" disabled><i class="fa fa-truck"></i> Create Shipment</button>');
                     panel.append(buttonSection);
@@ -372,6 +374,54 @@
                                 alert("Error creating shipment: " + error);
                             }
                         });
+                    });
+                    
+                    // Wire up the send to reverification button
+                    $(".send-to-reverification-btn[data-order-id='" + orderId + "']").off("click").on("click", function() {
+                        if (confirm('Send this order back to reverification? This will allow modifications to products and move it out of the fulfillment queue.')) {
+                            var button = $(this);
+                            
+                            // Disable button and show loading state
+                            button.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+                            
+                            var data = {
+                                orderId: orderId
+                            };
+                            addAntiForgeryToken(data);
+                            
+                            $.ajax({
+                                url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Constants.AreaAdmin }))",
+                                type: "POST",
+                                data: data,
+                                success: function(response) {
+                                    if (response.success) {
+                                        alert("Order sent to reverification successfully");
+                                        
+                                        // Refresh the fulfillment queue grid to remove this order
+                                        $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                        
+                                        // Refresh the reverification queue grid if it exists
+                                        if ($("#reverification-queue-grid").length > 0) {
+                                            setTimeout(function() {
+                                                $("#reverification-queue-grid").data("kendoGrid").dataSource.read();
+                                            }, 500);
+                                        }
+                                    } else {
+                                        alert("Error: " + (response.error || response.message || "Unknown error"));
+                                        // Re-enable button on failure
+                                        button.prop('disabled', false).html('<i class="fa fa-undo"></i> Send to Reverification');
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    console.error("Send to reverification failed:", error);
+                                    console.error("Response:", xhr.responseText);
+                                    alert("Error sending order to reverification: " + error);
+                                    
+                                    // Re-enable button on error
+                                    button.prop('disabled', false).html('<i class="fa fa-undo"></i> Send to Reverification');
+                                }
+                            });
+                        }
                     });
                 }
             });

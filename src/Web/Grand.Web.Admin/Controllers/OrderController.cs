@@ -316,7 +316,7 @@ public class OrderController(
                     // Check if any item has OpenQty > 0 AND order is verified
                     bool hasUnfulfilledItems = order.OrderItems.Any(item => item.OpenQty > 0);
                     
-                    if (hasUnfulfilledItems && order.IsVerifiedOrder)
+                    if (hasUnfulfilledItems && order.IsVerifiedOrder && !order.NeedsReverification)
                     {
                         // Get the model for this order
                         var orderModel = new OrderModel

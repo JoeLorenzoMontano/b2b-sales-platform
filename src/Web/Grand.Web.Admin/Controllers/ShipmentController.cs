@@ -79,6 +79,13 @@ public class ShipmentController : BaseAdminController
       if (item.ShippedDateUtc.HasValue && item.DeliveryDateUtc.HasValue) {
         continue;
       }
+      
+      // Check if the related order needs reverification
+      var order = await _orderService.GetOrderById(item.OrderId);
+      if (order != null && order.NeedsReverification) {
+        continue; // Skip shipments from orders needing reverification
+      }
+      
       items.Add(await _shipmentViewModelService.PrepareShipmentModel(item, false));
     }
 

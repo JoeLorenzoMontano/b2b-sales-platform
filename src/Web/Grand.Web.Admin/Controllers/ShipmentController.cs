@@ -86,6 +86,12 @@ public class ShipmentController : BaseAdminController
         continue; // Skip shipments from orders needing reverification
       }
       
+      // Check if order has any unfulfilled items - if so, skip this shipment
+      // Orders with unfulfilled items should be handled by fulfillment queue instead
+      if (order != null && order.OrderItems.Any(orderItem => orderItem.OpenQty > 0)) {
+        continue; // Skip shipments from orders with unfulfilled items
+      }
+      
       items.Add(await _shipmentViewModelService.PrepareShipmentModel(item, false));
     }
 

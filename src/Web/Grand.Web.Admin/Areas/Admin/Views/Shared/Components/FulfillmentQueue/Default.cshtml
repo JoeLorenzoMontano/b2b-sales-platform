@@ -14,6 +14,35 @@
         accent-color: white; /* Customize the checkbox color */
         transform: scale(1.3); /* Make it larger */
     }
+    .fulfillment-actions {
+        white-space: nowrap;
+    }
+    .fulfillment-actions .btn {
+        padding: 2px 6px;
+        font-size: 12px;
+        line-height: 1.2;
+        border-radius: 3px;
+    }
+    .fulfillment-actions .btn:hover {
+        transform: scale(1.05);
+        transition: transform 0.1s ease;
+    }
+    .fulfillment-actions .btn-primary {
+        background-color: #3f51b5;
+        border-color: #3f51b5;
+    }
+    .fulfillment-actions .btn-primary:hover {
+        background-color: #303f9f;
+        border-color: #303f9f;
+    }
+    .fulfillment-actions .btn-info {
+        background-color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    .fulfillment-actions .btn-info:hover {
+        background-color: #138496;
+        border-color: #117a8b;
+    }
 </style>
 
 <script>
@@ -127,6 +156,22 @@
                         format: "{0:G}",
                         headerAttributes: { style: "text-align:center" },
                         attributes: { style: "text-align:center" },
+                    },
+                    {
+                        title: "",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                        template: function(dataItem) {
+                            return '<div class="fulfillment-actions">' +
+                                '<a href="@Html.Raw(Url.Action("PdfInvoice", "Order", new { area = Constants.AreaAdmin }))/' + dataItem.Id + '" ' +
+                                'class="btn btn-primary btn-sm mr-1" target="_blank" title="Generate PDF Invoice">' +
+                                '<i class="fa fa-file-pdf-o"></i></a>' +
+                                '<button type="button" class="btn btn-info btn-sm view-docs-btn" ' +
+                                'data-order-id="' + dataItem.Id + '" title="View Documents">' +
+                                '<i class="fa fa-folder-open"></i></button>' +
+                                '</div>';
+                        }
                     }
                 ]
             });
@@ -430,5 +475,39 @@
         // Add a link to Order List with filter for pending fulfillment
         var titleBar = $(".x_title").last();
         titleBar.append('<div class="pull-right"><a href="@Url.Action("List", "Order", new { OrderStatusId = 20, NeedsFulfillment = true, area = Constants.AreaAdmin })" class="btn btn-info">View All Orders Needing Fulfillment</a></div>');
+        
+        // Handle View Docs button clicks
+        $(document).on('click', '.view-docs-btn', function() {
+            var orderId = $(this).data('order-id');
+            var editUrl = "@Html.Raw(Url.Action("Edit", "Order", new { area = Constants.AreaAdmin }))/" + orderId;
+            
+            // Open the order edit page in a new tab
+            var newWindow = window.open(editUrl, '_blank');
+            
+            // Wait for the page to load and then select the Documents tab
+            if (newWindow) {
+                // Add a script to the new window to select the Documents tab once it loads
+                var checkTabStrip = function() {
+                    try {
+                        if (newWindow.$ && newWindow.$("[data-role='tabstrip']").length > 0) {
+                            var tabstrip = newWindow.$("[data-role='tabstrip']").data("kendoTabStrip");
+                            if (tabstrip) {
+                                // Select the Documents tab (index 6)
+                                tabstrip.select(6);
+                            }
+                        } else {
+                            // If TabStrip not ready yet, try again in 100ms
+                            setTimeout(checkTabStrip, 100);
+                        }
+                    } catch (e) {
+                        // Cross-origin restrictions or other errors - ignore
+                        console.log("Could not access new window to select Documents tab");
+                    }
+                };
+                
+                // Start checking after a brief delay to allow page to start loading
+                setTimeout(checkTabStrip, 500);
+            }
+        });
     });
 </script>

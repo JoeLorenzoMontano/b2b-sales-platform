@@ -276,6 +276,7 @@ public class OrderModel : BaseEntityModel
 
     //workflow info
     public bool CanCancelOrder { get; set; }
+    public bool IsVerifiedOrder { get; set; }
 
 
     //order's tags

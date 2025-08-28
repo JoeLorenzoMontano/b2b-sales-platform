@@ -609,8 +609,22 @@ function refreshCurrentProductsGrid() {
     window.location.reload();
 }
 
-// Check for existing shipments and hide ProductSearchAdd if shipments exist
+// Check for existing shipments and hide ProductSearchAdd if shipments exist or order is in fulfillment
 function checkShipments() {
+    var isVerifiedOrder = @Json.Serialize(Model.IsVerifiedOrder);
+    
+    if (isVerifiedOrder) {
+        // Hide ProductSearchAdd section for verified orders (in fulfillment queue)
+        $('.add-products-section').hide();
+        $('.add-products-section').after(
+            '<div class="shipment-warning alert alert-warning mt-3">' +
+            '<i class="fa fa-warning"></i> ' +
+            'Cannot add products to orders in fulfillment queue. Send order back to reverification to add products.' +
+            '</div>'
+        );
+        return;
+    }
+    
     $.ajax({
         url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
         type: "POST",
@@ -627,14 +641,16 @@ function checkShipments() {
                     '</div>'
                 );
             } else {
-                // Show ProductSearchAdd section if no shipments
+                // Show ProductSearchAdd section if no shipments and not verified
                 $('.add-products-section').show();
                 $('.shipment-warning').remove();
             }
         },
         error: function() {
-            // On error, show ProductSearchAdd (fail safe)
-            $('.add-products-section').show();
+            // On error, show ProductSearchAdd (fail safe) only if not verified
+            if (!isVerifiedOrder) {
+                $('.add-products-section').show();
+            }
         }
     });
 }

@@ -1017,6 +1017,7 @@ public class OrderViewModelService : IOrderViewModelService
         }
 
         model.HasDownloadableProducts = hasDownloadableItems;
+        model.IsVerifiedOrder = order.IsVerifiedOrder;
 
         #endregion
     }

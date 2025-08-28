@@ -167,6 +167,15 @@
 
     <script>
         $(document).ready(function () {
+            
+            // Debounce helper function for auto-search
+            let searchTimeout;
+            function debounceSearch(delay = 500) {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function() {
+                    $('#search-customers').click();
+                }, delay);
+            }
 
             $('.extend-collapse').hide();
             $('.filter-extend-button').click(function () {
@@ -349,10 +358,16 @@
                     }
                 })
 
-                $("#@Html.IdFor(model => model.SearchEmail)").keydown(function (event) {
+                // Auto-search with debounce for SearchEmail
+                $("#@Html.IdFor(model => model.SearchEmail)").on('keyup input', function (event) {
                     if (event.keyCode == 13) {
+                        // Immediate search on Enter
+                        clearTimeout(searchTimeout);
                         $("#search-customers").click();
                         return false;
+                    } else {
+                        // Debounced search on typing
+                        debounceSearch();
                     }
                 });
                 $("#@Html.IdFor(model => model.SearchUsername)").keydown(function (event) {
@@ -361,16 +376,28 @@
                         return false;
                     }
                 });
-                $("#@Html.IdFor(model => model.SearchFirstName)").keydown(function (event) {
+                // Auto-search with debounce for SearchFirstName
+                $("#@Html.IdFor(model => model.SearchFirstName)").on('keyup input', function (event) {
                     if (event.keyCode == 13) {
+                        // Immediate search on Enter
+                        clearTimeout(searchTimeout);
                         $("#search-customers").click();
                         return false;
+                    } else {
+                        // Debounced search on typing
+                        debounceSearch();
                     }
                 });
-                $("#@Html.IdFor(model => model.SearchAddressKeyword)").keydown(function (event) {
+                // Auto-search with debounce for SearchAddressKeyword
+                $("#@Html.IdFor(model => model.SearchAddressKeyword)").on('keyup input', function (event) {
                     if (event.keyCode == 13) {
+                        // Immediate search on Enter
+                        clearTimeout(searchTimeout);
                         $("#search-customers").click();
                         return false;
+                    } else {
+                        // Debounced search on typing
+                        debounceSearch();
                     }
                 });
                 $("#@Html.IdFor(model => model.SearchLastName)").keydown(function (event) {

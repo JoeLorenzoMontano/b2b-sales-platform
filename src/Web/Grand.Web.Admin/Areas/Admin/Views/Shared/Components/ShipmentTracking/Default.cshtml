@@ -684,8 +684,6 @@
                     data: postData,
                     success: function(response) {
                         if (response.success) {
-                            alert("Order sent to reverification successfully");
-                            
                             // Refresh shipment tracking grid
                             $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
                             

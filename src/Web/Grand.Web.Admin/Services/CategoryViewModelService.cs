@@ -87,6 +87,8 @@ public class CategoryViewModelService : ICategoryViewModelService
         {
             var categoryModel = x.ToModel();
             categoryModel.Breadcrumb = await _categoryService.GetFormattedBreadCrumb(x);
+            var productCategories = await _productCategoryService.GetProductCategoriesByCategoryId(x.Id);
+            categoryModel.ProductCount = productCategories.TotalCount;
             categoryListModel.Add(categoryModel);
         }
 

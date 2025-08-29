@@ -235,6 +235,20 @@
                             field: "CustomerGroupNames",
                             title: "@Loc["Admin.Customers.Customers.Fields.CustomerGroups"]",
                             width: 200
+                        }, {
+                            field: "MatchedAddressInfo",
+                            title: "Matched Address",
+                            width: 250,
+                            template: function(dataItem) {
+                                if (dataItem.MatchedAddressInfo) {
+                                    // Use kendo.htmlEncode for safety but preserve our highlighting markup
+                                    var content = dataItem.MatchedAddressInfo;
+                                    return '<small style="color: #666; font-style: italic;"><i class="fa fa-map-marker" style="color: #337ab7; margin-right: 4px;"></i>' + content + '</small>';
+                                }
+                                return '';
+                            },
+                            encoded: false,
+                            hidden: true
                         },
 
                         @if (Model.CompanyEnabled)
@@ -288,6 +302,13 @@
                         format: "{0:G}"
                     }]
                 });
+
+                // Initially hide the address column if no address search is active
+                var initialAddressKeyword = $('#@Html.IdFor(model => model.SearchAddressKeyword)').val();
+                var grid = $('#customers-grid').data('kendoGrid');
+                if (!initialAddressKeyword || initialAddressKeyword.trim().length === 0) {
+                    grid.hideColumn("MatchedAddressInfo");
+                }
             });
     </script>
 
@@ -309,6 +330,15 @@
                 //search button
                 $('#search-customers').click(function () {
                     var grid = $('#customers-grid').data('kendoGrid');
+                    
+                    // Show/hide address column based on whether address search is used
+                    var addressKeyword = $('#@Html.IdFor(model => model.SearchAddressKeyword)').val();
+                    if (addressKeyword && addressKeyword.trim().length > 0) {
+                        grid.showColumn("MatchedAddressInfo");
+                    } else {
+                        grid.hideColumn("MatchedAddressInfo");
+                    }
+                    
                     grid.dataSource.page(1); //new search. Set page size to 1
                     //grid.dataSource.read(); we already loaded the grid above using "page" function
                     //clear selected checkboxes

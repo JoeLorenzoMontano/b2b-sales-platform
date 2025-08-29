@@ -619,7 +619,10 @@ function checkShipments() {
         $('.add-products-section').after(
             '<div class="shipment-warning alert alert-warning mt-3">' +
             '<i class="fa fa-warning"></i> ' +
-            'Cannot add products to orders in fulfillment queue. Send order back to reverification to add products.' +
+            'Cannot add products to orders in fulfillment queue. ' +
+            '<button type="button" class="btn btn-primary btn-sm ml-2" onclick="sendToReverificationFromProducts(\'@Model.Id\')">' +
+            '<i class="fa fa-undo"></i> Send to Reverification' +
+            '</button>' +
             '</div>'
         );
         return;
@@ -670,4 +673,28 @@ $(document).ready(function() {
         }, 100);
     }
 });
+
+function sendToReverificationFromProducts(orderId) {
+    if (!confirm('Are you sure you want to send this order back to reverification? This will delete any existing shipments.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: addAntiForgeryToken({ orderId: orderId }),
+        dataType: "json",
+        success: function(result) {
+            if (result.success) {
+                // Refresh the page to update the UI state
+                window.location.reload();
+            } else {
+                alert('Error: ' + (result.message || 'Failed to send order to reverification'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while sending order to reverification.');
+        }
+    });
+}
 </script>

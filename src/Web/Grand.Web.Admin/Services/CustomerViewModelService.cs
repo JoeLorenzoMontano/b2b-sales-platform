@@ -222,7 +222,7 @@ public class CustomerViewModelService : ICustomerViewModelService
             pageSize: pageSize);
 
         var customermodellist = new List<CustomerModel>();
-        foreach (var item in customers) customermodellist.Add(await PrepareCustomerModelForList(item));
+        foreach (var item in customers) customermodellist.Add(await PrepareCustomerModelForList(item, model.SearchAddressKeyword));
         return (customermodellist, customers.TotalCount);
     }
 
@@ -1351,9 +1351,9 @@ public class CustomerViewModelService : ICustomerViewModelService
         return result;
     }
 
-    protected virtual async Task<CustomerModel> PrepareCustomerModelForList(Customer customer)
+    protected virtual async Task<CustomerModel> PrepareCustomerModelForList(Customer customer, string addressKeyword = null)
     {
-        return new CustomerModel {
+        var model = new CustomerModel {
             Id = customer.Id,
             Email = !string.IsNullOrEmpty(customer.Email)
                 ? customer.Email
@@ -1368,6 +1368,78 @@ public class CustomerViewModelService : ICustomerViewModelService
             CreatedOn = _dateTimeService.ConvertToUserTime(customer.CreatedOnUtc, DateTimeKind.Utc),
             LastActivityDate = _dateTimeService.ConvertToUserTime(customer.LastActivityDateUtc, DateTimeKind.Utc)
         };
+
+        // If address keyword search was used, find and format the matching address
+        if (!string.IsNullOrWhiteSpace(addressKeyword))
+        {
+            model.MatchedAddressInfo = await FormatMatchedAddress(customer, addressKeyword);
+        }
+
+        return model;
+    }
+
+    protected virtual Task<string> FormatMatchedAddress(Customer customer, string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword) || customer.Addresses == null || !customer.Addresses.Any())
+            return Task.FromResult<string>(null);
+
+        var keywordLower = keyword.ToLower();
+        
+        // Find the first address that matches the keyword
+        var matchedAddress = customer.Addresses.FirstOrDefault(addr =>
+            (addr.FirstName != null && addr.FirstName.ToLower().Contains(keywordLower)) ||
+            (addr.LastName != null && addr.LastName.ToLower().Contains(keywordLower)) ||
+            (addr.Email != null && addr.Email.ToLower().Contains(keywordLower)) ||
+            (addr.Address1 != null && addr.Address1.ToLower().Contains(keywordLower)) ||
+            (addr.Address2 != null && addr.Address2.ToLower().Contains(keywordLower)) ||
+            (addr.City != null && addr.City.ToLower().Contains(keywordLower)) ||
+            (addr.ZipPostalCode != null && addr.ZipPostalCode.ToLower().Contains(keywordLower)) ||
+            (addr.PhoneNumber != null && addr.PhoneNumber.ToLower().Contains(keywordLower)) ||
+            (addr.Company != null && addr.Company.ToLower().Contains(keywordLower))
+        );
+
+        if (matchedAddress == null)
+            return Task.FromResult<string>(null);
+
+        // Format the address for display
+        var parts = new List<string>();
+        
+        // Add company if present
+        if (!string.IsNullOrWhiteSpace(matchedAddress.Company))
+            parts.Add(matchedAddress.Company);
+        
+        // Add name if different from customer name
+        var addressName = $"{matchedAddress.FirstName} {matchedAddress.LastName}".Trim();
+        var customerName = customer.GetFullName();
+        if (!string.IsNullOrWhiteSpace(addressName) && !addressName.Equals(customerName, StringComparison.OrdinalIgnoreCase))
+            parts.Add(addressName);
+        
+        // Add street address
+        if (!string.IsNullOrWhiteSpace(matchedAddress.Address1))
+            parts.Add(matchedAddress.Address1);
+        
+        // Add city and zip
+        var cityZip = new List<string>();
+        if (!string.IsNullOrWhiteSpace(matchedAddress.City))
+            cityZip.Add(matchedAddress.City);
+        if (!string.IsNullOrWhiteSpace(matchedAddress.ZipPostalCode))
+            cityZip.Add(matchedAddress.ZipPostalCode);
+        
+        if (cityZip.Any())
+            parts.Add(string.Join(", ", cityZip));
+
+        var result = parts.Any() ? string.Join(" • ", parts) : null;
+        
+        // Highlight the matched keyword in the result
+        if (!string.IsNullOrEmpty(result))
+        {
+            // Simple highlighting - wrap matched text with <mark> tags
+            var regex = new System.Text.RegularExpressions.Regex($"({System.Text.RegularExpressions.Regex.Escape(keyword)})", 
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            result = regex.Replace(result, "<mark style='background-color: #fff3cd; padding: 1px 2px; border-radius: 2px;'>$1</mark>");
+        }
+        
+        return Task.FromResult(result);
     }
 
     protected virtual async Task PrepareSalesEmployeeModel(CustomerModel model)

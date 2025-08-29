@@ -234,6 +234,9 @@ public class CustomerModel : BaseEntityModel
     [UIHint("Download")]
     public string AddCustomerNoteDownloadId { get; set; }
 
+    // Address match information for search results
+    public string MatchedAddressInfo { get; set; }
+
     #region Nested classes
 
     public class AssociatedExternalAuthModel : BaseEntityModel

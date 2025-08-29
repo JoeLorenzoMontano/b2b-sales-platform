@@ -238,12 +238,10 @@
                         }, {
                             field: "MatchedAddressInfo",
                             title: "Matched Address",
-                            width: 250,
                             template: function(dataItem) {
                                 if (dataItem.MatchedAddressInfo) {
-                                    // Use kendo.htmlEncode for safety but preserve our highlighting markup
                                     var content = dataItem.MatchedAddressInfo;
-                                    return '<small style="color: #666; font-style: italic;"><i class="fa fa-map-marker" style="color: #337ab7; margin-right: 4px;"></i>' + content + '</small>';
+                                    return '<i class="fa fa-map-marker" style="color: #337ab7; margin-right: 4px;"></i>' + content;
                                 }
                                 return '';
                             },

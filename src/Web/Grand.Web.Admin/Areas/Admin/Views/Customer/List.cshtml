@@ -390,6 +390,7 @@
                 $("#@Html.IdFor(model => model.SearchEmail)").on('keyup', function (event) {
                     if (event.which == 13 || event.keyCode == 13) {
                         // Immediate search on Enter
+                        event.preventDefault();
                         clearTimeout(searchTimeout);
                         $("#search-customers").click();
                         return false;
@@ -411,6 +412,7 @@
                 $("#@Html.IdFor(model => model.SearchFirstName)").on('keyup', function (event) {
                     if (event.which == 13 || event.keyCode == 13) {
                         // Immediate search on Enter
+                        event.preventDefault();
                         clearTimeout(searchTimeout);
                         $("#search-customers").click();
                         return false;
@@ -426,6 +428,7 @@
                 $("#@Html.IdFor(model => model.SearchAddressKeyword)").on('keyup', function (event) {
                     if (event.which == 13 || event.keyCode == 13) {
                         // Immediate search on Enter
+                        event.preventDefault();
                         clearTimeout(searchTimeout);
                         $("#search-customers").click();
                         return false;

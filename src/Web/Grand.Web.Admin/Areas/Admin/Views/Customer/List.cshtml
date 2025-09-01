@@ -388,16 +388,8 @@
 
                 // Auto-search with debounce for SearchEmail
                 $("#@Html.IdFor(model => model.SearchEmail)").on('keyup', function (event) {
-                    if (event.which == 13 || event.keyCode == 13) {
-                        // Immediate search on Enter
-                        event.preventDefault();
-                        clearTimeout(searchTimeout);
-                        $("#search-customers").click();
-                        return false;
-                    } else {
-                        // Debounced search on typing
-                        debounceSearch();
-                    }
+                    // Debounced search on typing
+                    debounceSearch();
                 }).on('input', function () {
                     // Debounced search on input events (paste, cut, etc.)
                     debounceSearch();
@@ -410,32 +402,16 @@
                 });
                 // Auto-search with debounce for SearchFirstName
                 $("#@Html.IdFor(model => model.SearchFirstName)").on('keyup', function (event) {
-                    if (event.which == 13 || event.keyCode == 13) {
-                        // Immediate search on Enter
-                        event.preventDefault();
-                        clearTimeout(searchTimeout);
-                        $("#search-customers").click();
-                        return false;
-                    } else {
-                        // Debounced search on typing
-                        debounceSearch();
-                    }
+                    // Debounced search on typing
+                    debounceSearch();
                 }).on('input', function () {
                     // Debounced search on input events (paste, cut, etc.)
                     debounceSearch();
                 });
                 // Auto-search with debounce for SearchAddressKeyword
                 $("#@Html.IdFor(model => model.SearchAddressKeyword)").on('keyup', function (event) {
-                    if (event.which == 13 || event.keyCode == 13) {
-                        // Immediate search on Enter
-                        event.preventDefault();
-                        clearTimeout(searchTimeout);
-                        $("#search-customers").click();
-                        return false;
-                    } else {
-                        // Debounced search on typing
-                        debounceSearch();
-                    }
+                    // Debounced search on typing
+                    debounceSearch();
                 }).on('input', function () {
                     // Debounced search on input events (paste, cut, etc.)
                     debounceSearch();

@@ -28,7 +28,7 @@
                             </a>
                             <ul class="dropdown-menu pull-right">
                                 <li>
-                                    <input type="submit" name="exportexcel-all" asp-action="ExportExcelAll" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.All"]"/>
+                                    <input type="button" id="exportexcel-all" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.All"]"/>
                                 </li>
                                 <li>
                                     <input type="button" id="exportexcel-selected" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.Selected"]"/>
@@ -612,6 +612,38 @@
 <script>
 
     $(document).ready(function () {
+        $('#exportexcel-all').click(function (e) {
+            e.preventDefault();
+            // Create a temporary form to submit to ExportExcelAll action
+            var form = $('<form>', {
+                'method': 'POST',
+                'action': '@Url.Action("ExportExcelAll", "Customer", new { area = Constants.AreaAdmin })'
+            });
+            
+            // Add all current filter data to the form
+            var data = additionalData();
+            $.each(data, function(key, value) {
+                if (Array.isArray(value)) {
+                    $.each(value, function(index, item) {
+                        form.append($('<input>', {
+                            'type': 'hidden',
+                            'name': key,
+                            'value': item
+                        }));
+                    });
+                } else {
+                    form.append($('<input>', {
+                        'type': 'hidden',
+                        'name': key,
+                        'value': value
+                    }));
+                }
+            });
+            
+            form.appendTo('body').submit();
+            return false;
+        });
+        
         $('#exportexcel-selected').click(function (e) {
             e.preventDefault();
             var ids = selectedIds.join(",");

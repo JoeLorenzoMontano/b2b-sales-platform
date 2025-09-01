@@ -410,8 +410,17 @@
                 });
                 // Auto-search with debounce for SearchAddressKeyword
                 $("#@Html.IdFor(model => model.SearchAddressKeyword)").on('keyup', function (event) {
-                    // Debounced search on typing
-                    debounceSearch();
+                    if (event.which == 13 || event.keyCode == 13) {
+                        // Immediate search on Enter for instant column visibility update
+                        event.preventDefault();
+                        event.stopPropagation();
+                        clearTimeout(searchTimeout);
+                        $("#search-customers").click();
+                        return false;
+                    } else {
+                        // Debounced search on typing
+                        debounceSearch();
+                    }
                 }).on('input', function () {
                     // Debounced search on input events (paste, cut, etc.)
                     debounceSearch();

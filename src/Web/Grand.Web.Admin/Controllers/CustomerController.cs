@@ -1328,15 +1328,29 @@ public class CustomerController : BaseAdminController
             if (primaryAddress != null)
             {
                 var addressParts = new List<string>();
-                if (!string.IsNullOrEmpty(primaryAddress.FirstName))
-                    addressParts.Add(primaryAddress.FirstName);
-                if (!string.IsNullOrEmpty(primaryAddress.LastName))
-                    addressParts.Add(primaryAddress.LastName);
+                
+                // Add company name if available
+                if (!string.IsNullOrEmpty(primaryAddress.Company))
+                    addressParts.Add($"🏢 {primaryAddress.Company}");
+                
+                // Add street address if available
+                if (!string.IsNullOrEmpty(primaryAddress.Address1))
+                    addressParts.Add(primaryAddress.Address1);
+                
+                // Add city
                 if (!string.IsNullOrEmpty(primaryAddress.City))
                     addressParts.Add(primaryAddress.City);
+                
+                // Add state if available
+                if (!string.IsNullOrEmpty(primaryAddress.StateProvinceId))
+                    addressParts.Add(primaryAddress.StateProvinceId);
+                
+                // Add zip code if available
+                if (!string.IsNullOrEmpty(primaryAddress.ZipPostalCode))
+                    addressParts.Add(primaryAddress.ZipPostalCode);
                     
                 if (addressParts.Any())
-                    label += $" ({string.Join(", ", addressParts)})";
+                    label += $" | 📍 {string.Join(", ", addressParts)}";
             }
         }
         

@@ -303,8 +303,8 @@ public class OrderController(
             var orders = await orderService.SearchOrders(
                 storeId: model.StoreId,
                 pageIndex: 0,  // Always first page
-                pageSize: 20,  // Reasonable number of orders
-                createdFromUtc: DateTime.UtcNow.AddDays(-30) // Get orders from the last 30 days
+                pageSize: 100,  // Increased number of orders
+                createdFromUtc: DateTime.UtcNow.AddDays(-90) // Get orders from the last 90 days (3 months)
             );
             
             var fulfillmentOrders = new List<OrderModel>();

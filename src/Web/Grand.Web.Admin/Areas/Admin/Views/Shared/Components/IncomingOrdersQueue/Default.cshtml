@@ -949,8 +949,16 @@
                                 </select>
                             </div>
                             <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="sameAddressCheckbox" checked>
+                                    <label class="form-check-label" for="sameAddressCheckbox">
+                                        Use same address for billing and shipping
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label for="shippingAddressSelectIncoming">Shipping Address</label>
-                                <select id="shippingAddressSelectIncoming" class="form-control">
+                                <select id="shippingAddressSelectIncoming" class="form-control" disabled>
                                     <option value="">Select Address...</option>
                                 </select>
                             </div>
@@ -988,8 +996,38 @@
             $('#shippingAddressSelectIncoming').append(option);
         });
         
+        // Set first address as default for both dropdowns since checkbox is checked by default
+        if (addresses.length > 0) {
+            var firstAddressId = addresses[0].id;
+            $('#billingAddressSelectIncoming').val(firstAddressId);
+            $('#shippingAddressSelectIncoming').val(firstAddressId);
+        }
+        
         // Show modal
         $('#addressSelectionModalIncoming').modal('show');
+        
+        // Set up same address checkbox functionality
+        $('#sameAddressCheckbox').on('change', function() {
+            var isChecked = $(this).is(':checked');
+            var shippingSelect = $('#shippingAddressSelectIncoming');
+            var billingSelect = $('#billingAddressSelectIncoming');
+            
+            if (isChecked) {
+                // Enable same address mode
+                shippingSelect.prop('disabled', true);
+                shippingSelect.val(billingSelect.val());
+            } else {
+                // Disable same address mode
+                shippingSelect.prop('disabled', false);
+            }
+        });
+        
+        // Sync shipping address when billing address changes (if checkbox is checked)
+        $('#billingAddressSelectIncoming').on('change', function() {
+            if ($('#sameAddressCheckbox').is(':checked')) {
+                $('#shippingAddressSelectIncoming').val($(this).val());
+            }
+        });
     }
 
     function createOrderFromIncoming(customerId) {

@@ -23,6 +23,7 @@
 @inject IOrderService _orderService
 @inject ICustomerService _customerService
 @inject IWarehouseService _warehouseService
+@inject IShipmentService _shipmentService
 @{
     var logoPicture = await _pictureService.GetPictureById(_pdfSettings.LogoPictureId);
     var logoExists = logoPicture != null;
@@ -146,12 +147,51 @@
         }
 
         <h6>@(string.Format(_translationService.GetResource("PDFInvoice.Order#", order.CustomerLanguageId), order.OrderNumber)) (@order.CreatedOnUtc)</h6>
-        <table class="CodeTable">
-            <tr>
-                <td class="line">
-                    @if (order.BillingAddress != null)
-                    {
-                        <b>@(_translationService.GetResource("PDFInvoice.BillingInformation", order.CustomerLanguageId))</b>
+        
+        var orderShipments = await _shipmentService.GetShipmentsByOrder(order.Id);
+        
+        // Helper function to compare addresses
+        bool areAddressesEqual(Address addr1, Address addr2) 
+        {
+            if (addr1 == null || addr2 == null) return false;
+            
+            return string.Equals(addr1.FirstName?.Trim(), addr2.FirstName?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(addr1.LastName?.Trim(), addr2.LastName?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(addr1.Company?.Trim(), addr2.Company?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(addr1.Address1?.Trim(), addr2.Address1?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(addr1.City?.Trim(), addr2.City?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(addr1.ZipPostalCode?.Trim(), addr2.ZipPostalCode?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(addr1.PhoneNumber?.Trim(), addr2.PhoneNumber?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                   addr1.CountryId == addr2.CountryId;
+        }
+        
+        var addressesAreSame = areAddressesEqual(order.BillingAddress, order.ShippingAddress);
+        
+        // Pre-calculate payment method info to avoid nested code blocks
+        var paymentMethod = _paymentService.LoadPaymentMethodBySystemName(order.PaymentMethodSystemName);
+        var paymentMethodStr = paymentMethod != null ? paymentMethod.FriendlyName : order.PaymentMethodSystemName;
+        
+        @if (order.TargetDeliveryDate.HasValue || orderShipments.Any(s => s.DeliveryDateUtc.HasValue))
+        {
+            <div style="margin-bottom: 10px; padding: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
+                @if (order.TargetDeliveryDate.HasValue)
+                {
+                    <b>@(_translationService.GetResource("PDFInvoice.TargetDeliveryDate", order.CustomerLanguageId) ?? "Target Delivery Date"):</b> @order.TargetDeliveryDate.Value.ToString("MMMM dd, yyyy")<br/>
+                }
+                @foreach (var shipment in orderShipments.Where(s => s.DeliveryDateUtc.HasValue))
+                {
+                    <b>@(_translationService.GetResource("PDFInvoice.ActualDeliveryDate", order.CustomerLanguageId) ?? "Delivered"):</b> @shipment.DeliveryDateUtc.Value.ToString("MMMM dd, yyyy")<br/>
+                }
+            </div>
+        }
+        
+        @if (addressesAreSame && order.BillingAddress != null)
+        {
+            <!-- Single address display when billing and shipping are the same -->
+            <table class="CodeTable">
+                <tr>
+                    <td class="line" colspan="2">
+                        <b>@(_translationService.GetResource("PDFInvoice.BillingShippingInformation", order.CustomerLanguageId) ?? "Billing & Shipping Address")</b>
                         <br/>
                         @if (!string.IsNullOrEmpty(order.BillingAddress.Company))
                         {
@@ -164,10 +204,14 @@
                         @(order.BillingAddress.City + ", " + order.BillingAddress.ZipPostalCode)<br/>
                         @((await _countryService.GetCountryById(order.BillingAddress.CountryId))?.Name)<br/>
                         <br/>
-                        var paymentMethod = _paymentService.LoadPaymentMethodBySystemName(order.PaymentMethodSystemName);
-                        var paymentMethodStr = paymentMethod != null ? paymentMethod.FriendlyName : order.PaymentMethodSystemName;
                         <b>@(string.Format(_translationService.GetResource("PDFInvoice.PaymentMethod", order.CustomerLanguageId), paymentMethodStr))</b>
                         <br/>
+                        
+                        @if (order.ShippingAddress != null && !string.IsNullOrEmpty(order.ShippingMethod))
+                        {
+                            <b>@(string.Format(_translationService.GetResource("PDFInvoice.ShippingMethod", order.CustomerLanguageId), order.ShippingMethod))</b>
+                            <br/>
+                        }
                         
                         @if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
                         {
@@ -200,30 +244,90 @@
                         }
                         
                         @await Component.InvokeAsync("Widget", new { widgetZone = "pdf_payment_method_below", additionalData = order.Id })
-                    }
-                </td>
-                <td class="line">
-                    @if (order.ShippingAddress != null)
-                    {
-                        <b>@(_translationService.GetResource("PDFInvoice.ShippingInformation", order.CustomerLanguageId))</b>
-                        <br/>
-                        @if (!string.IsNullOrEmpty(order.ShippingAddress.Company))
+                    </td>
+                </tr>
+            </table>
+        }
+        else
+        {
+            <!-- Separate address display when billing and shipping are different -->
+            <table class="CodeTable">
+                <tr>
+                    <td class="line">
+                        @if (order.BillingAddress != null)
                         {
-                            @(string.Format(_translationService.GetResource("PDFInvoice.Company", order.CustomerLanguageId), order.ShippingAddress.Company))<br/>
-                        }
+                            <b>@(_translationService.GetResource("PDFInvoice.BillingInformation", order.CustomerLanguageId))</b>
+                            <br/>
+                            @if (!string.IsNullOrEmpty(order.BillingAddress.Company))
+                            {
+                                @(string.Format(_translationService.GetResource("PDFInvoice.Company", order.CustomerLanguageId), order.BillingAddress.Company))<br/>
+                            }
 
-                        @(string.Format(_translationService.GetResource("PDFInvoice.Name", order.CustomerLanguageId), order.ShippingAddress.FirstName + " " + order.ShippingAddress.LastName))<br/>
-                        @(string.Format(_translationService.GetResource("PDFInvoice.Phone", order.CustomerLanguageId), order.ShippingAddress.PhoneNumber))<br/>
-                        @(string.Format(_translationService.GetResource("PDFInvoice.Address", order.CustomerLanguageId), order.ShippingAddress.Address1))<br/>
-                        @(order.ShippingAddress.City + ", " + order.ShippingAddress.ZipPostalCode)<br/>
-                        @((await _countryService.GetCountryById(order.ShippingAddress.CountryId))?.Name)<br/>
-                        <br/>
-                        <b>@(string.Format(_translationService.GetResource("PDFInvoice.ShippingMethod", order.CustomerLanguageId), order.ShippingMethod))</b>
-                        <br/>
-                    }
-                </td>
-            </tr>
-        </table>
+                            @(string.Format(_translationService.GetResource("PDFInvoice.Name", order.CustomerLanguageId), order.BillingAddress.FirstName + " " + order.BillingAddress.LastName))<br/>
+                            @(string.Format(_translationService.GetResource("PDFInvoice.Phone", order.CustomerLanguageId), order.BillingAddress.PhoneNumber))<br/>
+                            @(string.Format(_translationService.GetResource("PDFInvoice.Address", order.CustomerLanguageId), order.BillingAddress.Address1))<br/>
+                            @(order.BillingAddress.City + ", " + order.BillingAddress.ZipPostalCode)<br/>
+                            @((await _countryService.GetCountryById(order.BillingAddress.CountryId))?.Name)<br/>
+                            <br/>
+                            <b>@(string.Format(_translationService.GetResource("PDFInvoice.PaymentMethod", order.CustomerLanguageId), paymentMethodStr))</b>
+                            <br/>
+                            
+                            @if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+                            {
+                                var impersonatingCustomer = await _customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+                                if (impersonatingCustomer != null)
+                                {
+                                    var salesRepName = impersonatingCustomer.GetFullName();
+                                    var salesRepEmail = impersonatingCustomer.Email;
+                                    var salesRepDisplay = "";
+                                    
+                                    if (!string.IsNullOrEmpty(salesRepName) && !string.IsNullOrEmpty(salesRepEmail))
+                                    {
+                                        salesRepDisplay = $"{salesRepName} ({salesRepEmail})";
+                                    }
+                                    else if (!string.IsNullOrEmpty(salesRepName))
+                                    {
+                                        salesRepDisplay = salesRepName;
+                                    }
+                                    else if (!string.IsNullOrEmpty(salesRepEmail))
+                                    {
+                                        salesRepDisplay = salesRepEmail;
+                                    }
+                                    
+                                    if (!string.IsNullOrEmpty(salesRepDisplay))
+                                    {
+                                        <b>@(string.Format(_translationService.GetResource("pdfinvoice.salesrep", order.CustomerLanguageId), salesRepDisplay))</b>
+                                        <br/>
+                                    }
+                                }
+                            }
+                            
+                            @await Component.InvokeAsync("Widget", new { widgetZone = "pdf_payment_method_below", additionalData = order.Id })
+                        }
+                    </td>
+                    <td class="line">
+                        @if (order.ShippingAddress != null)
+                        {
+                            <b>@(_translationService.GetResource("PDFInvoice.ShippingInformation", order.CustomerLanguageId))</b>
+                            <br/>
+                            @if (!string.IsNullOrEmpty(order.ShippingAddress.Company))
+                            {
+                                @(string.Format(_translationService.GetResource("PDFInvoice.Company", order.CustomerLanguageId), order.ShippingAddress.Company))<br/>
+                            }
+
+                            @(string.Format(_translationService.GetResource("PDFInvoice.Name", order.CustomerLanguageId), order.ShippingAddress.FirstName + " " + order.ShippingAddress.LastName))<br/>
+                            @(string.Format(_translationService.GetResource("PDFInvoice.Phone", order.CustomerLanguageId), order.ShippingAddress.PhoneNumber))<br/>
+                            @(string.Format(_translationService.GetResource("PDFInvoice.Address", order.CustomerLanguageId), order.ShippingAddress.Address1))<br/>
+                            @(order.ShippingAddress.City + ", " + order.ShippingAddress.ZipPostalCode)<br/>
+                            @((await _countryService.GetCountryById(order.ShippingAddress.CountryId))?.Name)<br/>
+                            <br/>
+                            <b>@(string.Format(_translationService.GetResource("PDFInvoice.ShippingMethod", order.CustomerLanguageId), order.ShippingMethod))</b>
+                            <br/>
+                        }
+                    </td>
+                </tr>
+            </table>
+        }
 
         <div class="summary">
             @(_translationService.GetResource("PDFInvoice.Product(s)", order.CustomerLanguageId))

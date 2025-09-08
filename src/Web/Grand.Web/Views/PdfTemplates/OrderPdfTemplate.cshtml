@@ -171,13 +171,9 @@
         var paymentMethod = _paymentService.LoadPaymentMethodBySystemName(order.PaymentMethodSystemName);
         var paymentMethodStr = paymentMethod != null ? paymentMethod.FriendlyName : order.PaymentMethodSystemName;
         
-        @if (order.TargetDeliveryDate.HasValue || orderShipments.Any(s => s.DeliveryDateUtc.HasValue))
+        @if (orderShipments.Any(s => s.DeliveryDateUtc.HasValue))
         {
             <div style="margin-bottom: 10px; padding: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
-                @if (order.TargetDeliveryDate.HasValue)
-                {
-                    <b>@(_translationService.GetResource("PDFInvoice.TargetDeliveryDate", order.CustomerLanguageId) ?? "Target Delivery Date"):</b> @order.TargetDeliveryDate.Value.ToString("MMMM dd, yyyy")<br/>
-                }
                 @foreach (var shipment in orderShipments.Where(s => s.DeliveryDateUtc.HasValue))
                 {
                     <b>@(_translationService.GetResource("PDFInvoice.ActualDeliveryDate", order.CustomerLanguageId) ?? "Delivered"):</b> @shipment.DeliveryDateUtc.Value.ToString("MMMM dd, yyyy")<br/>

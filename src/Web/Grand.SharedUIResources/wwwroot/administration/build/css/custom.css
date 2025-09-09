@@ -7071,9 +7071,29 @@ table.tableFixHead {
 
 /* modal */
 
+/* Modal positioning - responsive for different screen sizes */
 .modal {
     left: 90px;
     width: calc(100% - 90px);
+}
+
+/* Responsive modal positioning for smaller screens */
+@media (max-width: 1199px) {
+    .modal {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 800px;
+    }
+}
+
+@media (max-width: 767px) {
+    .modal {
+        left: 5%;
+        transform: none;
+        width: 90%;
+        max-width: none;
+    }
 }
 
 [data-theme="dark"] body,

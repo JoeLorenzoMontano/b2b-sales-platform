@@ -1341,9 +1341,7 @@ public class CustomerController : BaseAdminController
                 if (!string.IsNullOrEmpty(primaryAddress.City))
                     addressParts.Add(primaryAddress.City);
                 
-                // Add state if available
-                if (!string.IsNullOrEmpty(primaryAddress.StateProvinceId))
-                    addressParts.Add(primaryAddress.StateProvinceId);
+                // Add state if available (skip StateProvinceId as it's a GUID - not user friendly)
                 
                 // Add zip code if available
                 if (!string.IsNullOrEmpty(primaryAddress.ZipPostalCode))

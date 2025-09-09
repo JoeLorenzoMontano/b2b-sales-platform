@@ -163,6 +163,40 @@
         position: relative;
         z-index: 1;
     }
+
+    /* Responsive positioning for customer search modal */
+    #customerSearchModal {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 15px;
+    }
+
+    #customerSearchModal .modal-dialog {
+        margin: 0;
+        max-height: calc(100vh - 30px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    #customerSearchModal .modal-content {
+        height: fit-content;
+        max-height: 100%;
+        overflow-y: auto;
+    }
+
+    /* Ensure proper sizing on smaller screens */
+    @@media (max-width: 767px) {
+        #customerSearchModal {
+            padding: 10px;
+        }
+        
+        #customerSearchModal .modal-dialog {
+            max-height: calc(100vh - 20px);
+            width: 100%;
+            max-width: none;
+        }
+    }
 </style>
 
 <script>

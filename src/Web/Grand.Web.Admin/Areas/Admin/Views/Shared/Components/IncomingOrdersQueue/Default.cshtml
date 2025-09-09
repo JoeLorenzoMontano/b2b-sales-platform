@@ -20,15 +20,17 @@
                 </button>
             </div>
             <div class="modal-body">
+                <!-- Hidden for now - consolidated into unified search below
                 <div class="form-group">
                     <label for="customerSearchInput">Search Customer</label>
                     <input type="text" id="customerSearchInput" class="form-control" placeholder="Type customer email or name..." />
                     <small class="form-text text-muted">Start typing to search customers</small>
                 </div>
+                -->
                 <div class="form-group">
-                    <label for="addressSearchInput">Search by Address/Location</label>
-                    <input type="text" id="addressSearchInput" class="form-control" placeholder="City, address, company name, etc..." />
-                    <small class="form-text text-muted">Search in customer addresses, company names, cities, etc.</small>
+                    <label for="addressSearchInput">Search Customer</label>
+                    <input type="text" id="addressSearchInput" class="form-control" placeholder="Search by customer name, email, company, address, city, etc..." />
+                    <small class="form-text text-muted">Search customers by any information: name, email, company, address, city, etc.</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -793,16 +795,11 @@
         
         // Initialize autocomplete when modal is shown (ensures DOM element is visible)
         $('#customerSearchModal').on('shown.bs.modal.customerSearch', function () {
-            // Destroy existing autocomplete if any
-            if ($('#customerSearchInput').hasClass('ui-autocomplete-input')) {
-                $('#customerSearchInput').autocomplete('destroy');
-            }
-            
-            // Initialize enhanced autocomplete for both fields
+            // Initialize unified customer search
             initializeCustomerSearch();
             
             // Focus on the search input
-            $('#customerSearchInput').focus();
+            $('#addressSearchInput').focus();
         });
         
         // Comprehensive cleanup when modal is hidden
@@ -817,10 +814,10 @@
         $('.customer-search-results').remove();
         
         // Clear input values
-        $('#customerSearchInput, #addressSearchInput').val('');
+        $('#addressSearchInput').val('');
         
         // Remove existing event handlers with namespace
-        $('#customerSearchInput, #addressSearchInput').off('input.customerSearch');
+        $('#addressSearchInput').off('input.customerSearch');
         $('#customerSearchModal').off('shown.bs.modal.customerSearch hidden.bs.modal.customerSearch');
         
         // Clear any existing timeout
@@ -830,23 +827,21 @@
         }
     }
 
-    // Initialize enhanced customer search with both name/email and address search
+    // Initialize unified customer search - searches customers by all fields: name, email, address, etc.
     function initializeCustomerSearch() {
         // Use global timeout variable for proper cleanup
         window.customerSearchTimeout = null;
         
         function performSearch() {
-            var customerTerm = $('#customerSearchInput').val() || '';
-            var addressKeyword = $('#addressSearchInput').val() || '';
+            var searchKeyword = $('#addressSearchInput').val() || '';
             
-            // Check if either field has at least 1 character
-            var hasValidCustomerTerm = customerTerm.length >= 1;
-            var hasValidAddressKeyword = addressKeyword.length >= 1;
+            // Check if search has at least 1 character
+            var hasValidSearch = searchKeyword.length >= 1;
             
-            console.log('performSearch called:', { customerTerm, addressKeyword, hasValidCustomerTerm, hasValidAddressKeyword });
+            console.log('performSearch called:', { searchKeyword, hasValidSearch });
             
-            if (!hasValidCustomerTerm && !hasValidAddressKeyword) {
-                // Clear results if neither field has sufficient input
+            if (!hasValidSearch) {
+                // Clear results if no valid input
                 $('.customer-search-results').remove();
                 return;
             }
@@ -858,14 +853,11 @@
             
             // Set new timeout for search
             window.customerSearchTimeout = setTimeout(function() {
-                // Build data object conditionally - only include parameters with valid values
-                var data = {};
-                if (hasValidCustomerTerm) {
-                    data.term = customerTerm;
-                }
-                if (hasValidAddressKeyword) {
-                    data.addressKeyword = addressKeyword;
-                }
+                // Build data object with unified search parameters
+                var data = {
+                    term: searchKeyword,           // Search customer names and emails
+                    addressKeyword: searchKeyword  // Also search addresses
+                };
                 
                 console.log('Making AJAX request with params:', data);
                 $.ajax({
@@ -926,12 +918,12 @@
             });
         }
         
-        // Bind events to both search inputs with namespace for proper cleanup
-        $('#customerSearchInput, #addressSearchInput').on('input.customerSearch', performSearch);
+        // Bind events to the unified search input with namespace for proper cleanup
+        $('#addressSearchInput').on('input.customerSearch', performSearch);
         
-        // Clear results when inputs are cleared
-        $('#customerSearchInput, #addressSearchInput').on('input.customerSearch', function() {
-            if (!$('#customerSearchInput').val() && !$('#addressSearchInput').val()) {
+        // Clear results when input is cleared
+        $('#addressSearchInput').on('input.customerSearch', function() {
+            if (!$('#addressSearchInput').val()) {
                 $('.customer-search-results').remove();
             }
         });
@@ -990,9 +982,9 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="shippingAddressGroup" style="display: none;">
                                 <label for="shippingAddressSelectIncoming">Shipping Address</label>
-                                <select id="shippingAddressSelectIncoming" class="form-control" disabled>
+                                <select id="shippingAddressSelectIncoming" class="form-control">
                                     <option value="">Select Address...</option>
                                 </select>
                             </div>
@@ -1043,16 +1035,17 @@
         // Set up same address checkbox functionality
         $('#sameAddressCheckbox').on('change', function() {
             var isChecked = $(this).is(':checked');
+            var shippingGroup = $('#shippingAddressGroup');
             var shippingSelect = $('#shippingAddressSelectIncoming');
             var billingSelect = $('#billingAddressSelectIncoming');
             
             if (isChecked) {
-                // Enable same address mode
-                shippingSelect.prop('disabled', true);
+                // Hide shipping address selection and sync with billing
+                shippingGroup.hide();
                 shippingSelect.val(billingSelect.val());
             } else {
-                // Disable same address mode
-                shippingSelect.prop('disabled', false);
+                // Show shipping address selection
+                shippingGroup.show();
             }
         });
         

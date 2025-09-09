@@ -166,8 +166,8 @@
         z-index: 1;
     }
 
-    /* Responsive positioning for customer search modal */
-    #customerSearchModal {
+    /* Responsive positioning for customer search modal - only when modal is shown */
+    #customerSearchModal.show {
         display: flex !important;
         align-items: center;
         justify-content: center;
@@ -185,6 +185,12 @@
         height: fit-content;
         max-height: 100%;
         overflow-y: auto;
+    }
+
+    /* Ensure hidden modals don't interfere with page interactions */
+    #customerSearchModal:not(.show) {
+        display: none !important;
+        pointer-events: none;
     }
 
     /* Ensure proper sizing on smaller screens */

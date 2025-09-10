@@ -765,12 +765,12 @@
                         Products (@Model.Items.Count items)
                     </h3>
                     <div class="tw-flex tw-items-center tw-text-gray-600">
-                        <span class="tw-text-sm tw-mr-2">Click to expand</span>
-                        <i id="products-arrow" class="fa fa-chevron-down tw-transition-transform tw-duration-200 tw-text-blue-600"></i>
+                        <span class="tw-text-sm tw-mr-2">Click to collapse</span>
+                        <i id="products-arrow" class="fa fa-chevron-up tw-transition-transform tw-duration-200 tw-text-blue-600"></i>
                     </div>
                 </div>
             </div>
-            <div id="products-list-content" class="tw-hidden">
+            <div id="products-list-content" class="">
                 <div class="tw-p-4">
                     <!-- Mobile Product Cards (hidden on desktop) -->
                     <div class="mobile-product-cards tw-block md:tw-hidden">
@@ -2009,15 +2009,18 @@ function toggleOrderTotals(editmode) {
 function toggleProductsList() {
     const content = $('#products-list-content');
     const arrow = $('#products-arrow');
+    const expandText = $('.products-header span:contains("Click to")');
     
     // Toggle content with smooth slide animation
     content.slideToggle(300);
     
-    // Toggle arrow direction
+    // Toggle arrow direction and text
     if (arrow.hasClass('fa-chevron-down')) {
         arrow.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        expandText.text('Click to collapse');
     } else {
         arrow.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        expandText.text('Click to expand');
     }
 }
 </script>

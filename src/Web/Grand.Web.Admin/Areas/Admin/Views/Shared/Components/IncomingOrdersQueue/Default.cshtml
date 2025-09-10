@@ -32,6 +32,15 @@
                     <input type="text" id="addressSearchInput" class="form-control" placeholder="Search by customer name, email, company, address, city, etc..." />
                     <small class="form-text text-muted">Search customers by any information: name, email, company, address, city, etc.</small>
                 </div>
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="sameAddressCheckboxSearch" checked>
+                        <label class="form-check-label" for="sameAddressCheckboxSearch">
+                            Use same address for billing and shipping
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">When checked, clicking a customer will create order directly using their first address</small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -941,7 +950,38 @@
         // Hide customer search modal
         $('#customerSearchModal').modal('hide');
         
-        // Load customer addresses
+        // Check if same address checkbox is checked
+        var useSameAddress = $('#sameAddressCheckboxSearch').is(':checked');
+        
+        if (useSameAddress) {
+            // Skip address modal and create order directly
+            createOrderDirectly(customerId, customerLabel);
+        } else {
+            // Use existing flow - show address selection modal
+            // Load customer addresses
+            $.ajax({
+                url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
+                type: "POST",
+                data: addAntiForgeryToken({
+                    customerId: customerId
+                }),
+                dataType: "json",
+                success: function(addressData) {
+                    if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
+                        showAddressSelectionModalForIncoming(customerId, customerLabel, addressData.addresses);
+                    } else {
+                        showNotificationIncoming("Customer must have saved addresses before creating an order", "error", 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showNotificationIncoming("Error loading customer addresses", "error", 5000);
+                }
+            });
+        }
+    }
+
+    function createOrderDirectly(customerId, customerLabel) {
+        // Load customer addresses to get the first address
         $.ajax({
             url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
             type: "POST",
@@ -951,7 +991,34 @@
             dataType: "json",
             success: function(addressData) {
                 if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
-                    showAddressSelectionModalForIncoming(customerId, customerLabel, addressData.addresses);
+                    // Use first address for both billing and shipping
+                    var firstAddress = addressData.addresses[0];
+                    var billingAddressId = firstAddress.id;
+                    var shippingAddressId = firstAddress.id;
+                    
+                    // Create order directly using the existing StartOrder endpoint
+                    $.ajax({
+                        url: "@Html.Raw(Url.Action("StartOrder", "Customer", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        data: addAntiForgeryToken({
+                            customerId: customerId,
+                            billingAddressId: billingAddressId,
+                            shippingAddressId: shippingAddressId
+                        }),
+                        dataType: "json",
+                        success: function(data) {
+                            if (data.success) {
+                                // Refresh the incoming orders grid
+                                $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
+                                showNotificationIncoming("Order created successfully for " + customerLabel, "success", 5000);
+                            } else {
+                                showNotificationIncoming(data.message || "Error creating order", "error", 5000);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            showNotificationIncoming("Error creating order: " + error, "error", 5000);
+                        }
+                    });
                 } else {
                     showNotificationIncoming("Customer must have saved addresses before creating an order", "error", 5000);
                 }

@@ -197,13 +197,13 @@
                 {
                     <div class="tw-mb-4">
                         <span class="tw-font-medium tw-text-gray-700">Billing & Shipping Address:</span>
-                        <div class="tw-bg-gray-100 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-gray-200">
+                        <div class="tw-p-3 tw-rounded tw-mt-1 tw-border" style="background-color: var(--address-combined-bg); border-color: var(--address-combined-border); color: var(--address-combined-text);">
                             @if (Model.BillingAddress != null)
                             {
-                                <div class="tw-text-sm tw-text-gray-800">
+                                <div class="tw-text-sm">
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
                                     {
-                                        <div class="tw-font-semibold tw-text-gray-900">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
+                                        <div class="tw-font-semibold" style="color: var(--address-name-text);">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
                                     {
@@ -228,11 +228,11 @@
                     {
                         <div class="tw-mb-4">
                             <span class="tw-font-medium tw-text-gray-700">Shipping Address:</span>
-                            <div class="tw-bg-blue-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-blue-100">
-                                <div class="tw-text-sm tw-text-blue-900">
+                            <div class="tw-p-3 tw-rounded tw-mt-1 tw-border" style="background-color: var(--address-shipping-bg); border-color: var(--address-shipping-border); color: var(--address-shipping-text);">
+                                <div class="tw-text-sm">
                                     @if (!string.IsNullOrEmpty(Model.ShippingAddress.FirstName) || !string.IsNullOrEmpty(Model.ShippingAddress.LastName))
                                     {
-                                        <div class="tw-font-semibold tw-text-gray-900">@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</div>
+                                        <div class="tw-font-semibold" style="color: var(--address-name-text);">@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</div>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.ShippingAddress.Company))
                                     {
@@ -255,11 +255,11 @@
                     {
                         <div class="tw-mb-4">
                             <span class="tw-font-medium tw-text-gray-700">Billing Address:</span>
-                            <div class="tw-bg-green-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-green-100">
-                                <div class="tw-text-sm tw-text-green-900">
+                            <div class="tw-p-3 tw-rounded tw-mt-1 tw-border" style="background-color: var(--address-billing-bg); border-color: var(--address-billing-border); color: var(--address-billing-text);">
+                                <div class="tw-text-sm">
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
                                     {
-                                        <div class="tw-font-semibold tw-text-gray-900">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
+                                        <div class="tw-font-semibold" style="color: var(--address-name-text);">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
                                     {
@@ -283,11 +283,11 @@
                 {
                     <div class="tw-mb-4">
                         <span class="tw-font-medium tw-text-gray-700">Pickup Address:</span>
-                        <div class="tw-bg-orange-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-orange-100">
-                            <div class="tw-text-sm tw-text-orange-900">
+                        <div class="tw-p-3 tw-rounded tw-mt-1 tw-border" style="background-color: var(--address-pickup-bg); border-color: var(--address-pickup-border); color: var(--address-pickup-text);">
+                            <div class="tw-text-sm">
                                 @if (!string.IsNullOrEmpty(Model.PickupAddress.FirstName) || !string.IsNullOrEmpty(Model.PickupAddress.LastName))
                                 {
-                                    <div class="tw-font-semibold tw-text-gray-900">@Model.PickupAddress.FirstName @Model.PickupAddress.LastName</div>
+                                    <div class="tw-font-semibold" style="color: var(--address-name-text);">@Model.PickupAddress.FirstName @Model.PickupAddress.LastName</div>
                                 }
                                 @if (!string.IsNullOrEmpty(Model.PickupAddress.Company))
                                 {
@@ -757,11 +757,17 @@
         </section>
         
         <!-- Expandable Products List (now inside grid) -->
-        <div class="tw-col-span-full tw-mt-6 tw-bg-white tw-rounded tw-shadow">
-            <div class="products-header tw-p-4 tw-cursor-pointer tw-border-b tw-border-gray-200" onclick="toggleProductsList()">
+        <div class="tw-col-span-full tw-mt-6 tw-bg-white tw-rounded tw-shadow tw-border tw-border-gray-300">
+            <div class="products-header tw-p-4 tw-cursor-pointer tw-border-b tw-border-gray-300 tw-bg-gray-50 hover:tw-bg-gray-100 tw-transition-colors tw-duration-150" onclick="toggleProductsList()">
                 <div class="tw-flex tw-justify-between tw-items-center">
-                    <h3 class="tw-font-semibold tw-text-lg tw-mb-0">Products (@Model.Items.Count items)</h3>
-                    <i id="products-arrow" class="fa fa-chevron-down tw-transition-transform tw-duration-200"></i>
+                    <h3 class="tw-font-semibold tw-text-lg tw-mb-0 tw-text-gray-800">
+                        <i class="fa fa-package tw-mr-2 tw-text-blue-600"></i>
+                        Products (@Model.Items.Count items)
+                    </h3>
+                    <div class="tw-flex tw-items-center tw-text-gray-600">
+                        <span class="tw-text-sm tw-mr-2">Click to expand</span>
+                        <i id="products-arrow" class="fa fa-chevron-down tw-transition-transform tw-duration-200 tw-text-blue-600"></i>
+                    </div>
                 </div>
             </div>
             <div id="products-list-content" class="tw-hidden">
@@ -1212,7 +1218,27 @@
     --address-name-text: #111827;
 }
 
-/* Dark mode overrides (if implemented) */
+/* Dark mode overrides */
+[data-theme="dark"] {
+    --address-combined-bg: #374151;
+    --address-combined-border: #6b7280;
+    --address-combined-text: #f9fafb;
+    
+    --address-shipping-bg: #1e3a8a;
+    --address-shipping-border: #3b82f6;
+    --address-shipping-text: #dbeafe;
+    
+    --address-billing-bg: #14532d;
+    --address-billing-border: #22c55e;
+    --address-billing-text: #dcfce7;
+    
+    --address-pickup-bg: #9a3412;
+    --address-pickup-border: #f97316;
+    --address-pickup-text: #fed7aa;
+    
+    --address-name-text: #ffffff;
+}
+
 @@media (prefers-color-scheme: dark) {
     :root {
         --address-combined-bg: #374151;

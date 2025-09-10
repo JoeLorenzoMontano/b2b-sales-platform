@@ -77,9 +77,225 @@
 
     </script>
 
-<div class="form-horizontal">
-<vc:admin-widget widget-zone="order_details_info_top" additional-data="Model"/>
-<div class="form-body">
+<!-- Modern 3-column layout matching target design -->
+<div class="stash-page-content">
+    <vc:admin-widget widget-zone="order_details_info_top" additional-data="Model"/>
+    
+    <!-- 3-column info grid -->
+    <div class="tw-grid tw-grid-cols-12 tw-gap-4 tw-mb-6">
+        
+        <!-- Seller Section -->
+        <section class="tw-bg-white tw-rounded tw-p-4 tw-shadow tw-col-span-12 md:tw-col-span-6 lg:tw-col-span-3">
+            <h2 class="tw-mb-3 tw-font-semibold tw-text-lg">Seller</h2>
+            <div class="tw-flex-1">
+                
+                <div class="tw-mb-3">
+                    <div class="heading-3 tw-mb-2">@Model.StoreName</div>
+                </div>
+                
+                <!-- Sales Representative -->
+                <div class="tw-mb-4">
+                    <span class="tw-font-medium tw-text-gray-700">Sales Representative:</span><br/>
+                    @Html.AntiForgeryToken()
+                    <div class="tw-mt-2">
+                        @{
+                            var salesEmployees = await _salesEmployeeService.GetAll();
+                            if (salesEmployees.Any())
+                            {
+                                <select name="salesEmployeeId" class="form-control tw-text-sm" id="salesEmployeeIdSelect">
+                                    <option value="">@Loc["Admin.Common.Select"]</option>
+                                    @foreach (var salesEmployee in salesEmployees)
+                                    {
+                                        if (Model.SalesEmployeeId == salesEmployee.Id)
+                                        {
+                                            <option value="@salesEmployee.Id" selected="selected">@salesEmployee.Name</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@salesEmployee.Id">@salesEmployee.Name</option>
+                                        }
+                                    }
+                                </select>
+                                <div class="tw-mt-1">
+                                    <button type="button" class="btn btn-sm btn-success" id="submitSalesEmployee">@Loc["Admin.Common.Save"]</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning tw-text-xs">
+                                    No sales employees found.
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                
+                <!-- Payment Method -->
+                <div class="tw-mb-2">
+                    <span class="tw-font-medium tw-text-gray-700">Payment Method:</span><br/>
+                    <span>@Model.PaymentMethod</span>
+                </div>
+                
+            </div>
+        </section>
+        
+        <!-- Buyer Section -->
+        <section class="tw-bg-white tw-rounded tw-p-4 tw-shadow tw-col-span-12 md:tw-col-span-6 lg:tw-col-span-3">
+            <h2 class="tw-mb-3 tw-font-semibold tw-text-lg">Buyer</h2>
+            <div class="tw-flex-1">
+                
+                <div class="tw-mb-3">
+                    <div class="heading-3 tw-mb-2">
+                        @Html.ActionLink(Model.CustomerInfo, "Edit", "Customer", new { id = Model.CustomerId }, new { @class = "tw-text-blue-600 hover:tw-underline" })
+                    </div>
+                </div>
+                
+                <!-- Customer Details -->
+                <div class="tw-mb-4">
+                    <span class="tw-font-medium tw-text-gray-700">Customer IP:</span><br/>
+                    <span>@Model.CustomerIp</span>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(Model.VatNumber))
+                {
+                    <div class="tw-mb-2">
+                        <span class="tw-font-medium tw-text-gray-700">VAT Number:</span><br/>
+                        <span>@Model.VatNumber</span>
+                    </div>
+                }
+                
+                <!-- Impersonation Info -->
+                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
+                {
+                    <div class="tw-mb-2">
+                        <span class="tw-font-medium tw-text-gray-700">Impersonated By:</span><br/>
+                        <div class="tw-bg-yellow-100 tw-p-2 tw-rounded tw-text-sm">
+                            @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
+                            {
+                                <a href="@Url.Action("Edit", "Customer", new { id = Model.ImpersonatedByEmployeeId })" class="tw-text-blue-600">@Model.ImpersonatedByEmployeeName</a>
+                            }
+                            else
+                            {
+                                <span>@Model.ImpersonatedByEmployeeId</span>
+                            }
+                        </div>
+                    </div>
+                }
+                
+            </div>
+        </section>
+        
+        <!-- Order Information Section (spans 2 columns) -->
+        <section class="tw-bg-white tw-rounded tw-p-4 tw-shadow tw-col-span-12 lg:tw-col-span-6">
+            <div class="tw-flex tw-justify-between tw-mb-4">
+                <h2 class="tw-font-semibold tw-text-lg tw-mb-0">Order Information</h2>
+                <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fa fa-edit"></i>
+                </button>
+            </div>
+            
+            <div class="tw-grid tw-gap-3 tw-grid-cols-12">
+                
+                <!-- Order Details Column -->
+                <div class="tw-col-span-6">
+                    <div class="tw-mb-3 tw-font-medium">Order Details</div>
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Order number:</span> @Model.OrderNumber
+                    </div>
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Order status:</span>
+                        <div class="alert tw-inline-block tw-text-xs tw-px-2 tw-py-1 tw-ml-1 @Model.OrderStatus.ToLower()">@Model.OrderStatus</div>
+                    </div>
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Order created:</span> @Html.DisplayFor(model => model.CreatedOn)
+                    </div>
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Currency:</span> @Model.CurrencyCode
+                        @if (Model.CurrencyRate != 1)
+                        {
+                            <text> (@Model.CurrencyRate)</text>
+                        }
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(Model.Code))
+                    {
+                        <div class="tw-mb-2 tw-text-sm">
+                            <span class="tw-font-medium tw-text-gray-700">Code:</span> @Model.Code
+                        </div>
+                    }
+                    
+                </div>
+                
+                <!-- Payment Details Column -->
+                <div class="tw-col-span-6">
+                    <div class="tw-mb-3 tw-font-medium">Payment Details</div>
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Payment Status:</span>
+                        @{
+                            var labelStatus = "";
+                            switch (Model.PaymentStatusEnum)
+                            {
+                                case PaymentStatus.Paid:
+                                    labelStatus = "success";
+                                    break;
+                                case PaymentStatus.PartiallyPaid:
+                                    labelStatus = "info";
+                                    break;
+                                case PaymentStatus.Pending:
+                                    labelStatus = "default";
+                                    break;
+                                case PaymentStatus.Authorized:
+                                    labelStatus = "info";
+                                    break;
+                                case PaymentStatus.PartiallyRefunded:
+                                    labelStatus = "info";
+                                    break;
+                                case PaymentStatus.Refunded:
+                                    labelStatus = "warning";
+                                    break;
+                                case PaymentStatus.Voided:
+                                    labelStatus = "danger";
+                                    break;
+                            }
+                        }
+                        <div class="tw-mt-1">
+                            <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId, area = "Admin" })">
+                                @Model.PaymentStatus
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Shipping Status:</span> @Model.ShippingStatus
+                    </div>
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Order Total:</span> 
+                        <span class="tw-font-bold">@Model.OrderTotal</span>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(Model.RefundedAmount))
+                    {
+                        <div class="tw-mb-2 tw-text-sm">
+                            <span class="tw-font-medium tw-text-gray-700">Refunded:</span> @Model.RefundedAmount
+                        </div>
+                    }
+                    
+                    <div class="tw-mb-2 tw-text-sm">
+                        <span class="tw-font-medium tw-text-gray-700">Profit:</span> @Model.Profit
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </section>
+        
+    </div>
 <div class="form-group">
     <admin-label asp-for="OrderNumber" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
     <div class="col-9 col-md-9 col-sm-9">
@@ -120,43 +336,6 @@
     </div>
 </div>
 
-<div class="form-group">
-    <admin-label asp-for="PaymentStatus" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        @{
-            var labelStatus = "";
-            switch (Model.PaymentStatusEnum)
-            {
-                case PaymentStatus.Paid:
-                    labelStatus = "success";
-                    break;
-                case PaymentStatus.PartiallyPaid:
-                    labelStatus = "info";
-                    break;
-                case PaymentStatus.Pending:
-                    labelStatus = "default";
-                    break;
-                case PaymentStatus.Authorized:
-                    labelStatus = "info";
-                    break;
-                case PaymentStatus.PartiallyRefunded:
-                    labelStatus = "info";
-                    break;
-                case PaymentStatus.Refunded:
-                    labelStatus = "warning";
-                    break;
-                case PaymentStatus.Voided:
-                    labelStatus = "danger";
-                    break;
-            }
-        }
-        <div>
-
-            <a class="btn btn-@labelStatus" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })">@Model.PaymentStatus - @Loc["Admin.Common.View"]</a>
-
-        </div>
-    </div>
-</div>
 
 <div class="form-group" id="trEditOrderTags">
     <admin-label asp-for="OrderTags"/>
@@ -407,438 +586,1125 @@
                     }
                 });
             });
-        </script>
-    </div>
-</div>
-@if (!string.IsNullOrEmpty(Model.VatNumber))
-{
-    <div class="form-group">
-        <admin-label asp-for="VatNumber" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.VatNumber</label>
-        </div>
-    </div>
-}
-@if (!string.IsNullOrEmpty(Model.AffiliateId))
-{
-    <div class="form-group">
-        <admin-label asp-for="AffiliateId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">
-                <a href="@Url.Action("Edit", "Affiliate", new { id = Model.AffiliateId, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })">@Model.AffiliateName - @Loc["Admin.Common.View"]</a>
-            </label>
-        </div>
-    </div>
-}
-<div class="form-group">
-    <admin-label asp-for="SalesEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9 salesEmployeeDisplay">
-        @Html.AntiForgeryToken()
-        <div class="form-horizontal">
-            <div class="form-body">
-                <div class="form-group">
-                    <div class="col-md-9 col-sm-9">
-                        @{
-                            var salesEmployees = await _salesEmployeeService.GetAll();
-                            if (salesEmployees.Any())
-                            {
-                                <select name="salesEmployeeId" class="form-control" id="salesEmployeeIdSelect">
-                                    <option value="">@Loc["Admin.Common.Select"]</option>
-                                    @foreach (var salesEmployee in salesEmployees)
-                                    {
-                                        if (Model.SalesEmployeeId == salesEmployee.Id)
+                
+                @if (!string.IsNullOrEmpty(Model.AffiliateId))
+                {
+                    <div class="tw-mb-2">
+                        <span class="tw-font-medium tw-text-gray-700">Affiliate:</span><br/>
+                        <a href="@Url.Action("Edit", "Affiliate", new { id = Model.AffiliateId, area = "Admin" })" class="tw-text-blue-600 hover:tw-underline">
+                            @Model.AffiliateName
+                        </a>
+                    </div>
+                }
+                
+                <!-- Edit Impersonation (Hidden by default) -->
+                <div id="impersonationSelector" style="display: none; margin-top: 10px;">
+                    <div class="form-horizontal">
+                        <div class="form-body">
+                            <div class="form-group">
+                                <div class="col-md-12">
+                                    <div class="input-group">
+                                        <input type="text" id="impersonatedEmployeeIdSearch" class="form-control" placeholder="Search employee/customer..." />
+                                        <div class="input-group-append">
+                                            <button type="button" id="searchImpersonatedEmployee" class="btn btn-info">
+                                                <i class="fa fa-search"></i> Search
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <select name="impersonatedEmployeeId" class="form-control mt-2" id="impersonatedEmployeeIdSelect">
+                                        <option value="">@Loc["Admin.Common.Select"]</option>
+                                        @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId) && !string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
                                         {
-                                            <option value="@salesEmployee.Id" selected="selected">@salesEmployee.Name</option>
+                                            <option value="@Model.ImpersonatedByEmployeeId" selected="selected">@Model.ImpersonatedByEmployeeName</option>
                                         }
-                                        else
+                                    </select>
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-success" id="submitImpersonatedEmployee">@Loc["Admin.Common.Save"]</button>
+                                        <button type="button" class="btn btn-sm btn-secondary" id="cancelImpersonatedEmployee">@Loc["Admin.Common.Cancel"]</button>
+                                        @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
                                         {
-                                            <option value="@salesEmployee.Id">@salesEmployee.Name</option>
+                                            <button type="button" class="btn btn-sm btn-danger" id="removeImpersonatedEmployee">@Loc["Admin.Common.Remove"]</button>
                                         }
-                                    }
-                                </select>
-                                <div class="mt-2">
-                                    <button type="button" class="btn btn-sm btn-success" id="submitSalesEmployee">@Loc["Admin.Common.Save"]</button>
+                                    </div>
                                 </div>
-                            }
-                            else
-                            {
-                                <div class="alert alert-warning">
-                                    No sales employees found. Please add sales employees in the Sales Employees section.
-                                    <a href="@Url.Action("Index", "SalesEmployee", new { area = "Admin" })" class="btn btn-sm btn-info">
-                                        Go to Sales Employees
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </section>
+        
+    </div>
+    
+    <!-- Order Summary Section with Tabbed Interface -->
+    <div class="tw-col-span-full tw-mt-6">
+        <div class="stash-tabs tw-relative" role="tabList">
+            <ul class="stash-tabs-list tw-flex tw-items-end tw-border-b tw-border-gray-200">
+                <li id="tab-order-summary" role="tab" aria-selected="true" aria-controls="tabpanel-order-summary" class="stash-tab stash-tab--active tw-px-6 tw-py-3 tw-border-t-4 tw-border-blue-500 tw-bg-white tw-rounded-t tw-cursor-pointer">
+                    <span class="tw-text-blue-500 tw-font-medium">Order Summary</span>
+                </li>
+                <li id="tab-order-tags" role="tab" aria-selected="false" aria-controls="tabpanel-order-tags" class="stash-tab tw-px-6 tw-py-3 tw-text-gray-700 tw-cursor-pointer hover:tw-text-blue-500">
+                    <span>Order Tags</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div id="tabpanel-order-summary" role="tabpanel">
+            <div class="stash-data-view tw-relative tw-bg-white tw-rounded-b tw-shadow">
+                
+                <!-- Toolbar with action buttons -->
+                <div class="stash-data-view-toolbar tw-flex tw-min-h-15 tw-items-center tw-justify-between tw-bg-white tw-py-3 tw-px-6 tw-border-b tw-border-gray-200">
+                    <div class="tw-flex tw-items-center tw-gap-6">
+                        <button type="button" onclick="$('.add-products-section').toggle();" class="tw-flex tw-flex-col tw-items-center tw-text-blue-500">
+                            <i class="fa fa-plus-circle tw-text-lg"></i>
+                            <div class="tw-mt-1 tw-text-xs tw-leading-3">Add Products</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile Product Cards (hidden on desktop) -->
+                <div class="mobile-product-cards">
+                    @for (var j = 0; j < Model.Items.Count; j++)
+                    {
+                        var item = Model.Items[j];
+                        <input asp-for="@Model.Items[j].Id" type="hidden"/>
+                        <div class="mobile-product-card">
+                            <div class="mobile-product-header">
+                                <div class="tw-font-semibold tw-text-gray-900 tw-mr-3">@(j + 1)</div>
+                                <div class="tw-flex-1">
+                                    <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" class="mobile-product-title">
+                                        @item.ProductName
                                     </a>
                                 </div>
+                            </div>
+                            
+                            <div class="mobile-product-details">
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label">Brand:</span>
+                                    <span class="mobile-detail-value tw-font-medium">@(!string.IsNullOrEmpty(item.VendorName) ? item.VendorName : "N/A")</span>
+                                </div>
+                                
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label">Quantity:</span>
+                                    <span class="mobile-detail-value mobile-inline-edit">
+                                        <div class="tw-font-medium">
+                                            <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control inline-edit-field mobile-qty-input tw-w-20" min="1"/>
+                                        </div>
+                                        @if (item.OpenQty > 0 || item.CancelQty > 0)
+                                        {
+                                            <div class="tw-text-xs tw-text-gray-600 tw-mt-1">
+                                                @if (item.OpenQty > 0) { <span>Open: @item.OpenQty</span> }
+                                                @if (item.CancelQty > 0) { <span class="tw-ml-1">Canceled: @item.CancelQty</span> }
+                                            </div>
+                                        }
+                                    </span>
+                                </div>
+                                
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label">Price:</span>
+                                    <span class="mobile-detail-value mobile-inline-edit">
+                                        <div class="tw-font-medium">
+                                            <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field mobile-price-input tw-w-24"/>
+                                        </div>
+                                    </span>
+                                </div>
+                                
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label"><strong>Total Price:</strong></span>
+                                    <span class="mobile-detail-value"><div class="tw-font-medium">
+                                        <span class="subtotal-display" data-order-item-id="@item.Id">
+                                            @switch (Model.TaxDisplayType)
+                                            {
+                                                case TaxDisplayType.ExcludingTax:
+                                                {
+                                                    @item.SubTotalExclTax
+                                                }
+                                                    break;
+                                                case TaxDisplayType.IncludingTax:
+                                                {
+                                                    @item.SubTotalInclTax
+                                                }
+                                                    break;
+                                            }
+                                        </span>
+                                    </div></span>
+                                </div>
+                            </div>
+                            
+                            <!-- Mobile Actions -->
+                            <div class="mobile-actions">
+                                <div class="mobile-save-status" id="save-status-@item.Id" style="display:none;">
+                                    <small class="text-muted">
+                                        <i class="fa fa-spinner fa-spin"></i> Saving...
+                                    </small>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');" class="k-button btn-sm" title="@Loc["Admin.Common.Delete"]">
+                                        <span class="k-icon k-i-delete"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Desktop Product Table -->
+                <div class="stash-table tw-relative tw-border-t tw-border-gray-200 tw-overflow-auto tw-hidden lg:tw-block">
+                    <table class="tw-min-w-full tw-border-separate">
+                        <thead class="tw-border-b tw-border-gray-200">
+                            <tr class="tw-grid tw-grid-cols-12 tw-w-full">
+                                <th class="tw-border-b tw-border-r tw-border-gray-200 tw-p-3 tw-text-xs tw-font-medium tw-text-gray-900 tw-bg-white tw-col-span-4">
+                                    Product List
+                                </th>
+                                <th class="tw-border-b tw-border-r tw-border-gray-200 tw-p-3 tw-text-xs tw-font-medium tw-text-gray-900 tw-bg-white tw-col-span-2">
+                                    Brand
+                                </th>
+                                <th class="tw-border-b tw-border-r tw-border-gray-200 tw-p-3 tw-text-xs tw-font-medium tw-text-gray-900 tw-bg-white tw-col-span-2">
+                                    Quantity
+                                </th>
+                                <th class="tw-border-b tw-border-r tw-border-gray-200 tw-p-3 tw-text-xs tw-font-medium tw-text-gray-900 tw-bg-white tw-col-span-2">
+                                    Price
+                                </th>
+                                <th class="tw-border-b tw-border-r tw-border-gray-200 tw-p-3 tw-text-xs tw-font-medium tw-text-gray-900 tw-bg-white tw-col-span-2 tw-text-right">
+                                    Total Price
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var j = 0; j < Model.Items.Count; j++)
+                            {
+                                var item = Model.Items[j];
+                                <input asp-for="@Model.Items[j].Id" type="hidden"/>
+                                <tr class="tw-grid tw-grid-cols-12 tw-w-full tw-border-b tw-border-gray-100 hover:tw-bg-gray-50">
+                                    <!-- Product Column -->
+                                    <td class="tw-p-3 tw-col-span-4">
+                                        <div class="tw-flex tw-items-start">
+                                            <div class="tw-font-semibold tw-text-gray-900 tw-mr-3">@(j + 1)</div>
+                                            <div class="tw-flex-1">
+                                                <div class="tw-font-medium tw-mb-1 tw-text-gray-900">
+                                                    <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" class="tw-text-blue-600 hover:tw-underline">
+                                                        @item.ProductName
+                                                    </a>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(item.Sku))
+                                                {
+                                                    <p class="tw-text-gray-700 tw-mb-1 tw-text-sm">SKU: @item.Sku</p>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                                                {
+                                                    <p class="tw-text-gray-700 tw-mb-1 tw-text-sm">@Html.Raw(item.AttributeInfo)</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    
+                                    <!-- Brand Column -->
+                                    <td class="tw-p-3 tw-col-span-2">
+                                        <span class="tw-font-medium">@(!string.IsNullOrEmpty(item.VendorName) ? item.VendorName : "N/A")</span>
+                                    </td>
+                                    
+                                    <!-- Quantity Column -->
+                                    <td class="tw-p-3 tw-col-span-2">
+                                        <div class="tw-flex tw-flex-wrap tw-items-center">
+                                            <div class="tw-font-medium">
+                                                <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control inline-edit-field tw-w-20" min="1"/>
+                                            </div>
+                                            @if (item.OpenQty > 0 || item.CancelQty > 0)
+                                            {
+                                                <div class="tw-ml-2 tw-text-xs tw-text-gray-600">
+                                                    @if (item.OpenQty > 0) { <span>Open: @item.OpenQty</span> }
+                                                    @if (item.CancelQty > 0) { <span class="tw-ml-1">Canceled: @item.CancelQty</span> }
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+                                    
+                                    <!-- Price Column -->
+                                    <td class="tw-p-3 tw-col-span-2">
+                                        <div class="tw-text-right lg:tw-text-left">
+                                            <div class="tw-font-medium">
+                                                <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field tw-w-24"/>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    
+                                    <!-- Total Column -->
+                                    <td class="tw-p-3 tw-col-span-2 tw-text-right">
+                                        <div class="tw-font-medium">
+                                            <span class="subtotal-display" data-order-item-id="@item.Id">
+                                                @switch (Model.TaxDisplayType)
+                                                {
+                                                    case TaxDisplayType.ExcludingTax:
+                                                    {
+                                                        @item.SubTotalExclTax
+                                                    }
+                                                        break;
+                                                    case TaxDisplayType.IncludingTax:
+                                                    {
+                                                        @item.SubTotalInclTax
+                                                    }
+                                                        break;
+                                                }
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Action buttons -->
+                                        <div class="tw-mt-2">
+                                            <div class="btn-group">
+                                                <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');" class="k-button btn-sm" title="@Loc["Admin.Common.Delete"]">
+                                                    <span class="k-icon k-i-delete"></span>
+                                                </button>
+                                            </div>
+                                            
+                                            <!-- Auto-save status -->
+                                            <div class="auto-save-status tw-mt-1" id="save-status-@item.Id" style="display:none;">
+                                                <small class="text-muted">
+                                                    <i class="fa fa-spinner fa-spin"></i> Saving...
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
                             }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Order Totals Footer -->
+                <div class="tw-bg-gray-50 tw-border-t tw-border-gray-200 tw-grid tw-grid-cols-12 tw-gap-4 tw-p-6">
+                    <div class="tw-col-span-full lg:tw-col-span-7">
+                        <div class="tw-flex tw-justify-between tw-items-center">
+                            <span class="tw-font-medium">Total Quantity:</span>
+                            <span class="tw-font-semibold">@Model.Items.Sum(x => x.Quantity) Units</span>
+                        </div>
+                    </div>
+                    
+                    <div class="tw-col-span-full lg:tw-col-span-5 tw-bg-white tw-rounded tw-p-4">
+                        @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
+                        {
+                            <div class="tw-flex tw-justify-between tw-py-2 tw-border-t tw-border-gray-200">
+                                <span class="tw-font-medium">Subtotal:</span>
+                                <span>@Model.OrderSubtotalInclTax</span>
+                            </div>
                         }
+                        @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
+                        {
+                            <div class="tw-flex tw-justify-between tw-py-2 tw-border-t tw-border-gray-200">
+                                <span class="tw-font-medium">Subtotal:</span>
+                                <span>@Model.OrderSubtotalExclTax</span>
+                            </div>
+                        }
+                        
+                        @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
+                        {
+                            <div class="tw-flex tw-justify-between tw-py-2 tw-border-t tw-border-gray-200">
+                                <span class="tw-font-medium">Shipping charge:</span>
+                                <span>@Model.OrderShippingInclTax</span>
+                            </div>
+                        }
+                        @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
+                        {
+                            <div class="tw-flex tw-justify-between tw-py-2 tw-border-t tw-border-gray-200">
+                                <span class="tw-font-medium">Shipping charge:</span>
+                                <span>@Model.OrderShippingExclTax</span>
+                            </div>
+                        }
+                        
+                        @if (Model.DisplayTax)
+                        {
+                            <div class="tw-flex tw-justify-between tw-py-2 tw-border-t tw-border-gray-200">
+                                <span class="tw-font-medium">Tax:</span>
+                                <span>@Model.Tax</span>
+                            </div>
+                        }
+                        
+                        <div class="tw-flex tw-justify-between tw-py-2 tw-border-t tw-border-gray-700 tw-font-bold tw-text-lg">
+                            <span>Total:</span>
+                            <span>@Model.OrderTotal</span>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+        <!-- Order Tags Tab Panel (Hidden by default) -->
+        <div id="tabpanel-order-tags" role="tabpanel" style="display: none;">
+            <div class="stash-data-view tw-relative tw-bg-white tw-rounded-b tw-shadow tw-p-6">
+                <div class="form-group" id="trEditOrderTags">
+                    <admin-label asp-for="OrderTags"/>
+                    <div class="col-md-9 col-sm-9">
+                        <span asp-validation-for="OrderTags"></span>
+                        <div class="input-group flex-nowrap w-100">
+                            <admin-input asp-for="OrderTags"/>
+                            <input type="submit" name="btnSaveOrderTags" asp-action="SaveOrderTags" value="@Loc["Admin.Orders.Fields.SaveOrderTags"]" id="btnSaveOrderTags" class="k-button" onclick=" return confirm('@Loc["Admin.Common.AreYouSure"]'); "/>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
+    </div>
+    
+    <!-- Add Products Section (Integrated) -->
+    <div class="add-products-section tw-mt-6" style="display: none;">
+        <div class="tw-bg-white tw-rounded tw-shadow tw-p-4">
+            <div class="tw-flex tw-items-center tw-mb-4">
+                <i class="fa fa-plus tw-text-blue-500 tw-mr-2"></i>
+                <h3 class="tw-font-semibold tw-text-lg">Add Products to Order</h3>
+            </div>
+            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, contextType = "order" })
+        </div>
+    </div>
+
+</div>
+
+<vc:admin-widget widget-zone="order_details_info_bottom" additional-data="Model"/>
+
+<!-- Comprehensive JavaScript and CSS for the new unified layout -->
+<style>
+/* Modern grid-based layout styles with Tailwind-like utilities */
+.tw-grid { display: grid; }
+.tw-grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.tw-gap-4 { gap: 1rem; }
+.tw-col-span-12 { grid-column: span 12 / span 12; }
+.tw-col-span-full { grid-column: 1 / -1; }
+.tw-col-span-6 { grid-column: span 6 / span 6; }
+.tw-col-span-4 { grid-column: span 4 / span 4; }
+.tw-col-span-3 { grid-column: span 3 / span 3; }
+.tw-col-span-2 { grid-column: span 2 / span 2; }
+
+/* Responsive breakpoints */
+@@media (min-width: 768px) {
+    .md\:tw-col-span-6 { grid-column: span 6 / span 6; }
+}
+@@media (min-width: 1024px) {
+    .lg\:tw-col-span-6 { grid-column: span 6 / span 6; }
+    .lg\:tw-col-span-5 { grid-column: span 5 / span 5; }
+    .lg\:tw-col-span-7 { grid-column: span 7 / span 7; }
+    .lg\:tw-col-span-3 { grid-column: span 3 / span 3; }
+    .lg\:tw-text-left { text-align: left; }
+    .tw-hidden.lg\:tw-block { display: block; }
+}
+
+/* Layout and spacing utilities */
+.tw-bg-white { background-color: #ffffff; }
+.tw-bg-gray-50 { background-color: #f9fafb; }
+.tw-rounded { border-radius: 0.375rem; }
+.tw-p-4 { padding: 1rem; }
+.tw-p-3 { padding: 0.75rem; }
+.tw-p-6 { padding: 1.5rem; }
+.tw-px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.tw-py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.tw-py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.tw-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
+.tw-mb-6 { margin-bottom: 1.5rem; }
+.tw-mb-4 { margin-bottom: 1rem; }
+.tw-mb-3 { margin-bottom: 0.75rem; }
+.tw-mb-2 { margin-bottom: 0.5rem; }
+.tw-mb-1 { margin-bottom: 0.25rem; }
+.tw-mb-0 { margin-bottom: 0; }
+.tw-mt-6 { margin-top: 1.5rem; }
+.tw-mt-4 { margin-top: 1rem; }
+.tw-mt-2 { margin-top: 0.5rem; }
+.tw-mt-1 { margin-top: 0.25rem; }
+.tw-mr-3 { margin-right: 0.75rem; }
+.tw-mr-2 { margin-right: 0.5rem; }
+.tw-ml-2 { margin-left: 0.5rem; }
+.tw-ml-1 { margin-left: 0.25rem; }
+
+/* Typography */
+.tw-font-semibold { font-weight: 600; }
+.tw-font-medium { font-weight: 500; }
+.tw-font-bold { font-weight: 700; }
+.tw-text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.tw-text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.tw-text-xs { font-size: 0.75rem; line-height: 1rem; }
+.tw-text-blue-600 { color: #2563eb; }
+.tw-text-blue-500 { color: #3b82f6; }
+.tw-text-gray-900 { color: #111827; }
+.tw-text-gray-700 { color: #374151; }
+.tw-text-gray-600 { color: #4b5563; }
+.tw-text-right { text-align: right; }
+.tw-leading-3 { line-height: 0.75rem; }
+
+/* Flexbox utilities */
+.tw-flex { display: flex; }
+.tw-flex-1 { flex: 1 1 0%; }
+.tw-flex-col { flex-direction: column; }
+.tw-flex-wrap { flex-wrap: wrap; }
+.tw-items-center { align-items: center; }
+.tw-items-start { align-items: flex-start; }
+.tw-items-end { align-items: flex-end; }
+.tw-justify-between { justify-content: space-between; }
+.tw-gap-6 { gap: 1.5rem; }
+
+/* Border utilities */
+.tw-border-b { border-bottom-width: 1px; }
+.tw-border-r { border-right-width: 1px; }
+.tw-border-t { border-top-width: 1px; }
+.tw-border-t-4 { border-top-width: 4px; }
+.tw-border-gray-200 { border-color: #e5e7eb; }
+.tw-border-gray-100 { border-color: #f3f4f6; }
+.tw-border-gray-700 { border-color: #374151; }
+.tw-border-blue-500 { border-color: #3b82f6; }
+.tw-rounded-t { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; }
+.tw-rounded-b { border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
+
+/* Interactive states */
+.tw-cursor-pointer { cursor: pointer; }
+.hover\:tw-bg-gray-50:hover { background-color: #f9fafb; }
+.hover\:tw-text-blue-500:hover { color: #3b82f6; }
+.hover\:tw-underline:hover { text-decoration-line: underline; }
+
+/* Display utilities */
+.tw-hidden { display: none; }
+.tw-relative { position: relative; }
+.tw-min-w-full { min-width: 100%; }
+.tw-w-full { width: 100%; }
+.tw-w-24 { width: 6rem; }
+.tw-w-20 { width: 5rem; }
+
+/* Special styles for order status and payment status indicators */
+.alert.pending { background-color: #fef3c7; color: #92400e; }
+.alert.paid { background-color: #d1fae5; color: #065f46; }
+.alert.cancelled { background-color: #fee2e2; color: #991b1b; }
+.alert.processing { background-color: #dbeafe; color: #1e40af; }
+
+/* Tab styles */
+.stash-tabs-list {
+    border-bottom: 1px solid #e5e7eb;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.stash-tab {
+    border: 1px solid transparent;
+    border-bottom: none;
+    background-color: #f9fafb;
+}
+
+.stash-tab--active {
+    background-color: #ffffff;
+    border-color: #e5e7eb;
+    border-top-color: #3b82f6;
+}
+
+/* Mobile cards - ensure they work on small screens */
+@@media (max-width: 1023px) {
+    .mobile-product-cards {
+        display: block;
+        padding: 1rem;
+    }
+    
+    .mobile-product-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 15px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    .mobile-product-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .mobile-product-title {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .mobile-product-title:hover {
+        text-decoration: underline;
+    }
+    
+    .mobile-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .mobile-detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .mobile-detail-label {
+        font-weight: 600;
+        color: #4b5563;
+        min-width: 80px;
+    }
+    
+    .mobile-detail-value {
+        flex: 1;
+        text-align: right;
+    }
+    
+    .mobile-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+    }
+}
+
+/* Desktop table - hide on mobile */
+@@media (max-width: 1023px) {
+    .tw-hidden.lg\:tw-block {
+        display: none;
+    }
+    
+    .mobile-product-cards {
+        display: block;
+    }
+}
+
+/* Special background for highlighted sections */
+.tw-bg-yellow-100 {
+    background-color: #fef3c7;
+}
+
+/* Input field styling consistency */
+.form-control.inline-edit-field {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.form-control.inline-edit-field:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+    outline: none;
+}
+
+/* Ensure proper table layout on desktop */
+.stash-table table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.stash-table th,
+.stash-table td {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.stash-table th:not(:last-child),
+.stash-table td:not(:last-child) {
+    border-right: 1px solid #e5e7eb;
+}
+
+/* Style improvements for sections */
+.heading-3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Min height for tab content */
+.stash-data-view {
+    min-height: 400px;
+}
+</style>
+
 <script>
-    $(document).ready(function() {
-        // Save on dropdown change
-        $("#salesEmployeeIdSelect").change(function() {
-            // Highlight the save button when a different value is selected
-            $("#submitSalesEmployee").addClass("btn-primary").removeClass("btn-success");
-        });
+$(document).ready(function() {
+    // Initialize all functionality
+    initializeOrderInfoTabs();
+    initializeInlineEditing();
+    initializeSalesEmployeeHandlers();
+    initializeImpersonationHandlers();
+    initializeOrderTags();
+    checkShipments();
+});
+
+// Tab switching functionality for Order Summary and Order Tags
+function initializeOrderInfoTabs() {
+    // Handle tab clicks
+    $('#tab-order-summary, #tab-order-tags').click(function() {
+        var tabId = $(this).attr('id');
+        var panelId = $(this).attr('aria-controls');
         
-        // Submit handler
-        $("#submitSalesEmployee").click(function(e) {
+        // Remove active state from all tabs
+        $('.stash-tab').removeClass('stash-tab--active tw-border-blue-500 tw-bg-white')
+                       .addClass('tw-text-gray-700')
+                       .find('span').removeClass('tw-text-blue-500');
+        
+        // Add active state to clicked tab
+        $(this).addClass('stash-tab--active tw-border-blue-500 tw-bg-white')
+               .removeClass('tw-text-gray-700')
+               .find('span').addClass('tw-text-blue-500');
+        
+        // Hide all panels
+        $('[role="tabpanel"]').hide();
+        
+        // Show selected panel
+        $('#' + panelId).show();
+        
+        // Update ARIA attributes
+        $('.stash-tab').attr('aria-selected', 'false');
+        $(this).attr('aria-selected', 'true');
+    });
+}
+
+// Inline editing functionality (from original Products tab)
+function initializeInlineEditing() {
+    // Handle blur event for auto-save on price and quantity fields
+    $(document).on('blur', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function() {
+        const $field = $(this);
+        const fieldName = $field.attr('name');
+        const indexMatch = fieldName.match(/Items\[(\d+)\]/);
+        
+        let orderItemId = null;
+        if (indexMatch) {
+            const index = indexMatch[1];
+            const $idField = $(`input[name="Items[${index}].Id"]`);
+            orderItemId = $idField.val();
+        }
+        
+        const originalValue = $field.data('original-value') || $field.attr('data-original-value');
+        const newValue = $field.val().trim();
+        
+        // Store original value if not already stored
+        if (!originalValue) {
+            $field.data('original-value', newValue);
+            return;
+        }
+        
+        // Validate we have an order item ID
+        if (!orderItemId) {
+            console.error('No order item ID found for field:', $field.attr('name'));
+            showFieldError($field, 'Unable to identify order item');
+            return;
+        }
+        
+        // Only save if value changed and is valid
+        if (newValue !== originalValue && isValidValue(newValue, getFieldType($field))) {
+            autoSaveOrderItem(orderItemId, $field, newValue);
+        } else if (newValue === originalValue) {
+            clearFieldError($field);
+        } else if (!isValidValue(newValue, getFieldType($field))) {
+            showFieldError($field, getValidationMessage(getFieldType($field)));
+        }
+    });
+
+    // Handle focus event - clear errors and store original value
+    $(document).on('focus', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function() {
+        const $field = $(this);
+        clearFieldError($field);
+        
+        if (!$field.data('original-value')) {
+            $field.data('original-value', $field.val());
+        }
+    });
+
+    // Prevent form submission when pressing Enter
+    $(document).on('keypress', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function(e) {
+        if (e.which === 13) {
+            $(this).blur();
+            return false;
+        }
+    });
+}
+
+// Sales employee functionality
+function initializeSalesEmployeeHandlers() {
+    $("#salesEmployeeIdSelect").change(function() {
+        $("#submitSalesEmployee").addClass("btn-primary").removeClass("btn-success");
+    });
+    
+    $("#submitSalesEmployee").click(function(e) {
+        e.preventDefault();
+        
+        var orderId = '@Model.Id';
+        var salesEmployeeId = $("#salesEmployeeIdSelect").val();
+        
+        $.ajax({
+            url: '@Url.Action("SaveSalesEmployee", "Order", new { area = "Admin" })',
+            type: 'POST',
+            data: {
+                id: orderId,
+                salesEmployeeId: salesEmployeeId,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                if (result.success) {
+                    $("#submitSalesEmployee").addClass("btn-success").removeClass("btn-primary");
+                    displaySuccessMessage("Sales representative updated successfully");
+                } else {
+                    displayErrorMessage(result.message || "Error saving sales employee");
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error saving sales employee:", error);
+                displayErrorMessage("Error saving sales employee. Please try again.");
+            }
+        });
+    });
+}
+
+// Impersonation functionality
+function initializeImpersonationHandlers() {
+    $("#btnChangeImpersonation").click(function() {
+        $("#impersonationSelector").toggle();
+    });
+    
+    $("#cancelImpersonatedEmployee").click(function() {
+        $("#impersonationSelector").hide();
+    });
+    
+    // Customer search functionality
+    $("#searchImpersonatedEmployee").click(function() {
+        var searchTerm = $("#impersonatedEmployeeIdSearch").val();
+        if (!searchTerm || searchTerm.trim() === '') {
+            alert("Please enter a search term");
+            return;
+        }
+        
+        $(this).html('<i class="fa fa-spinner fa-spin"></i> Searching...');
+        $(this).prop('disabled', true);
+        
+        $.ajax({
+            url: '@Url.Action("CustomerSearchAutoComplete", "Customer", new { area = "Admin" })',
+            type: 'GET',
+            data: { term: searchTerm },
+            success: function(data) {
+                $("#searchImpersonatedEmployee").html('<i class="fa fa-search"></i> Search');
+                $("#searchImpersonatedEmployee").prop('disabled', false);
+                
+                var $select = $("#impersonatedEmployeeIdSelect");
+                var selectedValue = $select.val();
+                $select.find('option').not(':first').not('[value="' + selectedValue + '"]').remove();
+                
+                if (data && data.length > 0) {
+                    $.each(data, function(index, item) {
+                        if (item.id !== selectedValue) {
+                            $select.append(new Option(item.label, item.id));
+                        }
+                    });
+                } else {
+                    alert("No customers found matching your search criteria");
+                }
+            },
+            error: function() {
+                $("#searchImpersonatedEmployee").html('<i class="fa fa-search"></i> Search');
+                $("#searchImpersonatedEmployee").prop('disabled', false);
+                alert("Error searching for customers. Please try again.");
+            }
+        });
+    });
+    
+    $("#impersonatedEmployeeIdSearch").keypress(function(e) {
+        if (e.which === 13) {
             e.preventDefault();
-            
-            // Get values
+            $("#searchImpersonatedEmployee").click();
+        }
+    });
+    
+    $("#submitImpersonatedEmployee").click(function() {
+        var orderId = '@Model.Id';
+        var impersonatedEmployeeId = $("#impersonatedEmployeeIdSelect").val();
+        
+        $.ajax({
+            url: '@Url.Action("SaveImpersonatedEmployee", "Order", new { area = "Admin" })',
+            type: 'POST',
+            data: {
+                id: orderId,
+                impersonatedEmployeeId: impersonatedEmployeeId,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message || "Error saving impersonated employee");
+                }
+            },
+            error: function() {
+                alert("Error saving impersonated employee. Please try again.");
+            }
+        });
+    });
+    
+    $("#removeImpersonatedEmployee").click(function() {
+        if (confirm("Are you sure you want to remove the impersonated employee?")) {
             var orderId = '@Model.Id';
-            var salesEmployeeId = $("#salesEmployeeIdSelect").val();
             
-            // Use AJAX to save without page reload
             $.ajax({
-                url: '@Url.Action("SaveSalesEmployee", "Order", new { area = "Admin" })',
+                url: '@Url.Action("SaveImpersonatedEmployee", "Order", new { area = "Admin" })',
                 type: 'POST',
                 data: {
                     id: orderId,
-                    salesEmployeeId: salesEmployeeId,
+                    impersonatedEmployeeId: "",
                     __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                 },
                 success: function(result) {
                     if (result.success) {
-                        // Change button back to success state
-                        $("#submitSalesEmployee").addClass("btn-success").removeClass("btn-primary");
-                        
-                        // Show success message (subtle notification)
-                        displaySuccessMessage("Sales representative updated successfully");
+                        location.reload();
                     } else {
-                        // Show error message
-                        displayErrorMessage(result.message || "Error saving sales employee");
+                        alert(result.message || "Error removing impersonated employee");
                     }
                 },
-                error: function(xhr, status, error) {
-                    console.error("Error saving sales employee:", error);
-                    displayErrorMessage("Error saving sales employee. Please try again.");
+                error: function() {
+                    alert("Error removing impersonated employee. Please try again.");
                 }
             });
-        });
+        }
     });
-    
-    // Helper functions for notifications
-    function displaySuccessMessage(message) {
-        // Create a temporary success message that fades out
-        var alert = $('<div class="alert alert-success fade show mt-2" role="alert">' + message + '</div>');
-        $("#salesEmployeeIdSelect").after(alert);
-        setTimeout(function() {
-            alert.fadeOut('slow', function() {
-                $(this).remove();
-            });
-        }, 3000);
-    }
-    
-    function displayErrorMessage(message) {
-        // Create a temporary error message that fades out
-        var alert = $('<div class="alert alert-danger fade show mt-2" role="alert">' + message + '</div>');
-        $("#salesEmployeeIdSelect").after(alert);
-        setTimeout(function() {
-            alert.fadeOut('slow', function() {
-                $(this).remove();
-            });
-        }, 5000);
-    }
-</script>
-    </div>
-</div>
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubtotalInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubtotalInclTax</label>
-        </div>
-    </div>
 }
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubtotalExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubtotalExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax
-     && !string.IsNullOrEmpty(Model.OrderSubTotalDiscountInclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubTotalDiscountInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubTotalDiscountInclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax
-     && !string.IsNullOrEmpty(Model.OrderSubTotalDiscountExclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubTotalDiscountExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubTotalDiscountExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderShippingInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderShippingInclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderShippingExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderShippingExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax
-     && !string.IsNullOrEmpty(Model.PaymentMethodAdditionalFeeInclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="PaymentMethodAdditionalFeeInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.PaymentMethodAdditionalFeeInclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax
-     && !string.IsNullOrEmpty(Model.PaymentMethodAdditionalFeeExclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="PaymentMethodAdditionalFeeExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.PaymentMethodAdditionalFeeExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.DisplayTaxRates)
-{
-    foreach (var tr in Model.TaxRates)
-    {
-        <div class="form-group">
-            <admin-label asp-for="Tax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-            <div class="col-9 col-md-9 col-sm-9">
-                <label class="control-label">@tr.Rate% - @tr.Value</label>
-            </div>
-        </div>
-    }
-}
-@if (Model.DisplayTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="Tax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.Tax</label>
-        </div>
-    </div>
-}
-@if (!string.IsNullOrEmpty(Model.OrderTotalDiscount))
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderTotalDiscount" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderTotalDiscount</label>
-        </div>
-    </div>
-}
-@foreach (var gc in Model.GiftVouchers)
-{
-    <div class="form-group">
-        <admin-label asp-for="GiftVouchers[0].CouponCode" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">(@(gc.CouponCode))</label>
-            <label class="control-label">@gc.Amount</label>
-        </div>
-    </div>
-}
-@if (Model.RedeemedLoyaltyPoints > 0)
-{
-    <div class="form-group">
-        <admin-label asp-for="RedeemedLoyaltyPoints" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">
-                @Model.RedeemedLoyaltyPoints @Loc["Admin.Orders.Fields.RedeemedLoyaltyPoints.Points"]
-                <text>/</text>
-                @Model.RedeemedLoyaltyPointsAmount
-            </label>
-        </div>
-    </div>
-}
-<div class="form-group">
-    <admin-label asp-for="OrderTotal" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.OrderTotal</label>
-    </div>
-</div>
-@if (!string.IsNullOrEmpty(Model.RefundedAmount))
-{
-    <div class="form-group">
-        <admin-label asp-for="RefundedAmount" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.RefundedAmount</label>
-        </div>
-    </div>
-}
-@if (!string.IsNullOrEmpty(Model.SuggestedRefundedAmount))
-{
-    <div class="form-group">
-        <admin-label asp-for="SuggestedRefundedAmount" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.SuggestedRefundedAmount</label>
-        </div>
-    </div>
-}
-@if (Model.UsedDiscounts.Count > 0)
-{
-    <div class="form-group">
-        <admin-label asp-for="UsedDiscounts" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            @for (var i = 0; i < Model.UsedDiscounts.Count; i++)
-            {
-                var discount = Model.UsedDiscounts[i];
-                <label class="control-label">
-                    <a href="@Url.Action("Edit", "Discount", new { id = discount.DiscountId, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })">@discount.DiscountName</a>
-                    @if (i != Model.UsedDiscounts.Count - 1)
-                    {
-                        <text>,</text>
-                    }
-                </label>
-            }
-        </div>
-    </div>
-}
-<div class="form-group">
-    <admin-label asp-for="Profit" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.Profit</label>
-    </div>
-</div>
 
-<div class="form-group" id="trEditOrderTotals">
-    <label class="control-label col-md-3"></label>
-    <div class="col-12 col-md-12 col-sm-12">
-        <div class="form-horizontal portlet light bg-inverse form-fit">
-            <div class="form-body">
-                <div class="form-group">
-                    <admin-label asp-for="OrderSubtotalInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label"> @Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="OrderSubtotalInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.ExclTax"] </label>
-                        <admin-input asp-for="OrderSubtotalExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderSubTotalDiscountInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="OrderSubTotalDiscountInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.ExclTax"] </label>
-                        <admin-input asp-for="OrderSubTotalDiscountExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderShippingInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="OrderShippingInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.ExclTax"]</label>
-                        <admin-input asp-for="OrderShippingExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="PaymentMethodAdditionalFeeInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label"> @Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="PaymentMethodAdditionalFeeInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label"> @Loc["Admin.Orders.Fields.Edit.ExclTax"] </label>
-                        <admin-input asp-for="PaymentMethodAdditionalFeeExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="TaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="TaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderTotalDiscountValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="OrderTotalDiscountValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="CurrencyRate" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="CurrencyRate"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderTotalValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="OrderTotalValue"/>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="form-group">
-    <label class="control-label col-md-3"></label>
-    <div class="col-md-9 actions btn-group btn-group-devided">
-        <button type="submit" id="btnEditOrderTotals" onclick=" toggleOrderTotals(true);return false; " name="btnEditOrderTotals" class="k-button"><span class="k-icon k-i-edit"></span>&nbsp;@Loc["Admin.Orders.Fields.EditOrderTotals"]</button>
-        <input type="submit" name="btnSaveOrderTotals" asp-action="EditOrderTotals" value="@Loc["Admin.Orders.Fields.SaveOrderTotals"]" id="btnSaveOrderTotals" class="k-button" onclick=" return confirm('@Loc["Admin.Common.AreYouSure"]'); "/>
-        <input type="submit" name="btnCancelOrderTotals" value="@Loc["Admin.Orders.Fields.CancelOrderTotals"]" onclick=" toggleOrderTotals(false);return false; " id="btnCancelOrderTotals" class="k-button"/>
-    </div>
-</div>
-<div class="form-group">
-    <admin-label asp-for="PaymentMethod" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.PaymentMethod</label>
-    </div>
-</div>
+// Order tags functionality
+function initializeOrderTags() {
+    // Initialize tag editor
+    @Html.Raw(orderTagsSB.ToString())
+    $("#@Html.IdFor(model => model.OrderTags)").tagEditor({
+        autocomplete: {
+            delay: 0,
+            position: { collision: 'flip' },
+            source: initialOrderTags
+        },
+        delimiter: ',',
+        placeholder: 'Enter tags...'
+    });
+}
 
-@if (Model.CustomValues is { Count: > 0 })
-{
-    <div class="form-group">
-        <admin-label asp-for="CustomValues" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <table>
-                @foreach (var item in Model.CustomValues)
-                {
-                    <tr>
-                        <td>@item.Key:</td>
-                        <td>@(item.Value != null ? item.Value.ToString() : "")</td>
-                    </tr>
+// Helper functions for field validation and saving
+function getFieldType($field) {
+    const name = $field.attr('name');
+    if (name.includes('UnitPriceExclTaxValue')) return 'price';
+    if (name.includes('Quantity')) return 'quantity';
+    return 'unknown';
+}
+
+function isValidValue(value, fieldType) {
+    if (!value || value === '') return false;
+    
+    if (fieldType === 'quantity') {
+        const num = parseInt(value);
+        return /^\d+$/.test(value) && num > 0;
+    }
+    
+    if (fieldType === 'price') {
+        const num = parseFloat(value);
+        return /^\d+(\.\d{1,2})?$/.test(value) && num >= 0;
+    }
+    
+    return false;
+}
+
+function getValidationMessage(fieldType) {
+    if (fieldType === 'quantity') {
+        return 'Quantity must be a positive whole number';
+    }
+    if (fieldType === 'price') {
+        return 'Price must be a valid decimal number (e.g., 12.34)';
+    }
+    return 'Invalid value';
+}
+
+function autoSaveOrderItem(orderItemId, $field, newValue) {
+    const $row = $field.closest('tr');
+    const $mobileCard = $field.closest('.mobile-product-card');
+    const $statusDiv = $row.length ? $row.find('#save-status-' + orderItemId) : $mobileCard.find('#save-status-' + orderItemId);
+    const orderId = $('input[name="Id"]').val();
+    const fieldType = getFieldType($field);
+    
+    $statusDiv.html('<small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small>').show();
+    $field.prop('disabled', true);
+    
+    $.ajax({
+        url: '@Url.Action("UpdateOrderItemField", "Order", new { area = "Admin" })',
+        type: 'POST',
+        data: addAntiForgeryToken({
+            orderId: orderId,
+            orderItemId: orderItemId,
+            fieldType: fieldType,
+            value: newValue
+        }),
+        success: function(response) {
+            if (response.success) {
+                $field.data('original-value', newValue);
+                $statusDiv.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                
+                if (response.newSubTotal) {
+                    updateSubTotal(orderItemId, response.newSubTotal);
                 }
-            </table>
-        </div>
-    </div>
+                if (response.displayValue) {
+                    updateDisplayValue(orderItemId, fieldType, response.displayValue);
+                }
+                
+                clearFieldError($field);
+            } else {
+                showFieldError($field, response.message || 'Save failed');
+                $field.val($field.data('original-value'));
+            }
+        },
+        error: function(xhr, status, error) {
+            showFieldError($field, 'Network error - please try again');
+            $field.val($field.data('original-value'));
+        },
+        complete: function() {
+            $field.prop('disabled', false);
+            setTimeout(function() {
+                $statusDiv.hide();
+            }, 2000);
+        }
+    });
 }
-<div class="form-group">
-    <admin-label asp-for="CreatedOn" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label"> @Html.DisplayFor(model => model.CreatedOn)</label>
-    </div>
-</div>
-</div>
-<vc:admin-widget widget-zone="order_details_info_bottom" additional-data="Model"/>
-</div>
+
+function showFieldError($field, message) {
+    clearFieldError($field);
+    $field.addClass('is-invalid border-danger');
+    const errorHtml = '<div class="invalid-feedback d-block">' + message + '</div>';
+    $field.after(errorHtml);
+}
+
+function clearFieldError($field) {
+    $field.removeClass('is-invalid border-danger');
+    $field.next('.invalid-feedback').remove();
+}
+
+function updateSubTotal(orderItemId, newSubTotal) {
+    const $subtotalElement = $('.subtotal-display[data-order-item-id="' + orderItemId + '"]');
+    if ($subtotalElement.length > 0) {
+        $subtotalElement.text(newSubTotal);
+    }
+}
+
+function updateDisplayValue(orderItemId, fieldType, displayValue) {
+    const $field = $('[name^="Items"][name$="Id"][value="' + orderItemId + '"]').closest('tr');
+    if (fieldType === 'price') {
+        $field.find('.text-info span').text('Display: ' + displayValue);
+    }
+}
+
+function displaySuccessMessage(message) {
+    var alert = $('<div class="alert alert-success fade show mt-2" role="alert">' + message + '</div>');
+    $("#salesEmployeeIdSelect").after(alert);
+    setTimeout(function() {
+        alert.fadeOut('slow', function() {
+            $(this).remove();
+        });
+    }, 3000);
+}
+
+function displayErrorMessage(message) {
+    var alert = $('<div class="alert alert-danger fade show mt-2" role="alert">' + message + '</div>');
+    $("#salesEmployeeIdSelect").after(alert);
+    setTimeout(function() {
+        alert.fadeOut('slow', function() {
+            $(this).remove();
+        });
+    }, 5000);
+}
+
+// ProductSearchAdd integration
+function refreshCurrentProductsGrid() {
+    window.location.reload();
+}
+
+// Check for existing shipments and hide ProductSearchAdd if shipments exist
+function checkShipments() {
+    var isVerifiedOrder = @Json.Serialize(Model.IsVerifiedOrder);
+    
+    if (isVerifiedOrder) {
+        $('.add-products-section').hide();
+        $('.add-products-section').after(
+            '<div class="shipment-warning alert alert-warning mt-3">' +
+            '<i class="fa fa-warning"></i> ' +
+            'Cannot add products to orders in fulfillment queue. ' +
+            '<button type="button" class="btn btn-primary btn-sm ml-2" onclick="sendToReverificationFromProducts(\'' + '@Model.Id' + '\')">' +
+            '<i class="fa fa-undo"></i> Send to Reverification' +
+            '</button>' +
+            '</div>'
+        );
+        return;
+    }
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = "Admin" }))",
+        type: "POST",
+        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+        dataType: "json",
+        success: function(data) {
+            if (data && data.Total > 0) {
+                $('.add-products-section').hide();
+                $('.add-products-section').after(
+                    '<div class="shipment-warning alert alert-warning mt-3">' +
+                    '<i class="fa fa-warning"></i> ' +
+                    'Cannot add products when shipments exist. Please delete existing shipments first to add new products.' +
+                    '</div>'
+                );
+            } else {
+                $('.add-products-section').show();
+                $('.shipment-warning').remove();
+            }
+        },
+        error: function() {
+            if (!isVerifiedOrder) {
+                $('.add-products-section').show();
+            }
+        }
+    });
+}
+
+function sendToReverificationFromProducts(orderId) {
+    if (!confirm('Are you sure you want to send this order back to reverification? This will delete any existing shipments.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = "Admin" }))",
+        type: "POST",
+        data: addAntiForgeryToken({ orderId: orderId }),
+        dataType: "json",
+        success: function(result) {
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + (result.message || 'Failed to send order to reverification'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while sending order to reverification.');
+        }
+    });
+}
+
+// Order status change functionality (preserve from original)
+function toggleChangeOrderStatus(editmode) {
+    if (editmode) {
+        $('#pnlChangeOrderStatus').show();
+        $('#btnChangeOrderStatus').hide();
+    } else {
+        $('#pnlChangeOrderStatus').hide();
+        $('#btnChangeOrderStatus').show();
+    }
+}
+
+function toggleOrderTotals(editmode) {
+    if (editmode) {
+        $('#trEditOrderTotals').show();
+        $('#btnEditOrderTotals').hide();
+        $('#btnSaveOrderTotals').show();
+        $('#btnCancelOrderTotals').show();
+    } else {
+        $('#trEditOrderTotals').hide();
+        $('#btnEditOrderTotals').show();
+        $('#btnSaveOrderTotals').hide();
+        $('#btnCancelOrderTotals').hide();
+    }
+}
+</script>

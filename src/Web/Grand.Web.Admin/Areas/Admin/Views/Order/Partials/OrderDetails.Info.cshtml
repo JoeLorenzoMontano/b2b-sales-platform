@@ -197,7 +197,7 @@
                 {
                     <div class="tw-mb-4">
                         <span class="tw-font-medium tw-text-gray-700">Billing & Shipping Address:</span>
-                        <div class="tw-bg-gray-50 tw-p-3 tw-rounded tw-mt-1">
+                        <div class="tw-bg-gray-100 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-gray-200">
                             @if (Model.BillingAddress != null)
                             {
                                 <div class="tw-text-sm">
@@ -228,7 +228,7 @@
                     {
                         <div class="tw-mb-4">
                             <span class="tw-font-medium tw-text-gray-700">Shipping Address:</span>
-                            <div class="tw-bg-blue-50 tw-p-3 tw-rounded tw-mt-1">
+                            <div class="tw-bg-blue-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-blue-100">
                                 <div class="tw-text-sm">
                                     @if (!string.IsNullOrEmpty(Model.ShippingAddress.FirstName) || !string.IsNullOrEmpty(Model.ShippingAddress.LastName))
                                     {
@@ -255,7 +255,7 @@
                     {
                         <div class="tw-mb-4">
                             <span class="tw-font-medium tw-text-gray-700">Billing Address:</span>
-                            <div class="tw-bg-green-50 tw-p-3 tw-rounded tw-mt-1">
+                            <div class="tw-bg-green-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-green-100">
                                 <div class="tw-text-sm">
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
                                     {
@@ -283,7 +283,7 @@
                 {
                     <div class="tw-mb-4">
                         <span class="tw-font-medium tw-text-gray-700">Pickup Address:</span>
-                        <div class="tw-bg-yellow-50 tw-p-3 tw-rounded tw-mt-1">
+                        <div class="tw-bg-orange-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-orange-100">
                             <div class="tw-text-sm">
                                 @if (!string.IsNullOrEmpty(Model.PickupAddress.FirstName) || !string.IsNullOrEmpty(Model.PickupAddress.LastName))
                                 {
@@ -311,11 +311,8 @@
         
         <!-- Order Information Section (spans 2 columns) -->
         <section class="tw-bg-white tw-rounded tw-p-4 tw-shadow tw-col-span-12 lg:tw-col-span-6">
-            <div class="tw-flex tw-justify-between tw-mb-4">
+            <div class="tw-mb-4">
                 <h2 class="tw-font-semibold tw-text-lg tw-mb-0">Order Information</h2>
-                <button class="btn btn-sm btn-outline-secondary">
-                    <i class="fa fa-edit"></i>
-                </button>
             </div>
             
             <div class="tw-grid tw-gap-3 tw-grid-cols-12">

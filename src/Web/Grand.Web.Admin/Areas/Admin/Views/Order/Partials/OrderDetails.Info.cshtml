@@ -756,35 +756,37 @@
             </div>
         </section>
         
-        <!-- Expandable Products List - Enhanced Visibility -->
-        <div class="tw-col-span-full tw-mt-8">
-            <!-- Section Title -->
-            <div class="tw-mb-4 tw-text-center">
-                <h2 class="tw-text-xl tw-font-bold tw-text-gray-800 tw-mb-2">Order Products</h2>
-                <div class="tw-w-24 tw-h-1 tw-bg-blue-500 tw-mx-auto tw-rounded"></div>
-            </div>
-            
-            <!-- Enhanced Products Section -->
-            <div class="tw-bg-white tw-rounded-lg tw-shadow-lg tw-border-2 tw-border-blue-200 tw-overflow-hidden">
-                <div class="products-header tw-p-5 tw-cursor-pointer tw-bg-gradient-to-r tw-from-blue-50 tw-to-blue-100 hover:tw-from-blue-100 hover:tw-to-blue-150 tw-border-b-2 tw-border-blue-200 tw-transition-all tw-duration-200 hover:tw-shadow-md" onclick="toggleProductsList()">
-                    <div class="tw-flex tw-justify-between tw-items-center">
-                        <div class="tw-flex tw-items-center">
-                            <div class="tw-bg-blue-500 tw-rounded-full tw-p-2 tw-mr-3">
-                                <i class="fa fa-package tw-text-white tw-text-lg"></i>
-                            </div>
-                            <div>
-                                <h3 class="tw-font-bold tw-text-xl tw-mb-1 tw-text-gray-800">
-                                    Products (@Model.Items.Count items)
-                                </h3>
-                                <p class="tw-text-sm tw-text-gray-600 tw-mb-0">Order item details and quantities</p>
-                            </div>
+    </div>
+    
+    <!-- Expandable Products List - Enhanced Visibility -->
+    <div class="tw-mt-8">
+        <!-- Section Title -->
+        <div class="tw-mb-4 tw-text-center">
+            <h2 class="tw-text-xl tw-font-bold tw-text-gray-800 tw-mb-2">Order Products</h2>
+            <div class="tw-w-24 tw-h-1 tw-bg-blue-500 tw-mx-auto tw-rounded"></div>
+        </div>
+        
+        <!-- Enhanced Products Section -->
+        <div class="tw-bg-white tw-rounded-lg tw-shadow-lg tw-border-2 tw-border-blue-200 tw-overflow-hidden">
+            <div class="products-header tw-p-5 tw-cursor-pointer tw-bg-gradient-to-r tw-from-blue-50 tw-to-blue-100 hover:tw-from-blue-100 hover:tw-to-blue-150 tw-border-b-2 tw-border-blue-200 tw-transition-all tw-duration-200 hover:tw-shadow-md" onclick="toggleProductsList()">
+                <div class="tw-flex tw-justify-between tw-items-center">
+                    <div class="tw-flex tw-items-center">
+                        <div class="tw-bg-blue-500 tw-rounded-full tw-p-2 tw-mr-3">
+                            <i class="fa fa-package tw-text-white tw-text-lg"></i>
                         </div>
-                        <div class="tw-flex tw-items-center tw-bg-white tw-px-3 tw-py-2 tw-rounded-full tw-shadow-sm tw-border tw-border-blue-200">
-                            <span class="tw-text-sm tw-font-medium tw-text-gray-700 tw-mr-2">Click to collapse</span>
-                            <i id="products-arrow" class="fa fa-chevron-up tw-transition-transform tw-duration-200 tw-text-blue-600 tw-text-lg"></i>
+                        <div>
+                            <h3 class="tw-font-bold tw-text-xl tw-mb-1 tw-text-gray-800">
+                                Products (@Model.Items.Count items)
+                            </h3>
+                            <p class="tw-text-sm tw-text-gray-600 tw-mb-0">Order item details and quantities</p>
                         </div>
                     </div>
+                    <div class="tw-flex tw-items-center tw-bg-white tw-px-3 tw-py-2 tw-rounded-full tw-shadow-sm tw-border tw-border-blue-200">
+                        <span class="tw-text-sm tw-font-medium tw-text-gray-700 tw-mr-2">Click to collapse</span>
+                        <i id="products-arrow" class="fa fa-chevron-up tw-transition-transform tw-duration-200 tw-text-blue-600 tw-text-lg"></i>
+                    </div>
                 </div>
+            </div>
             <div id="products-list-content" class="">
                 <div class="tw-p-4">
                     <!-- Mobile Product Cards (hidden on desktop) -->
@@ -877,7 +879,6 @@
                 </div>
             </div>
         </div>
-        
     </div>
     
     <!-- Order Summary Section with Tabbed Interface -->

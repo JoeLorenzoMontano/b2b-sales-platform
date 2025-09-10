@@ -610,11 +610,20 @@ function refreshCurrentProductsGrid() {
 }
 
 // Check for existing shipments and hide ProductSearchAdd if shipments exist or order is in fulfillment
+var isCheckingShipments = false; // Flag to prevent multiple simultaneous calls
+
 function checkShipments() {
+    // Prevent multiple simultaneous executions
+    if (isCheckingShipments) {
+        return;
+    }
+    isCheckingShipments = true;
+    
     var isVerifiedOrder = @Json.Serialize(Model.IsVerifiedOrder);
     
     if (isVerifiedOrder) {
-        // Hide ProductSearchAdd section for verified orders (in fulfillment queue)
+        // Remove any existing warnings first, then hide ProductSearchAdd section for verified orders (in fulfillment queue)
+        $('.shipment-warning').remove();
         $('.add-products-section').hide();
         $('.add-products-section').after(
             '<div class="shipment-warning alert alert-warning mt-3">' +
@@ -625,6 +634,7 @@ function checkShipments() {
             '</button>' +
             '</div>'
         );
+        isCheckingShipments = false; // Reset flag
         return;
     }
     
@@ -635,7 +645,8 @@ function checkShipments() {
         dataType: "json",
         success: function(data) {
             if (data && data.Total > 0) {
-                // Hide ProductSearchAdd section and show warning
+                // Remove any existing warnings first, then hide ProductSearchAdd section and show warning
+                $('.shipment-warning').remove();
                 $('.add-products-section').hide();
                 $('.add-products-section').after(
                     '<div class="shipment-warning alert alert-warning mt-3">' +
@@ -648,12 +659,14 @@ function checkShipments() {
                 $('.add-products-section').show();
                 $('.shipment-warning').remove();
             }
+            isCheckingShipments = false; // Reset flag on success
         },
         error: function() {
             // On error, show ProductSearchAdd (fail safe) only if not verified
             if (!isVerifiedOrder) {
                 $('.add-products-section').show();
             }
+            isCheckingShipments = false; // Reset flag on error
         }
     });
 }

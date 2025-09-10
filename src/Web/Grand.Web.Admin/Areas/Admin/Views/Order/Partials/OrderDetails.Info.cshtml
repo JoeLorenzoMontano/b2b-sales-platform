@@ -756,20 +756,35 @@
             </div>
         </section>
         
-        <!-- Expandable Products List (now inside grid) -->
-        <div class="tw-col-span-full tw-mt-6 tw-bg-white tw-rounded tw-shadow tw-border tw-border-gray-300">
-            <div class="products-header tw-p-4 tw-cursor-pointer tw-border-b tw-border-gray-300 tw-bg-gray-50 hover:tw-bg-gray-100 tw-transition-colors tw-duration-150" onclick="toggleProductsList()">
-                <div class="tw-flex tw-justify-between tw-items-center">
-                    <h3 class="tw-font-semibold tw-text-lg tw-mb-0 tw-text-gray-800">
-                        <i class="fa fa-package tw-mr-2 tw-text-blue-600"></i>
-                        Products (@Model.Items.Count items)
-                    </h3>
-                    <div class="tw-flex tw-items-center tw-text-gray-600">
-                        <span class="tw-text-sm tw-mr-2">Click to collapse</span>
-                        <i id="products-arrow" class="fa fa-chevron-up tw-transition-transform tw-duration-200 tw-text-blue-600"></i>
+        <!-- Expandable Products List - Enhanced Visibility -->
+        <div class="tw-col-span-full tw-mt-8">
+            <!-- Section Title -->
+            <div class="tw-mb-4 tw-text-center">
+                <h2 class="tw-text-xl tw-font-bold tw-text-gray-800 tw-mb-2">Order Products</h2>
+                <div class="tw-w-24 tw-h-1 tw-bg-blue-500 tw-mx-auto tw-rounded"></div>
+            </div>
+            
+            <!-- Enhanced Products Section -->
+            <div class="tw-bg-white tw-rounded-lg tw-shadow-lg tw-border-2 tw-border-blue-200 tw-overflow-hidden">
+                <div class="products-header tw-p-5 tw-cursor-pointer tw-bg-gradient-to-r tw-from-blue-50 tw-to-blue-100 hover:tw-from-blue-100 hover:tw-to-blue-150 tw-border-b-2 tw-border-blue-200 tw-transition-all tw-duration-200 hover:tw-shadow-md" onclick="toggleProductsList()">
+                    <div class="tw-flex tw-justify-between tw-items-center">
+                        <div class="tw-flex tw-items-center">
+                            <div class="tw-bg-blue-500 tw-rounded-full tw-p-2 tw-mr-3">
+                                <i class="fa fa-package tw-text-white tw-text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="tw-font-bold tw-text-xl tw-mb-1 tw-text-gray-800">
+                                    Products (@Model.Items.Count items)
+                                </h3>
+                                <p class="tw-text-sm tw-text-gray-600 tw-mb-0">Order item details and quantities</p>
+                            </div>
+                        </div>
+                        <div class="tw-flex tw-items-center tw-bg-white tw-px-3 tw-py-2 tw-rounded-full tw-shadow-sm tw-border tw-border-blue-200">
+                            <span class="tw-text-sm tw-font-medium tw-text-gray-700 tw-mr-2">Click to collapse</span>
+                            <i id="products-arrow" class="fa fa-chevron-up tw-transition-transform tw-duration-200 tw-text-blue-600 tw-text-lg"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
             <div id="products-list-content" class="">
                 <div class="tw-p-4">
                     <!-- Mobile Product Cards (hidden on desktop) -->
@@ -1323,6 +1338,33 @@
 .tw-text-gray-900 { color: #111827; }
 .tw-text-gray-700 { color: #374151; }
 .tw-text-gray-600 { color: #4b5563; }
+.tw-text-gray-800 { color: #1f2937; }
+.tw-text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.tw-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+.tw-border-2 { border-width: 2px; }
+.tw-border-blue-200 { border-color: #bfdbfe; }
+.tw-bg-gradient-to-r { background-image: linear-gradient(to right, var(--tw-gradient-stops)); }
+.tw-from-blue-50 { --tw-gradient-from: #eff6ff; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(239, 246, 255, 0)); }
+.tw-to-blue-100 { --tw-gradient-to: #dbeafe; }
+.hover\:tw-from-blue-100:hover { --tw-gradient-from: #dbeafe; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(219, 234, 254, 0)); }
+.hover\:tw-to-blue-150:hover { --tw-gradient-to: #c7d2fe; }
+.tw-rounded-lg { border-radius: 0.5rem; }
+.tw-rounded-full { border-radius: 9999px; }
+.tw-bg-blue-500 { background-color: #3b82f6; }
+.tw-text-white { color: #ffffff; }
+.tw-p-5 { padding: 1.25rem; }
+.tw-px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.tw-py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.tw-w-24 { width: 6rem; }
+.tw-h-1 { height: 0.25rem; }
+.tw-mx-auto { margin-left: auto; margin-right: auto; }
+.tw-text-center { text-align: center; }
+.tw-mt-8 { margin-top: 2rem; }
+.tw-overflow-hidden { overflow: hidden; }
+.tw-border-b-2 { border-bottom-width: 2px; }
+.hover\:tw-shadow-md:hover { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+.tw-transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+.tw-scale-98 { transform: scale(0.98); }
 .tw-text-right { text-align: right; }
 .tw-leading-3 { line-height: 0.75rem; }
 
@@ -2022,5 +2064,11 @@ function toggleProductsList() {
         arrow.removeClass('fa-chevron-up').addClass('fa-chevron-down');
         expandText.text('Click to expand');
     }
+    
+    // Add visual feedback for interaction
+    $('.products-header').addClass('tw-scale-98');
+    setTimeout(function() {
+        $('.products-header').removeClass('tw-scale-98');
+    }, 150);
 }
 </script>

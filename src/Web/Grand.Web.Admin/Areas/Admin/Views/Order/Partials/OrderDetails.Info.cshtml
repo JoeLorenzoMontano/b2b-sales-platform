@@ -200,10 +200,10 @@
                         <div class="tw-bg-gray-100 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-gray-200">
                             @if (Model.BillingAddress != null)
                             {
-                                <div class="tw-text-sm">
+                                <div class="tw-text-sm tw-text-gray-800">
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
                                     {
-                                        <div class="tw-font-medium">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
+                                        <div class="tw-font-semibold tw-text-gray-900">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
                                     {
@@ -229,10 +229,10 @@
                         <div class="tw-mb-4">
                             <span class="tw-font-medium tw-text-gray-700">Shipping Address:</span>
                             <div class="tw-bg-blue-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-blue-100">
-                                <div class="tw-text-sm">
+                                <div class="tw-text-sm tw-text-blue-900">
                                     @if (!string.IsNullOrEmpty(Model.ShippingAddress.FirstName) || !string.IsNullOrEmpty(Model.ShippingAddress.LastName))
                                     {
-                                        <div class="tw-font-medium">@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</div>
+                                        <div class="tw-font-semibold tw-text-gray-900">@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</div>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.ShippingAddress.Company))
                                     {
@@ -256,10 +256,10 @@
                         <div class="tw-mb-4">
                             <span class="tw-font-medium tw-text-gray-700">Billing Address:</span>
                             <div class="tw-bg-green-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-green-100">
-                                <div class="tw-text-sm">
+                                <div class="tw-text-sm tw-text-green-900">
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
                                     {
-                                        <div class="tw-font-medium">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
+                                        <div class="tw-font-semibold tw-text-gray-900">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
                                     {
@@ -284,10 +284,10 @@
                     <div class="tw-mb-4">
                         <span class="tw-font-medium tw-text-gray-700">Pickup Address:</span>
                         <div class="tw-bg-orange-50 tw-p-3 tw-rounded tw-mt-1 tw-border tw-border-orange-100">
-                            <div class="tw-text-sm">
+                            <div class="tw-text-sm tw-text-orange-900">
                                 @if (!string.IsNullOrEmpty(Model.PickupAddress.FirstName) || !string.IsNullOrEmpty(Model.PickupAddress.LastName))
                                 {
-                                    <div class="tw-font-medium">@Model.PickupAddress.FirstName @Model.PickupAddress.LastName</div>
+                                    <div class="tw-font-semibold tw-text-gray-900">@Model.PickupAddress.FirstName @Model.PickupAddress.LastName</div>
                                 }
                                 @if (!string.IsNullOrEmpty(Model.PickupAddress.Company))
                                 {
@@ -1085,6 +1085,55 @@
 
 <!-- Comprehensive JavaScript and CSS for the new unified layout -->
 <style>
+/* Theme-aware CSS custom properties for address sections */
+:root {
+    /* Combined address styling */
+    --address-combined-bg: #f3f4f6;
+    --address-combined-border: #d1d5db;
+    --address-combined-text: #1f2937;
+    
+    /* Shipping address styling */
+    --address-shipping-bg: #eff6ff;
+    --address-shipping-border: #dbeafe;
+    --address-shipping-text: #1e3a8a;
+    
+    /* Billing address styling */
+    --address-billing-bg: #f0fdf4;
+    --address-billing-border: #dcfce7;
+    --address-billing-text: #14532d;
+    
+    /* Pickup address styling */
+    --address-pickup-bg: #fff7ed;
+    --address-pickup-border: #fed7aa;
+    --address-pickup-text: #9a3412;
+    
+    /* Name/emphasis text */
+    --address-name-text: #111827;
+}
+
+/* Dark mode overrides (if implemented) */
+@@media (prefers-color-scheme: dark) {
+    :root {
+        --address-combined-bg: #374151;
+        --address-combined-border: #6b7280;
+        --address-combined-text: #f9fafb;
+        
+        --address-shipping-bg: #1e3a8a;
+        --address-shipping-border: #3b82f6;
+        --address-shipping-text: #dbeafe;
+        
+        --address-billing-bg: #14532d;
+        --address-billing-border: #22c55e;
+        --address-billing-text: #dcfce7;
+        
+        --address-pickup-bg: #9a3412;
+        --address-pickup-border: #f97316;
+        --address-pickup-text: #fed7aa;
+        
+        --address-name-text: #ffffff;
+    }
+}
+
 /* Modern grid-based layout styles with Tailwind-like utilities */
 .tw-grid { display: grid; }
 .tw-grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }

@@ -758,6 +758,107 @@
         
     </div>
     
+    <!-- Expandable Products List -->
+    <div class="tw-col-span-full tw-mt-6 tw-bg-white tw-rounded tw-shadow">
+        <div class="products-header tw-p-4 tw-cursor-pointer tw-border-b tw-border-gray-200" onclick="toggleProductsList()">
+            <div class="tw-flex tw-justify-between tw-items-center">
+                <h3 class="tw-font-semibold tw-text-lg tw-mb-0">Products (@Model.Items.Count items)</h3>
+                <i id="products-arrow" class="fa fa-chevron-down tw-transition-transform tw-duration-200"></i>
+            </div>
+        </div>
+        <div id="products-list-content" class="tw-hidden">
+            <div class="tw-p-4">
+                <!-- Mobile Product Cards (hidden on desktop) -->
+                <div class="mobile-product-cards tw-block md:tw-hidden">
+                    @for (var j = 0; j < Model.Items.Count; j++)
+                    {
+                        var item = Model.Items[j];
+                        <div class="tw-bg-gray-50 tw-p-4 tw-rounded tw-mb-4 tw-border">
+                            <div class="tw-flex tw-justify-between tw-items-start tw-mb-2">
+                                <div class="tw-flex-1">
+                                    <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" class="tw-font-medium tw-text-blue-600 hover:tw-underline">
+                                        @item.ProductName
+                                    </a>
+                                    @if (!string.IsNullOrEmpty(item.Sku))
+                                    {
+                                        <div class="tw-text-sm tw-text-gray-600">SKU: @item.Sku</div>
+                                    }
+                                </div>
+                                <div class="tw-text-right">
+                                    <div class="tw-font-semibold">
+                                        @switch (Model.TaxDisplayType)
+                                        {
+                                            case TaxDisplayType.ExcludingTax:
+                                                @item.SubTotalExclTax
+                                                break;
+                                            case TaxDisplayType.IncludingTax:
+                                                @item.SubTotalInclTax
+                                                break;
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tw-grid tw-grid-cols-2 tw-gap-2 tw-text-sm">
+                                <div><span class="tw-font-medium">Quantity:</span> @item.Quantity</div>
+                                <div><span class="tw-font-medium">Price:</span> @item.UnitPriceExclTax</div>
+                                @if (!string.IsNullOrEmpty(item.WarehouseName))
+                                {
+                                    <div class="tw-col-span-2"><span class="tw-font-medium">Warehouse:</span> @item.WarehouseName</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Desktop Product Table (hidden on mobile) -->
+                <div class="tw-hidden md:tw-block tw-overflow-auto">
+                    <table class="tw-w-full tw-border-collapse">
+                        <thead>
+                            <tr class="tw-border-b tw-border-gray-200">
+                                <th class="tw-text-left tw-p-3 tw-font-medium">Product</th>
+                                <th class="tw-text-left tw-p-3 tw-font-medium">SKU</th>
+                                <th class="tw-text-center tw-p-3 tw-font-medium">Quantity</th>
+                                <th class="tw-text-right tw-p-3 tw-font-medium">Price</th>
+                                <th class="tw-text-right tw-p-3 tw-font-medium">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var j = 0; j < Model.Items.Count; j++)
+                            {
+                                var item = Model.Items[j];
+                                <tr class="tw-border-b tw-border-gray-100 hover:tw-bg-gray-50">
+                                    <td class="tw-p-3">
+                                        <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" class="tw-text-blue-600 hover:tw-underline tw-font-medium">
+                                            @item.ProductName
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(item.WarehouseName))
+                                        {
+                                            <div class="tw-text-xs tw-text-gray-600 tw-mt-1">Warehouse: @item.WarehouseName</div>
+                                        }
+                                    </td>
+                                    <td class="tw-p-3 tw-text-gray-600">@item.Sku</td>
+                                    <td class="tw-p-3 tw-text-center">@item.Quantity</td>
+                                    <td class="tw-p-3 tw-text-right">@item.UnitPriceExclTax</td>
+                                    <td class="tw-p-3 tw-text-right tw-font-semibold">
+                                        @switch (Model.TaxDisplayType)
+                                        {
+                                            case TaxDisplayType.ExcludingTax:
+                                                @item.SubTotalExclTax
+                                                break;
+                                            case TaxDisplayType.IncludingTax:
+                                                @item.SubTotalInclTax
+                                                break;
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Order Summary Section with Tabbed Interface -->
     <div class="tw-col-span-full tw-mt-6">
         <div class="stash-tabs tw-relative" role="tabList">
@@ -1875,6 +1976,22 @@ function toggleOrderTotals(editmode) {
         $('#btnEditOrderTotals').show();
         $('#btnSaveOrderTotals').hide();
         $('#btnCancelOrderTotals').hide();
+    }
+}
+
+// Toggle products list expand/collapse
+function toggleProductsList() {
+    const content = $('#products-list-content');
+    const arrow = $('#products-arrow');
+    
+    // Toggle content with smooth slide animation
+    content.slideToggle(300);
+    
+    // Toggle arrow direction
+    if (arrow.hasClass('fa-chevron-down')) {
+        arrow.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    } else {
+        arrow.removeClass('fa-chevron-up').addClass('fa-chevron-down');
     }
 }
 </script>

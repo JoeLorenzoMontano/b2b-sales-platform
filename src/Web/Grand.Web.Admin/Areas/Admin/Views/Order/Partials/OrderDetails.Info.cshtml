@@ -93,9 +93,9 @@
                     <div class="heading-3 tw-mb-2">@Model.StoreName</div>
                 </div>
                 
-                <!-- Sales Representative -->
+                <!-- Customer Default Rep -->
                 <div class="tw-mb-4">
-                    <span class="tw-font-medium tw-text-gray-700">Sales Representative:</span><br/>
+                    <span class="tw-font-medium tw-text-gray-700">Customer Default Rep:</span><br/>
                     @Html.AntiForgeryToken()
                     <div class="tw-mt-2">
                         @{
@@ -130,6 +130,24 @@
                     </div>
                 </div>
                 
+                <!-- Impersonation Info -->
+                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
+                {
+                    <div class="tw-mb-4">
+                        <span class="tw-font-medium tw-text-gray-700">Impersonated By:</span><br/>
+                        <div class="tw-bg-yellow-100 tw-p-2 tw-rounded tw-text-sm tw-mt-1">
+                            @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
+                            {
+                                <a href="@Url.Action("Edit", "Customer", new { id = Model.ImpersonatedByEmployeeId })" class="tw-text-blue-600">@Model.ImpersonatedByEmployeeName</a>
+                            }
+                            else
+                            {
+                                <span>@Model.ImpersonatedByEmployeeId</span>
+                            }
+                        </div>
+                    </div>
+                }
+                
                 <!-- Payment Method -->
                 <div class="tw-mb-2">
                     <span class="tw-font-medium tw-text-gray-700">Payment Method:</span><br/>
@@ -139,9 +157,9 @@
             </div>
         </section>
         
-        <!-- Buyer Section -->
+        <!-- Buyer & Address Section -->
         <section class="tw-bg-white tw-rounded tw-p-4 tw-shadow tw-col-span-12 md:tw-col-span-6 lg:tw-col-span-3">
-            <h2 class="tw-mb-3 tw-font-semibold tw-text-lg">Buyer</h2>
+            <h2 class="tw-mb-3 tw-font-semibold tw-text-lg">Buyer & Delivery</h2>
             <div class="tw-flex-1">
                 
                 <div class="tw-mb-3">
@@ -164,20 +182,126 @@
                     </div>
                 }
                 
-                <!-- Impersonation Info -->
-                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
+                <!-- Shipping & Delivery Addresses -->
+                @{
+                    bool addressesAreSame = false;
+                    if (Model.BillingAddress != null && Model.ShippingAddress != null)
+                    {
+                        addressesAreSame = Model.BillingAddress.Address1 == Model.ShippingAddress.Address1 && 
+                                         Model.BillingAddress.City == Model.ShippingAddress.City &&
+                                         Model.BillingAddress.ZipPostalCode == Model.ShippingAddress.ZipPostalCode;
+                    }
+                }
+
+                @if (addressesAreSame)
                 {
-                    <div class="tw-mb-2">
-                        <span class="tw-font-medium tw-text-gray-700">Impersonated By:</span><br/>
-                        <div class="tw-bg-yellow-100 tw-p-2 tw-rounded tw-text-sm">
-                            @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
+                    <div class="tw-mb-4">
+                        <span class="tw-font-medium tw-text-gray-700">Billing & Shipping Address:</span>
+                        <div class="tw-bg-gray-50 tw-p-3 tw-rounded tw-mt-1">
+                            @if (Model.BillingAddress != null)
                             {
-                                <a href="@Url.Action("Edit", "Customer", new { id = Model.ImpersonatedByEmployeeId })" class="tw-text-blue-600">@Model.ImpersonatedByEmployeeName</a>
+                                <div class="tw-text-sm">
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
+                                    {
+                                        <div class="tw-font-medium">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
+                                    {
+                                        <div>@Model.BillingAddress.Company</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.Address1))
+                                    {
+                                        <div>@Model.BillingAddress.Address1</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.City))
+                                    {
+                                        <div>@Model.BillingAddress.City, @Model.BillingAddress.ZipPostalCode</div>
+                                    }
+                                </div>
                             }
-                            else
-                            {
-                                <span>@Model.ImpersonatedByEmployeeId</span>
-                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @if (Model.ShippingAddress != null)
+                    {
+                        <div class="tw-mb-4">
+                            <span class="tw-font-medium tw-text-gray-700">Shipping Address:</span>
+                            <div class="tw-bg-blue-50 tw-p-3 tw-rounded tw-mt-1">
+                                <div class="tw-text-sm">
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.FirstName) || !string.IsNullOrEmpty(Model.ShippingAddress.LastName))
+                                    {
+                                        <div class="tw-font-medium">@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.Company))
+                                    {
+                                        <div>@Model.ShippingAddress.Company</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.Address1))
+                                    {
+                                        <div>@Model.ShippingAddress.Address1</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.City))
+                                    {
+                                        <div>@Model.ShippingAddress.City, @Model.ShippingAddress.ZipPostalCode</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    @if (Model.BillingAddress != null)
+                    {
+                        <div class="tw-mb-4">
+                            <span class="tw-font-medium tw-text-gray-700">Billing Address:</span>
+                            <div class="tw-bg-green-50 tw-p-3 tw-rounded tw-mt-1">
+                                <div class="tw-text-sm">
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
+                                    {
+                                        <div class="tw-font-medium">@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
+                                    {
+                                        <div>@Model.BillingAddress.Company</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.Address1))
+                                    {
+                                        <div>@Model.BillingAddress.Address1</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.City))
+                                    {
+                                        <div>@Model.BillingAddress.City, @Model.BillingAddress.ZipPostalCode</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+
+                @if (Model.PickupAddress != null)
+                {
+                    <div class="tw-mb-4">
+                        <span class="tw-font-medium tw-text-gray-700">Pickup Address:</span>
+                        <div class="tw-bg-yellow-50 tw-p-3 tw-rounded tw-mt-1">
+                            <div class="tw-text-sm">
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.FirstName) || !string.IsNullOrEmpty(Model.PickupAddress.LastName))
+                                {
+                                    <div class="tw-font-medium">@Model.PickupAddress.FirstName @Model.PickupAddress.LastName</div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.Company))
+                                {
+                                    <div>@Model.PickupAddress.Company</div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.Address1))
+                                {
+                                    <div>@Model.PickupAddress.Address1</div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.City))
+                                {
+                                    <div>@Model.PickupAddress.City, @Model.PickupAddress.ZipPostalCode</div>
+                                }
+                            </div>
                         </div>
                     </div>
                 }
@@ -664,7 +788,7 @@
                 </div>
 
                 <!-- Mobile Product Cards (hidden on desktop) -->
-                <div class="mobile-product-cards">
+                <div class="mobile-product-cards tw-block md:tw-hidden">
                     @for (var j = 0; j < Model.Items.Count; j++)
                     {
                         var item = Model.Items[j];
@@ -750,7 +874,7 @@
                 </div>
 
                 <!-- Desktop Product Table -->
-                <div class="stash-table tw-relative tw-border-t tw-border-gray-200 tw-overflow-auto tw-hidden lg:tw-block">
+                <div class="stash-table tw-relative tw-border-t tw-border-gray-200 tw-overflow-auto tw-hidden md:tw-block">
                     <table class="tw-min-w-full tw-border-separate">
                         <thead class="tw-border-b tw-border-gray-200">
                             <tr class="tw-grid tw-grid-cols-12 tw-w-full">

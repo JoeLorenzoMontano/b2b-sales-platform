@@ -1974,7 +1974,7 @@ function checkShipments() {
     }
     
     $.ajax({
-        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = "Admin" }))",
+        url: "@Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = "Admin" })",
         type: "POST",
         data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
         dataType: "json",
@@ -2006,7 +2006,7 @@ function sendToReverificationFromProducts(orderId) {
     }
     
     $.ajax({
-        url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = "Admin" }))",
+        url: "@Url.Action("SendToReverification", "Order", new { area = "Admin" })",
         type: "POST",
         data: addAntiForgeryToken({ orderId: orderId }),
         dataType: "json",

@@ -11,7 +11,8 @@ public static class FileExtensions
 
     public static IList<string> GetAllowedDocumentFileTypes(string allowedDocumentFileTypes)
     {
-        if (string.IsNullOrEmpty(allowedDocumentFileTypes))
+        // Fallback for existing installations where this setting might be null/empty
+        if (string.IsNullOrWhiteSpace(allowedDocumentFileTypes))
             return new List<string> { ".pdf", ".doc", ".docx", ".txt", ".zip" };
         return allowedDocumentFileTypes.Split(',').Select(x => x.Trim().ToLowerInvariant()).ToList();
     }

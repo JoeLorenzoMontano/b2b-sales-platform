@@ -1292,13 +1292,32 @@ public class CustomerController : BaseAdminController
             allCustomers.AddRange(lastNameCustomers);
         }
         
-        // For address search, make separate call
+        // For address search, make separate call and track matched emails
+        var customerMatchInfo = new Dictionary<string, string>(); // customerId -> matched email
+        
         if (hasValidAddress)
         {
             var addressCustomers = await _customerService.GetAllCustomers(
                 addressKeyword: addressKeyword,
                 pageSize: 15);
-            allCustomers.AddRange(addressCustomers);
+            
+            foreach (var customer in addressCustomers)
+            {
+                // Find the matched address email
+                var matchedAddressEmail = customer.Addresses?.FirstOrDefault(addr => 
+                    addr.Email != null && addr.Email.ToLower().Contains(addressKeyword.ToLower()))?.Email;
+                    
+                System.Diagnostics.Debug.WriteLine($"Customer {customer.Id}: Primary email = {customer.Email}, Matched address email = {matchedAddressEmail ?? "null"}");
+                
+                if (!string.IsNullOrEmpty(matchedAddressEmail) && 
+                    !matchedAddressEmail.Equals(customer.Email, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Store the matched address email
+                    customerMatchInfo[customer.Id] = matchedAddressEmail;
+                }
+                
+                allCustomers.Add(customer);
+            }
         }
         
         // Remove duplicates and limit results
@@ -1313,14 +1332,16 @@ public class CustomerController : BaseAdminController
         var result = customers.Select(c => new
         {
             id = c.Id,
-            label = FormatCustomerLabel(c, hasValidAddress)
+            label = FormatCustomerLabel(c, hasValidAddress, customerMatchInfo.TryGetValue(c.Id, out var matchedEmail) ? matchedEmail : null)
         }).ToList();
         return Json(result);
     }
     
-    private string FormatCustomerLabel(Customer customer, bool includeAddressInfo)
+    private string FormatCustomerLabel(Customer customer, bool includeAddressInfo, string matchedAddressEmail = null)
     {
-        var label = $"{customer.Email} - {customer.GetFullName()}";
+        // Use matched address email if available, otherwise use primary email
+        var displayEmail = !string.IsNullOrEmpty(matchedAddressEmail) ? $"{matchedAddressEmail} (Address)" : customer.Email;
+        var label = $"{displayEmail} - {customer.GetFullName()}";
         
         if (includeAddressInfo && customer.Addresses.Any())
         {

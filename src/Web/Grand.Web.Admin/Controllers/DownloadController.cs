@@ -1,6 +1,9 @@
 ﻿using Grand.Business.Core.Interfaces.Storage;
+using Grand.Business.Core.Interfaces.Marketing.Documents;
 using Grand.Domain.Permissions;
 using Grand.Domain.Media;
+using Grand.Domain.Documents;
+using Grand.Domain.Common;
 using Grand.Infrastructure;
 using Grand.SharedKernel.Extensions;
 using Grand.Web.Admin.Extensions;
@@ -18,13 +21,15 @@ public class DownloadController : BaseAdminController
     private readonly IContextAccessor _contextAccessor;
     private readonly MediaSettings _mediaSettings;
     private readonly ILogger<DownloadController> _logger;
+    private readonly IDocumentService _documentService;
 
-    public DownloadController(IDownloadService downloadService, IContextAccessor contextAccessor, MediaSettings mediaSettings, ILogger<DownloadController> logger)
+    public DownloadController(IDownloadService downloadService, IContextAccessor contextAccessor, MediaSettings mediaSettings, ILogger<DownloadController> logger, IDocumentService documentService)
     {
         _downloadService = downloadService;
         _contextAccessor = contextAccessor;
         _mediaSettings = mediaSettings;
         _logger = logger;
+        _documentService = documentService;
     }
 
     public async Task<IActionResult> DownloadFile(Guid downloadGuid)
@@ -203,6 +208,7 @@ public class DownloadController : BaseAdminController
         }
 
         var extractedFiles = new List<object>();
+        var createdDocuments = new List<object>();
         var allowedDocumentTypes = FileExtensions.GetAllowedDocumentFileTypes(_mediaSettings.AllowedDocumentFileTypes);
         var zipFileName = Path.GetFileNameWithoutExtension(file.FileName);
         
@@ -262,14 +268,13 @@ public class DownloadController : BaseAdminController
                 }
 
                 // Sanitize filename
-                var fileName = SanitizeFileName(Path.GetFileNameWithoutExtension(entry.Name));
-                if (string.IsNullOrEmpty(fileName))
+                var originalFileName = SanitizeFileName(Path.GetFileNameWithoutExtension(entry.Name));
+                if (string.IsNullOrEmpty(originalFileName))
                     continue;
 
-                // Handle duplicate filenames
-                var finalFileName = fileCounter > 0 ? $"{zipFileName}_{fileName}_{fileCounter}" : $"{zipFileName}_{fileName}";
-                fileCounter++;
-
+                // Create proper document name with incremental suffix
+                var documentName = fileCounter == 0 ? zipFileName : $"{zipFileName}({fileCounter})";
+                
                 // Extract file
                 using var entryStream = entry.Open();
                 using var memoryStream = new MemoryStream();
@@ -284,23 +289,60 @@ public class DownloadController : BaseAdminController
                     DownloadUrl = "",
                     DownloadBinary = fileBinary,
                     ContentType = GetContentTypeFromExtension(entryExtension),
-                    Filename = finalFileName,
+                    Filename = $"{originalFileName}",
                     Extension = entryExtension,
                     DownloadType = downloadType,
-                    ReferenceId = referenceId + ":ZIP_EXTRACTED" // Mark as ZIP extracted
+                    ReferenceId = referenceId
                 };
 
                 await _downloadService.InsertDownload(download);
 
                 extractedFiles.Add(new {
                     downloadId = download.Id,
-                    filename = finalFileName + entryExtension,
+                    filename = originalFileName + entryExtension,
                     downloadUrl = Url.Action("DownloadFile",
                         new { downloadGuid = download.DownloadGuid, area = Constants.AreaAdmin })
                 });
+
+                // Create document if this is for order documents (DownloadType.Order = 10)
+                if (downloadType == DownloadType.Order && !string.IsNullOrEmpty(referenceId))
+                {
+                    try
+                    {
+                        var document = new Document
+                        {
+                            Number = "",
+                            Name = documentName,
+                            Description = $"Extracted from ZIP: {file.FileName}",
+                            DownloadId = download.Id,
+                            Published = true,
+                            DisplayOrder = fileCounter,
+                            ObjectId = referenceId,
+                            ReferenceId = Reference.Order,
+                            StatusId = DocumentStatus.Open
+                        };
+
+                        await _documentService.Insert(document);
+                        
+                        createdDocuments.Add(new {
+                            documentId = document.Id,
+                            documentName = documentName,
+                            filename = originalFileName + entryExtension
+                        });
+
+                        _logger.LogInformation("Created document: {DocumentName} for file: {FileName}", documentName, originalFileName + entryExtension);
+                    }
+                    catch (Exception docEx)
+                    {
+                        _logger.LogError(docEx, "Failed to create document for file: {FileName}", originalFileName + entryExtension);
+                    }
+                }
+
+                fileCounter++;
             }
 
-            _logger.LogInformation("ZIP processing complete. Extracted {FileCount} files", extractedFiles.Count);
+            _logger.LogInformation("ZIP processing complete. Extracted {FileCount} files, created {DocumentCount} documents", 
+                extractedFiles.Count, createdDocuments.Count);
             
             if (!extractedFiles.Any())
             {
@@ -311,21 +353,28 @@ public class DownloadController : BaseAdminController
                 });
             }
 
-            // Return format compatible with single file uploads, but include multiple files data
+            // Return success message
+            var message = createdDocuments.Any() 
+                ? $"Successfully extracted {extractedFiles.Count} files and created {createdDocuments.Count} documents from ZIP"
+                : $"Successfully extracted {extractedFiles.Count} files from ZIP";
+
             return Json(new {
                 success = true,
                 isMultipleFiles = true,
                 extractedCount = extractedFiles.Count,
-                message = $"Successfully extracted {extractedFiles.Count} files from ZIP",
+                documentsCreated = createdDocuments.Count,
+                message = message,
                 // For compatibility with single file upload, use first file
                 downloadId = extractedFiles.Count > 0 ? ((dynamic)extractedFiles[0]).downloadId : "",
                 downloadUrl = extractedFiles.Count > 0 ? ((dynamic)extractedFiles[0]).downloadUrl : "",
-                // Include all files for multi-document creation
-                files = extractedFiles
+                // Include all files and documents data
+                files = extractedFiles,
+                documents = createdDocuments
             });
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error processing ZIP file: {FileName}", file.FileName);
             return Json(new {
                 success = false,
                 message = $"Error processing ZIP file: {ex.Message}"

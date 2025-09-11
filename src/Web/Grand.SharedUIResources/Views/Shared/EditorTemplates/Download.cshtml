@@ -150,38 +150,38 @@
                                     
                                     // Show summary message
                                     var summaryHtml = "<div class='alert alert-success'>" + responseJSON.message + "</div>";
-                                    summaryHtml += "<div class='extracted-files'>";
                                     
-                                    // List all extracted files with individual download links
-                                    responseJSON.files.forEach(function(file, index) {
-                                        summaryHtml += "<div class='file-item' style='margin: 5px 0;'>";
-                                        summaryHtml += "<a href='" + file.downloadUrl + "' class='btn btn-sm purple' title='" + file.filename + "'>";
-                                        summaryHtml += "<i class='fa fa-download'></i> " + file.filename;
-                                        summaryHtml += "</a>";
+                                    // If documents were created automatically on server-side, show them
+                                    if (responseJSON.documentsCreated && responseJSON.documentsCreated > 0) {
+                                        summaryHtml += "<div class='created-documents'>";
+                                        summaryHtml += "<strong>Documents Created:</strong> " + responseJSON.documentsCreated;
                                         summaryHtml += "</div>";
-                                    });
-                                    summaryHtml += "</div>";
+                                        
+                                        // Refresh the documents grid if it exists
+                                        setTimeout(function() {
+                                            if (typeof refreshDocumentsGrid === 'function') {
+                                                refreshDocumentsGrid();
+                                            } else if ($("#order-documents-grid").length > 0) {
+                                                $("#order-documents-grid").data("kendoGrid").dataSource.read();
+                                            }
+                                        }, 1000);
+                                    } else {
+                                        // Show extracted files with download links as fallback
+                                        summaryHtml += "<div class='extracted-files'>";
+                                        responseJSON.files.forEach(function(file, index) {
+                                            summaryHtml += "<div class='file-item' style='margin: 5px 0;'>";
+                                            summaryHtml += "<a href='" + file.downloadUrl + "' class='btn btn-sm purple' title='" + file.filename + "'>";
+                                            summaryHtml += "<i class='fa fa-download'></i> " + file.filename;
+                                            summaryHtml += "</a>";
+                                            summaryHtml += "</div>";
+                                        });
+                                        summaryHtml += "</div>";
+                                    }
                                     
                                     $("#@(clientId + "downloadurl")").html(summaryHtml);
                                     
                                     // For compatibility, store first file's ID in the hidden input
                                     $("#@(clientId + "value") input").val(responseJSON.downloadId);
-                                    
-                                    // Store multiple file information for potential document creation
-                                    $("#@(clientId + "value")").data("multipleFiles", responseJSON.files);
-                                    $("#@(clientId + "value")").data("isMultipleFiles", true);
-                                    
-                                    // Automatically create multiple documents if we have the context
-                                    if (typeof window.currentOrderId !== 'undefined' || $('.order-edit-page').length > 0) {
-                                        var objectId = '@ViewData["ReferenceId"]' || window.currentOrderId;
-                                        var referenceType = '@ViewData["DownloadType"]' || '10'; // 10 = Order reference
-                                        
-                                        if (objectId) {
-                                            setTimeout(function() {
-                                                createMultipleDocuments(responseJSON.files, objectId, referenceType, name);
-                                            }, 500);
-                                        }
-                                    }
                                     
                                     $("#@(clientId + "remove")").show();
                                     
@@ -203,46 +203,6 @@
                             });
                         });
 
-                        // Function to create multiple documents from ZIP extraction
-                        function createMultipleDocuments(files, objectId, referenceType, zipFileName) {
-                            console.log("Creating multiple documents for", files.length, "files");
-                            
-                            var downloadIds = files.map(function(file) { return file.downloadId; }).join(',');
-                            
-                            $.ajax({
-                                url: '@(Url.Action("CreateDocumentsFromZip", "Document", new { area }))',
-                                type: 'POST',
-                                data: {
-                                    ObjectId: objectId,
-                                    ReferenceId: referenceType,
-                                    downloadIds: downloadIds,
-                                    zipFileName: zipFileName,
-                                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                                },
-                                success: function(response) {
-                                    if (response.success) {
-                                        console.log("Successfully created documents:", response.message);
-                                        
-                                        // Refresh the documents grid if it exists
-                                        if (typeof refreshDocumentsGrid === 'function') {
-                                            refreshDocumentsGrid();
-                                        } else if ($("#order-documents-grid").length > 0) {
-                                            $("#order-documents-grid").data("kendoGrid").dataSource.read();
-                                        }
-                                        
-                                        // Show success message
-                                        if (typeof displaySuccessMessage === 'function') {
-                                            displaySuccessMessage(response.message);
-                                        }
-                                    } else {
-                                        console.error("Failed to create documents:", response.error);
-                                    }
-                                },
-                                error: function(xhr, status, error) {
-                                    console.error("Error creating documents:", error);
-                                }
-                            });
-                        }
 
                     </script>
 

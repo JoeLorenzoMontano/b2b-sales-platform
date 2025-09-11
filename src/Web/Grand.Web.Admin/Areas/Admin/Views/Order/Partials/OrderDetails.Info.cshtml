@@ -550,6 +550,53 @@ function toggleOrderTotals(editmode) {
 </script>
 
 <style>
+/* Light mode improvements for order info layout */
+@@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+    /* Table improvements for light mode - ensure proper contrast */
+    .table-striped thead th {
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
+        border-bottom: 2px solid #dee2e6 !important;
+    }
+    
+    .table-striped td {
+        border-top: 1px solid #dee2e6 !important;
+        color: #212529 !important;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .table-info th {
+        background-color: #d1ecf1 !important;
+        color: #0c5460 !important;
+        border-color: #bee5eb !important;
+    }
+}
+
+/* Default/fallback light mode styles */
+.table-striped thead th {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+.table-striped td {
+    border-top: 1px solid #dee2e6 !important;
+    color: #212529 !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.table-info th {
+    background-color: #d1ecf1 !important;
+    color: #0c5460 !important;
+    border-color: #bee5eb !important;
+}
+
 /* Dark mode improvements for order info layout */
 @@media (prefers-color-scheme: dark) {
     /* Address boxes - ensure text is readable in dark mode */
@@ -579,20 +626,40 @@ function toggleOrderTotals(editmode) {
         border: 1px solid #6c757d !important;
     }
     
-    /* Table improvements for dark mode */
+    /* Table improvements for dark mode - more specific selectors */
     .table-striped thead th {
-        border-bottom: 2px solid #fff !important;
+        border-bottom: 2px solid #6c757d !important;
         color: #fff !important;
+        background-color: #495057 !important;
     }
     
     .table-striped tbody tr:nth-of-type(odd) {
         background-color: rgba(255, 255, 255, 0.05) !important;
     }
     
-    .table-striped td,
-    .table-striped th {
+    /* Table borders and basic cell styling */
+    .table-striped td {
         border-top: 1px solid #6c757d !important;
-        color: #fff !important;
+    }
+    
+    /* Only target basic text, not styled elements */
+    .table-striped td:first-child {
+        color: #fff !important; /* # column */
+    }
+    
+    .table-striped td:nth-child(3),
+    .table-striped td:nth-child(4),
+    .table-striped td:nth-child(5) {
+        color: #fff !important; /* Quantity, Price, Total columns */
+    }
+    
+    /* Preserve Bootstrap color classes in dark mode */
+    .table-striped .text-primary {
+        color: #79aecb !important; /* Lighter blue for dark mode */
+    }
+    
+    .table-striped .text-muted {
+        color: #adb5bd !important; /* Proper muted color for dark mode */
     }
     
     .table-info th {
@@ -602,7 +669,7 @@ function toggleOrderTotals(editmode) {
     }
 }
 
-/* Force dark text in address boxes regardless of theme */
+/* Force styles for data-theme attribute (fallback) */
 [data-theme="dark"] .address-box,
 [data-theme="dark"] .border.p-2.bg-light,
 [data-theme="dark"] .border.p-2[style*="background-color: #e3f2fd"],
@@ -618,5 +685,31 @@ function toggleOrderTotals(editmode) {
 [data-theme="dark"] .border.p-2[style*="background-color: #e8f5e8"] div,
 [data-theme="dark"] .border.p-2[style*="background-color: #fff3cd"] div {
     color: #000 !important;
+}
+
+/* Dark mode table styles with data-theme */
+[data-theme="dark"] .table-striped thead th {
+    border-bottom: 2px solid #6c757d !important;
+    color: #fff !important;
+    background-color: #495057 !important;
+}
+
+[data-theme="dark"] .table-striped td {
+    border-top: 1px solid #6c757d !important;
+}
+
+[data-theme="dark"] .table-striped td:first-child,
+[data-theme="dark"] .table-striped td:nth-child(3),
+[data-theme="dark"] .table-striped td:nth-child(4),
+[data-theme="dark"] .table-striped td:nth-child(5) {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .table-striped .text-primary {
+    color: #79aecb !important;
+}
+
+[data-theme="dark"] .table-striped .text-muted {
+    color: #adb5bd !important;
 }
 </style>

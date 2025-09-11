@@ -157,32 +157,81 @@ public class SearchController : BaseAdminController
 
             if (result.Count < _adminSearchSettings.MaxSearchResultsCount && _adminSearchSettings.SearchInCustomers)
             {
+                var usedCustomerIds = new HashSet<string>();
+                
+                // Search by customer primary email
                 var customersByEmail = await _customerService.GetAllCustomers(email: searchTerm,
                     pageSize: _adminSearchSettings.MaxSearchResultsCount - result.Count);
-                
-                IPagedList<Customer> customersByUsername = new PagedList<Customer>();
-                if (_adminSearchSettings.MaxSearchResultsCount - result.Count - customersByEmail.Count > 0)
-                    customersByUsername = await _customerService.GetAllCustomers(username: searchTerm,
-                        pageSize: _adminSearchSettings.MaxSearchResultsCount
-                                  - result.Count - customersByEmail.Count);
-                
-                IPagedList<Customer> customersByAddressEmail = new PagedList<Customer>();
-                if (_adminSearchSettings.MaxSearchResultsCount - result.Count - customersByEmail.Count - customersByUsername.Count > 0)
-                    customersByAddressEmail = await _customerService.GetAllCustomers(addressKeyword: searchTerm,
-                        pageSize: _adminSearchSettings.MaxSearchResultsCount
-                                  - result.Count - customersByEmail.Count - customersByUsername.Count);
-
-                var combined = customersByEmail.Union(customersByUsername)
-                    .Union(customersByAddressEmail)
-                    .GroupBy(x => x.Id).Select(x => x.First());
-
-                foreach (var customer in combined)
-                    result.Add(new Tuple<object, int>(new
+                foreach (var customer in customersByEmail)
+                {
+                    if (result.Count >= _adminSearchSettings.MaxSearchResultsCount) break;
+                    if (usedCustomerIds.Add(customer.Id))
                     {
-                        title = customer.Email,
-                        link = Url.Content($"~/{Constants.AreaAdmin}/Customer/Edit/") + customer.Id,
-                        source = _translationService.GetResource("Admin.Customers")
-                    }, _adminSearchSettings.CustomersDisplayOrder));
+                        result.Add(new Tuple<object, int>(new
+                        {
+                            title = customer.Email,
+                            link = Url.Content($"~/{Constants.AreaAdmin}/Customer/Edit/") + customer.Id,
+                            source = _translationService.GetResource("Admin.Customers")
+                        }, _adminSearchSettings.CustomersDisplayOrder));
+                    }
+                }
+                
+                // Search by customer username
+                if (result.Count < _adminSearchSettings.MaxSearchResultsCount)
+                {
+                    var customersByUsername = await _customerService.GetAllCustomers(username: searchTerm,
+                        pageSize: _adminSearchSettings.MaxSearchResultsCount - result.Count);
+                    foreach (var customer in customersByUsername)
+                    {
+                        if (result.Count >= _adminSearchSettings.MaxSearchResultsCount) break;
+                        if (usedCustomerIds.Add(customer.Id))
+                        {
+                            result.Add(new Tuple<object, int>(new
+                            {
+                                title = customer.Email,
+                                link = Url.Content($"~/{Constants.AreaAdmin}/Customer/Edit/") + customer.Id,
+                                source = _translationService.GetResource("Admin.Customers")
+                            }, _adminSearchSettings.CustomersDisplayOrder));
+                        }
+                    }
+                }
+                
+                // Search by address keyword (including address emails)
+                if (result.Count < _adminSearchSettings.MaxSearchResultsCount)
+                {
+                    var customersByAddressEmail = await _customerService.GetAllCustomers(addressKeyword: searchTerm,
+                        pageSize: _adminSearchSettings.MaxSearchResultsCount - result.Count);
+                    foreach (var customer in customersByAddressEmail)
+                    {
+                        if (result.Count >= _adminSearchSettings.MaxSearchResultsCount) break;
+                        
+                        // Find the matched address email
+                        var matchedAddressEmail = customer.Addresses?.FirstOrDefault(addr => 
+                            addr.Email != null && addr.Email.ToLower().Contains(searchTerm.ToLower()))?.Email;
+                        
+                        // If we found a matched address email that's different from primary email, show separate result
+                        if (!string.IsNullOrEmpty(matchedAddressEmail) && 
+                            !matchedAddressEmail.Equals(customer.Email, StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.Add(new Tuple<object, int>(new
+                            {
+                                title = $"{matchedAddressEmail} (Address)",
+                                link = Url.Content($"~/{Constants.AreaAdmin}/Customer/Edit/") + customer.Id,
+                                source = _translationService.GetResource("Admin.Customers")
+                            }, _adminSearchSettings.CustomersDisplayOrder));
+                        }
+                        // If no address email match or it's the same as primary, show customer normally if not already shown
+                        else if (usedCustomerIds.Add(customer.Id))
+                        {
+                            result.Add(new Tuple<object, int>(new
+                            {
+                                title = customer.Email,
+                                link = Url.Content($"~/{Constants.AreaAdmin}/Customer/Edit/") + customer.Id,
+                                source = _translationService.GetResource("Admin.Customers")
+                            }, _adminSearchSettings.CustomersDisplayOrder));
+                        }
+                    }
+                }
             }
 
             if (result.Count < _adminSearchSettings.MaxSearchResultsCount && _adminSearchSettings.SearchInMenu &&

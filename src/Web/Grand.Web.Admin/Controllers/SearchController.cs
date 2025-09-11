@@ -205,9 +205,16 @@ public class SearchController : BaseAdminController
                     {
                         if (result.Count >= _adminSearchSettings.MaxSearchResultsCount) break;
                         
+                        // Debug: Check if addresses are loaded
+                        System.Diagnostics.Debug.WriteLine($"Customer {customer.Id} has {customer.Addresses?.Count ?? 0} addresses loaded");
+                        
                         // Find the matched address email
                         var matchedAddressEmail = customer.Addresses?.FirstOrDefault(addr => 
                             addr.Email != null && addr.Email.ToLower().Contains(searchTerm.ToLower()))?.Email;
+                        
+                        // Debug: Log what we found
+                        System.Diagnostics.Debug.WriteLine($"Matched address email: {matchedAddressEmail ?? "null"}");
+                        System.Diagnostics.Debug.WriteLine($"Customer primary email: {customer.Email ?? "null"}");
                         
                         // If we found a matched address email that's different from primary email, show separate result
                         if (!string.IsNullOrEmpty(matchedAddressEmail) && 
@@ -216,6 +223,18 @@ public class SearchController : BaseAdminController
                             result.Add(new Tuple<object, int>(new
                             {
                                 title = $"{matchedAddressEmail} (Address)",
+                                link = Url.Content($"~/{Constants.AreaAdmin}/Customer/Edit/") + customer.Id,
+                                source = _translationService.GetResource("Admin.Customers")
+                            }, _adminSearchSettings.CustomersDisplayOrder));
+                        }
+                        // If addresses collection is null/empty but customer was found via address search, show with indicator
+                        else if ((customer.Addresses == null || !customer.Addresses.Any()) && usedCustomerIds.Add(customer.Id))
+                        {
+                            // Customer was found via address keyword search but addresses aren't loaded
+                            // This indicates the search term matched an address email that we can't access here
+                            result.Add(new Tuple<object, int>(new
+                            {
+                                title = $"{customer.Email} (Matched via Address)",
                                 link = Url.Content($"~/{Constants.AreaAdmin}/Customer/Edit/") + customer.Id,
                                 source = _translationService.GetResource("Admin.Customers")
                             }, _adminSearchSettings.CustomersDisplayOrder));

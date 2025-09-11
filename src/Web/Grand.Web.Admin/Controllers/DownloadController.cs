@@ -17,12 +17,14 @@ public class DownloadController : BaseAdminController
     private readonly IDownloadService _downloadService;
     private readonly IContextAccessor _contextAccessor;
     private readonly MediaSettings _mediaSettings;
+    private readonly ILogger<DownloadController> _logger;
 
-    public DownloadController(IDownloadService downloadService, IContextAccessor contextAccessor, MediaSettings mediaSettings)
+    public DownloadController(IDownloadService downloadService, IContextAccessor contextAccessor, MediaSettings mediaSettings, ILogger<DownloadController> logger)
     {
         _downloadService = downloadService;
         _contextAccessor = contextAccessor;
         _mediaSettings = mediaSettings;
+        _logger = logger;
     }
 
     public async Task<IActionResult> DownloadFile(Guid downloadGuid)
@@ -188,9 +190,12 @@ public class DownloadController : BaseAdminController
         const int maxFilesInZip = 100;
         const int maxExtractedSizeBytes = 104857600; // 100MB
         
+        _logger.LogInformation("Processing ZIP upload: {FileName}, Size: {FileSize} bytes", file.FileName, file.Length);
+        
         // Validate ZIP file size
         if (file.Length > maxZipSizeBytes)
         {
+            _logger.LogWarning("ZIP file too large: {FileSize} bytes", file.Length);
             return Json(new {
                 success = false,
                 message = $"ZIP file is too large. Maximum size: {maxZipSizeBytes / (1024 * 1024)}MB"
@@ -200,6 +205,8 @@ public class DownloadController : BaseAdminController
         var extractedFiles = new List<object>();
         var allowedDocumentTypes = FileExtensions.GetAllowedDocumentFileTypes(_mediaSettings.AllowedDocumentFileTypes);
         var zipFileName = Path.GetFileNameWithoutExtension(file.FileName);
+        
+        _logger.LogInformation("Allowed document types: {AllowedTypes}", string.Join(", ", allowedDocumentTypes));
         
         try
         {
@@ -223,14 +230,20 @@ public class DownloadController : BaseAdminController
 
             foreach (var entry in archive.Entries)
             {
+                _logger.LogInformation("Processing ZIP entry: {EntryName}, Size: {EntrySize}", entry.Name, entry.Length);
+                
                 // Skip directories
                 if (string.IsNullOrEmpty(entry.Name) || entry.Name.EndsWith('/'))
+                {
+                    _logger.LogInformation("Skipping directory: {EntryName}", entry.Name);
                     continue;
+                }
 
                 // Validate extracted size
                 totalExtractedSize += entry.Length;
                 if (totalExtractedSize > maxExtractedSizeBytes)
                 {
+                    _logger.LogWarning("Total extracted size exceeds limit: {TotalSize} bytes", totalExtractedSize);
                     return Json(new {
                         success = false,
                         message = $"Total extracted size exceeds limit. Maximum: {maxExtractedSizeBytes / (1024 * 1024)}MB"
@@ -238,11 +251,13 @@ public class DownloadController : BaseAdminController
                 }
 
                 var entryExtension = Path.GetExtension(entry.Name);
+                _logger.LogInformation("Entry extension: {Extension}", entryExtension);
                 
                 // Skip files with disallowed extensions (excluding ZIP to prevent recursion)
                 if (string.Equals(entryExtension, ".zip", StringComparison.OrdinalIgnoreCase) ||
                     !allowedDocumentTypes.IsAllowedDocumentFileType(entryExtension))
                 {
+                    _logger.LogInformation("Skipping file with disallowed extension: {Extension}", entryExtension);
                     continue;
                 }
 
@@ -285,8 +300,11 @@ public class DownloadController : BaseAdminController
                 });
             }
 
+            _logger.LogInformation("ZIP processing complete. Extracted {FileCount} files", extractedFiles.Count);
+            
             if (!extractedFiles.Any())
             {
+                _logger.LogWarning("No valid files found in ZIP archive");
                 return Json(new {
                     success = false,
                     message = "No valid files found in ZIP archive"

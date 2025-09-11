@@ -287,7 +287,7 @@ public class DownloadController : BaseAdminController
                     Filename = finalFileName,
                     Extension = entryExtension,
                     DownloadType = downloadType,
-                    ReferenceId = referenceId
+                    ReferenceId = referenceId + ":ZIP_EXTRACTED" // Mark as ZIP extracted
                 };
 
                 await _downloadService.InsertDownload(download);
@@ -311,9 +311,16 @@ public class DownloadController : BaseAdminController
                 });
             }
 
+            // Return format compatible with single file uploads, but include multiple files data
             return Json(new {
                 success = true,
+                isMultipleFiles = true,
+                extractedCount = extractedFiles.Count,
                 message = $"Successfully extracted {extractedFiles.Count} files from ZIP",
+                // For compatibility with single file upload, use first file
+                downloadId = extractedFiles.Count > 0 ? ((dynamic)extractedFiles[0]).downloadId : "",
+                downloadUrl = extractedFiles.Count > 0 ? ((dynamic)extractedFiles[0]).downloadUrl : "",
+                // Include all files for multi-document creation
                 files = extractedFiles
             });
         }

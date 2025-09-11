@@ -1,6 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Marketing.Documents;
+using Grand.Business.Core.Interfaces.Storage;
 using Grand.Domain.Common;
 using Grand.Domain.Documents;
 using Grand.Domain.Permissions;
@@ -22,18 +23,21 @@ public class DocumentController : BaseAdminController
     private readonly IDocumentTypeService _documentTypeService;
     private readonly IDocumentViewModelService _documentViewModelService;
     private readonly ITranslationService _translationService;
+    private readonly IDownloadService _downloadService;
 
     public DocumentController(IDocumentViewModelService documentViewModelService,
         IDocumentService documentService,
         IDocumentTypeService documentTypeService,
         ITranslationService translationService,
-        ICustomerService customerService)
+        ICustomerService customerService,
+        IDownloadService downloadService)
     {
         _documentViewModelService = documentViewModelService;
         _documentService = documentService;
         _documentTypeService = documentTypeService;
         _translationService = translationService;
         _customerService = customerService;
+        _downloadService = downloadService;
     }
 
     public IActionResult Index()
@@ -284,6 +288,65 @@ public class DocumentController : BaseAdminController
         }
 
         return RedirectToAction("Edit", new { id });
+    }
+
+    /// <summary>
+    /// Create multiple documents from ZIP extraction
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateDocumentsFromZip(string ObjectId, int ReferenceId, string downloadIds, string zipFileName = "")
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(ObjectId) || string.IsNullOrEmpty(downloadIds))
+            {
+                return Json(new { success = false, error = "Missing required parameters." });
+            }
+
+            var downloadIdList = downloadIds.Split(',').Where(id => !string.IsNullOrWhiteSpace(id)).ToList();
+            var createdDocuments = 0;
+
+            foreach (var downloadId in downloadIdList)
+            {
+                // Get download info to create meaningful document name
+                var downloadInfo = await _downloadService.GetDownloadById(downloadId.Trim());
+                if (downloadInfo == null) continue;
+
+                var documentName = string.IsNullOrEmpty(zipFileName) 
+                    ? $"Document - {downloadInfo.Filename}{downloadInfo.Extension}"
+                    : $"{zipFileName} - {downloadInfo.Filename}{downloadInfo.Extension}";
+
+                // Create document using existing service
+                var document = new Document
+                {
+                    Number = "",
+                    Name = documentName,
+                    Description = $"Extracted from ZIP upload",
+                    DownloadId = downloadId.Trim(),
+                    Published = true,
+                    DisplayOrder = 0,
+                    ObjectId = ObjectId,
+                    ReferenceId = (Reference)ReferenceId,
+                    StatusId = DocumentStatus.Open
+                };
+
+                await _documentService.Insert(document);
+                createdDocuments++;
+            }
+
+            return Json(new { 
+                success = true, 
+                message = $"Created {createdDocuments} documents from ZIP extraction" 
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { 
+                success = false, 
+                error = $"Error creating documents: {ex.Message}" 
+            });
+        }
     }
 
     #endregion

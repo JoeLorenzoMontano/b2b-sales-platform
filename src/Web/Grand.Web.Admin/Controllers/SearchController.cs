@@ -159,12 +159,22 @@ public class SearchController : BaseAdminController
             {
                 var customersByEmail = await _customerService.GetAllCustomers(email: searchTerm,
                     pageSize: _adminSearchSettings.MaxSearchResultsCount - result.Count);
+                
                 IPagedList<Customer> customersByUsername = new PagedList<Customer>();
                 if (_adminSearchSettings.MaxSearchResultsCount - result.Count - customersByEmail.Count > 0)
                     customersByUsername = await _customerService.GetAllCustomers(username: searchTerm,
                         pageSize: _adminSearchSettings.MaxSearchResultsCount
                                   - result.Count - customersByEmail.Count);
-                var combined = customersByEmail.Union(customersByUsername).GroupBy(x => x.Email).Select(x => x.First());
+                
+                IPagedList<Customer> customersByAddressEmail = new PagedList<Customer>();
+                if (_adminSearchSettings.MaxSearchResultsCount - result.Count - customersByEmail.Count - customersByUsername.Count > 0)
+                    customersByAddressEmail = await _customerService.GetAllCustomers(addressKeyword: searchTerm,
+                        pageSize: _adminSearchSettings.MaxSearchResultsCount
+                                  - result.Count - customersByEmail.Count - customersByUsername.Count);
+
+                var combined = customersByEmail.Union(customersByUsername)
+                    .Union(customersByAddressEmail)
+                    .GroupBy(x => x.Id).Select(x => x.First());
 
                 foreach (var customer in combined)
                     result.Add(new Tuple<object, int>(new

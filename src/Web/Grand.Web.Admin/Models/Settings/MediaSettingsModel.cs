@@ -78,6 +78,9 @@ public class MediaSettingsModel : BaseModel
     [GrandResourceDisplayName("Admin.Settings.Media.AllowedFileTypes")]
     public string AllowedFileTypes { get; set; }
 
+    [GrandResourceDisplayName("Admin.Settings.Media.AllowedDocumentFileTypes")]
+    public string AllowedDocumentFileTypes { get; set; }
+
     [GrandResourceDisplayName("Admin.Settings.Media.FileManagerEnabledCommands")]
     public string FileManagerEnabledCommands { get; set; }
 

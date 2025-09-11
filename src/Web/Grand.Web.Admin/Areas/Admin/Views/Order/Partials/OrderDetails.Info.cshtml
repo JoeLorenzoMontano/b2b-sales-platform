@@ -106,10 +106,6 @@
                         @Html.ActionLink(Model.CustomerInfo, "Edit", "Customer", new { id = Model.CustomerId }, new { @class = "text-primary" })
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label"><strong>Customer IP:</strong></label>
-                        <div>@Model.CustomerIp</div>
-                    </div>
                     
                     @if (!string.IsNullOrEmpty(Model.VatNumber))
                     {
@@ -118,6 +114,42 @@
                             <div>@Model.VatNumber</div>
                         </div>
                     }
+                    
+                    <!-- Moved from Order Information column -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Payment Status:</strong></label>
+                        <div>
+                            @{
+                                string labelStatus = "secondary";
+                                switch (Model.PaymentStatus.ToLower())
+                                {
+                                    case "paid":
+                                        labelStatus = "success";
+                                        break;
+                                    case "pending":
+                                        labelStatus = "warning";
+                                        break;
+                                    case "cancelled":
+                                    case "refunded":
+                                        labelStatus = "danger";
+                                        break;
+                                }
+                            }
+                            <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId })">
+                                @Model.PaymentStatus
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Shipping Status:</strong></label>
+                        <div>@Model.ShippingStatus</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Order Total:</strong></label>
+                        <div><strong>@Model.OrderTotal</strong></div>
+                    </div>
                     
                     <!-- Address Information -->
                     @{
@@ -269,40 +301,6 @@
                             </div>
                         }
                         
-                        <div class="col-12 mb-3">
-                            <label class="form-label"><strong>Payment Status:</strong></label>
-                            <div>
-                                @{
-                                    string labelStatus = "secondary";
-                                    switch (Model.PaymentStatus.ToLower())
-                                    {
-                                        case "paid":
-                                            labelStatus = "success";
-                                            break;
-                                        case "pending":
-                                            labelStatus = "warning";
-                                            break;
-                                        case "cancelled":
-                                        case "refunded":
-                                            labelStatus = "danger";
-                                            break;
-                                    }
-                                }
-                                <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId })">
-                                    @Model.PaymentStatus
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <div class="col-12 mb-3">
-                            <label class="form-label"><strong>Shipping Status:</strong></label>
-                            <div>@Model.ShippingStatus</div>
-                        </div>
-                        
-                        <div class="col-12 mb-3">
-                            <label class="form-label"><strong>Order Total:</strong></label>
-                            <div><strong>@Model.OrderTotal</strong></div>
-                        </div>
                         
                         @if (!string.IsNullOrEmpty(Model.RefundedAmount))
                         {

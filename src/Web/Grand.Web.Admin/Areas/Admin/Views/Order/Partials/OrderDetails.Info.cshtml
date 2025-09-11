@@ -338,7 +338,6 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Product</th>
-                                        <th>SKU</th>
                                         <th class="text-center">Quantity</th>
                                         <th class="text-right">Price</th>
                                         <th class="text-right">Total</th>
@@ -354,12 +353,15 @@
                                                 <a href="@Url.Action("Edit", "Product", new { id = item.ProductId })" class="text-primary">
                                                     @item.ProductName
                                                 </a>
+                                                @if (!string.IsNullOrEmpty(item.Sku))
+                                                {
+                                                    <br><small class="text-muted">SKU: @item.Sku</small>
+                                                }
                                                 @if (!string.IsNullOrEmpty(item.WarehouseName))
                                                 {
                                                     <br><small class="text-muted">Warehouse: @item.WarehouseName</small>
                                                 }
                                             </td>
-                                            <td>@item.Sku</td>
                                             <td class="text-center">@item.Quantity</td>
                                             <td class="text-right">@item.UnitPriceExclTax</td>
                                             <td class="text-right">
@@ -378,7 +380,7 @@
                                 </tbody>
                                 <tfoot>
                                     <tr class="table-info">
-                                        <th colspan="3">Total</th>
+                                        <th colspan="2">Total</th>
                                         <th class="text-center">@Model.Items.Sum(x => x.Quantity)</th>
                                         <th></th>
                                         <th class="text-right">@Model.OrderTotal</th>
@@ -546,3 +548,75 @@ function toggleOrderTotals(editmode) {
     }
 }
 </script>
+
+<style>
+/* Dark mode improvements for order info layout */
+@@media (prefers-color-scheme: dark) {
+    /* Address boxes - ensure text is readable in dark mode */
+    .address-box,
+    .border.p-2.bg-light,
+    .border.p-2[style*="background-color: #e3f2fd"],
+    .border.p-2[style*="background-color: #e8f5e8"], 
+    .border.p-2[style*="background-color: #fff3cd"] {
+        color: #000 !important;
+        background-color: #f8f9fa !important;
+    }
+    
+    .address-box div,
+    .border.p-2.bg-light div,
+    .border.p-2[style*="background-color: #e3f2fd"] div,
+    .border.p-2[style*="background-color: #e8f5e8"] div,
+    .border.p-2[style*="background-color: #fff3cd"] div {
+        color: #000 !important;
+    }
+    
+    /* Card headers and borders */
+    .card-header {
+        border-bottom: 1px solid #6c757d !important;
+    }
+    
+    .card {
+        border: 1px solid #6c757d !important;
+    }
+    
+    /* Table improvements for dark mode */
+    .table-striped thead th {
+        border-bottom: 2px solid #fff !important;
+        color: #fff !important;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    .table-striped td,
+    .table-striped th {
+        border-top: 1px solid #6c757d !important;
+        color: #fff !important;
+    }
+    
+    .table-info th {
+        background-color: #17a2b8 !important;
+        color: #fff !important;
+        border-color: #17a2b8 !important;
+    }
+}
+
+/* Force dark text in address boxes regardless of theme */
+[data-theme="dark"] .address-box,
+[data-theme="dark"] .border.p-2.bg-light,
+[data-theme="dark"] .border.p-2[style*="background-color: #e3f2fd"],
+[data-theme="dark"] .border.p-2[style*="background-color: #e8f5e8"],
+[data-theme="dark"] .border.p-2[style*="background-color: #fff3cd"] {
+    color: #000 !important;
+    background-color: #f8f9fa !important;
+}
+
+[data-theme="dark"] .address-box div,
+[data-theme="dark"] .border.p-2.bg-light div,
+[data-theme="dark"] .border.p-2[style*="background-color: #e3f2fd"] div,
+[data-theme="dark"] .border.p-2[style*="background-color: #e8f5e8"] div,
+[data-theme="dark"] .border.p-2[style*="background-color: #fff3cd"] div {
+    color: #000 !important;
+}
+</style>

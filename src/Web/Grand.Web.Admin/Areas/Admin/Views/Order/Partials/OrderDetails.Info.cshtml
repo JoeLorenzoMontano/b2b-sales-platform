@@ -1958,6 +1958,7 @@ function refreshCurrentProductsGrid() {
 // Check for existing shipments and hide ProductSearchAdd if shipments exist
 function checkShipments() {
     var isVerifiedOrder = @Json.Serialize(Model.IsVerifiedOrder);
+    var orderId = '@Model.Id';
     
     if (isVerifiedOrder) {
         $('.add-products-section').hide();
@@ -1965,7 +1966,7 @@ function checkShipments() {
             '<div class="shipment-warning alert alert-warning mt-3">' +
             '<i class="fa fa-warning"></i> ' +
             'Cannot add products to orders in fulfillment queue. ' +
-            '<button type="button" class="btn btn-primary btn-sm ml-2" onclick="sendToReverificationFromProducts(\'' + '@Model.Id' + '\')">' +
+            '<button type="button" class="btn btn-primary btn-sm ml-2" onclick="sendToReverificationFromProducts(\'' + orderId + '\')">' +
             '<i class="fa fa-undo"></i> Send to Reverification' +
             '</button>' +
             '</div>'

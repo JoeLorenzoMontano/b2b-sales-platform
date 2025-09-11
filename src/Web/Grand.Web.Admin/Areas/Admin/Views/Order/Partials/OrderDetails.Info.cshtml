@@ -758,55 +758,55 @@
         
     </div>
     
-    <!-- Expandable Products List - Enhanced Visibility -->
-    <div class="tw-mt-8">
+    <!-- Expandable Products List -->
+    <div style="margin-top: 2rem;">
         <!-- Section Title -->
-        <div class="tw-mb-4 tw-text-center">
-            <h2 class="tw-text-xl tw-font-bold tw-text-gray-800 tw-mb-2">Order Products</h2>
-            <div class="tw-w-24 tw-h-1 tw-bg-blue-500 tw-mx-auto tw-rounded"></div>
+        <div class="text-center mb-4">
+            <h2 style="font-size: 1.25rem; font-weight: bold; color: #1f2937; margin-bottom: 0.5rem;">Order Products</h2>
+            <div style="width: 6rem; height: 0.25rem; background-color: #3b82f6; margin: 0 auto; border-radius: 0.25rem;"></div>
         </div>
         
         <!-- Enhanced Products Section -->
-        <div class="tw-bg-white tw-rounded-lg tw-shadow-lg tw-border-2 tw-border-blue-200 tw-overflow-hidden">
-            <div class="products-header tw-p-5 tw-cursor-pointer tw-bg-gradient-to-r tw-from-blue-50 tw-to-blue-100 hover:tw-from-blue-100 hover:tw-to-blue-150 tw-border-b-2 tw-border-blue-200 tw-transition-all tw-duration-200 hover:tw-shadow-md" onclick="toggleProductsList()">
-                <div class="tw-flex tw-justify-between tw-items-center">
-                    <div class="tw-flex tw-items-center">
-                        <div class="tw-bg-blue-500 tw-rounded-full tw-p-2 tw-mr-3">
-                            <i class="fa fa-package tw-text-white tw-text-lg"></i>
+        <div class="card shadow" style="border: 2px solid #bfdbfe; border-radius: 0.5rem; overflow: hidden;">
+            <div class="products-header p-4" style="cursor: pointer; background: linear-gradient(to right, #eff6ff, #dbeafe); border-bottom: 2px solid #bfdbfe; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(to right, #dbeafe, #bfdbfe)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.1)'" onmouseout="this.style.background='linear-gradient(to right, #eff6ff, #dbeafe)'; this.style.boxShadow='none'" onclick="toggleProductsList()">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div style="background-color: #3b82f6; border-radius: 50%; padding: 0.5rem; margin-right: 0.75rem;">
+                            <i class="fa fa-package" style="color: white; font-size: 1.125rem;"></i>
                         </div>
                         <div>
-                            <h3 class="tw-font-bold tw-text-xl tw-mb-1 tw-text-gray-800">
+                            <h3 style="font-weight: bold; font-size: 1.25rem; margin-bottom: 0.25rem; color: #1f2937;">
                                 Products (@Model.Items.Count items)
                             </h3>
-                            <p class="tw-text-sm tw-text-gray-600 tw-mb-0">Order item details and quantities</p>
+                            <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0;">Order item details and quantities</p>
                         </div>
                     </div>
-                    <div class="tw-flex tw-items-center tw-bg-white tw-px-3 tw-py-2 tw-rounded-full tw-shadow-sm tw-border tw-border-blue-200">
-                        <span class="tw-text-sm tw-font-medium tw-text-gray-700 tw-mr-2">Click to collapse</span>
-                        <i id="products-arrow" class="fa fa-chevron-up tw-transition-transform tw-duration-200 tw-text-blue-600 tw-text-lg"></i>
+                    <div class="d-flex align-items-center" style="background-color: white; padding: 0.5rem 0.75rem; border-radius: 50px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #bfdbfe;">
+                        <span style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-right: 0.5rem;">Click to collapse</span>
+                        <i id="products-arrow" class="fa fa-chevron-up" style="transition: transform 0.2s; color: #2563eb; font-size: 1.125rem;"></i>
                     </div>
                 </div>
             </div>
-            <div id="products-list-content" class="">
-                <div class="tw-p-4">
+            <div id="products-list-content" class="show">
+                <div class="p-4">
                     <!-- Mobile Product Cards (hidden on desktop) -->
-                    <div class="mobile-product-cards tw-block md:tw-hidden">
+                    <div class="mobile-product-cards d-block d-md-none">
                         @for (var j = 0; j < Model.Items.Count; j++)
                         {
                             var item = Model.Items[j];
-                            <div class="tw-bg-gray-50 tw-p-4 tw-rounded tw-mb-4 tw-border">
-                                <div class="tw-flex tw-justify-between tw-items-start tw-mb-2">
-                                    <div class="tw-flex-1">
-                                        <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" class="tw-font-medium tw-text-blue-600 hover:tw-underline">
+                            <div class="card mb-3" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 1rem;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div style="flex: 1;">
+                                        <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" style="font-weight: 500; color: #2563eb; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
                                             @item.ProductName
                                         </a>
                                         @if (!string.IsNullOrEmpty(item.Sku))
                                         {
-                                            <div class="tw-text-sm tw-text-gray-600">SKU: @item.Sku</div>
+                                            <div style="font-size: 0.875rem; color: #6b7280;">SKU: @item.Sku</div>
                                         }
                                     </div>
-                                    <div class="tw-text-right">
-                                        <div class="tw-font-semibold">
+                                    <div class="text-right">
+                                        <div style="font-weight: 600;">
                                             @switch (Model.TaxDisplayType)
                                             {
                                                 case TaxDisplayType.ExcludingTax:
@@ -819,12 +819,12 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="tw-grid tw-grid-cols-2 tw-gap-2 tw-text-sm">
-                                    <div><span class="tw-font-medium">Quantity:</span> @item.Quantity</div>
-                                    <div><span class="tw-font-medium">Price:</span> @item.UnitPriceExclTax</div>
+                                <div class="row" style="font-size: 0.875rem;">
+                                    <div class="col-6"><span style="font-weight: 500;">Quantity:</span> @item.Quantity</div>
+                                    <div class="col-6"><span style="font-weight: 500;">Price:</span> @item.UnitPriceExclTax</div>
                                     @if (!string.IsNullOrEmpty(item.WarehouseName))
                                     {
-                                        <div class="tw-col-span-2"><span class="tw-font-medium">Warehouse:</span> @item.WarehouseName</div>
+                                        <div class="col-12"><span style="font-weight: 500;">Warehouse:</span> @item.WarehouseName</div>
                                     }
                                 </div>
                             </div>
@@ -832,35 +832,35 @@
                     </div>
 
                     <!-- Desktop Product Table (hidden on mobile) -->
-                    <div class="tw-hidden md:tw-block tw-overflow-auto">
-                        <table class="tw-w-full tw-border-collapse">
+                    <div class="d-none d-md-block" style="overflow-x: auto;">
+                        <table class="table table-striped table-hover mb-0" style="width: 100%; border-collapse: collapse;">
                             <thead>
-                                <tr class="tw-border-b tw-border-gray-200">
-                                    <th class="tw-text-left tw-p-3 tw-font-medium">Product</th>
-                                    <th class="tw-text-left tw-p-3 tw-font-medium">SKU</th>
-                                    <th class="tw-text-center tw-p-3 tw-font-medium">Quantity</th>
-                                    <th class="tw-text-right tw-p-3 tw-font-medium">Price</th>
-                                    <th class="tw-text-right tw-p-3 tw-font-medium">Total</th>
+                                <tr style="border-bottom: 1px solid #e5e7eb;">
+                                    <th class="text-left p-3" style="font-weight: 500;">Product</th>
+                                    <th class="text-left p-3" style="font-weight: 500;">SKU</th>
+                                    <th class="text-center p-3" style="font-weight: 500;">Quantity</th>
+                                    <th class="text-right p-3" style="font-weight: 500;">Price</th>
+                                    <th class="text-right p-3" style="font-weight: 500;">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @for (var j = 0; j < Model.Items.Count; j++)
                                 {
                                     var item = Model.Items[j];
-                                    <tr class="tw-border-b tw-border-gray-100 hover:tw-bg-gray-50">
-                                        <td class="tw-p-3">
-                                            <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" class="tw-text-blue-600 hover:tw-underline tw-font-medium">
+                                    <tr style="border-bottom: 1px solid #f3f4f6;" onmouseover="this.style.backgroundColor='#f9fafb'" onmouseout="this.style.backgroundColor='transparent'">
+                                        <td class="p-3">
+                                            <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = "Admin" })" style="color: #2563eb; font-weight: 500; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
                                                 @item.ProductName
                                             </a>
                                             @if (!string.IsNullOrEmpty(item.WarehouseName))
                                             {
-                                                <div class="tw-text-xs tw-text-gray-600 tw-mt-1">Warehouse: @item.WarehouseName</div>
+                                                <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Warehouse: @item.WarehouseName</div>
                                             }
                                         </td>
-                                        <td class="tw-p-3 tw-text-gray-600">@item.Sku</td>
-                                        <td class="tw-p-3 tw-text-center">@item.Quantity</td>
-                                        <td class="tw-p-3 tw-text-right">@item.UnitPriceExclTax</td>
-                                        <td class="tw-p-3 tw-text-right tw-font-semibold">
+                                        <td class="p-3" style="color: #6b7280;">@item.Sku</td>
+                                        <td class="p-3 text-center">@item.Quantity</td>
+                                        <td class="p-3 text-right">@item.UnitPriceExclTax</td>
+                                        <td class="p-3 text-right" style="font-weight: 600;">
                                             @switch (Model.TaxDisplayType)
                                             {
                                                 case TaxDisplayType.ExcludingTax:
@@ -882,27 +882,27 @@
     </div>
     
     <!-- Order Summary Section with Tabbed Interface -->
-    <div class="tw-col-span-full tw-mt-6">
-        <div class="stash-tabs tw-relative" role="tabList">
-            <ul class="stash-tabs-list tw-flex tw-items-end tw-border-b tw-border-gray-200">
-                <li id="tab-order-summary" role="tab" aria-selected="true" aria-controls="tabpanel-order-summary" class="stash-tab stash-tab--active tw-px-6 tw-py-3 tw-border-t-4 tw-border-blue-500 tw-bg-white tw-rounded-t tw-cursor-pointer">
-                    <span class="tw-text-blue-500 tw-font-medium">Order Summary</span>
+    <div style="width: 100%; margin-top: 1.5rem;">
+        <div class="stash-tabs" style="position: relative;" role="tabList">
+            <ul class="stash-tabs-list d-flex align-items-end" style="border-bottom: 1px solid #e5e7eb;">
+                <li id="tab-order-summary" role="tab" aria-selected="true" aria-controls="tabpanel-order-summary" class="stash-tab stash-tab--active" style="padding: 0.75rem 1.5rem; border-top: 4px solid #3b82f6; background-color: white; border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; cursor: pointer;">
+                    <span style="color: #3b82f6; font-weight: 500;">Order Summary</span>
                 </li>
-                <li id="tab-order-tags" role="tab" aria-selected="false" aria-controls="tabpanel-order-tags" class="stash-tab tw-px-6 tw-py-3 tw-text-gray-700 tw-cursor-pointer hover:tw-text-blue-500">
+                <li id="tab-order-tags" role="tab" aria-selected="false" aria-controls="tabpanel-order-tags" class="stash-tab" style="padding: 0.75rem 1.5rem; color: #374151; cursor: pointer;" onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#374151'">
                     <span>Order Tags</span>
                 </li>
             </ul>
         </div>
         
         <div id="tabpanel-order-summary" role="tabpanel">
-            <div class="stash-data-view tw-relative tw-bg-white tw-rounded-b tw-shadow">
+            <div class="stash-data-view" style="position: relative; background-color: white; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
                 
                 <!-- Toolbar with action buttons -->
-                <div class="stash-data-view-toolbar tw-flex tw-min-h-15 tw-items-center tw-justify-between tw-bg-white tw-py-3 tw-px-6 tw-border-b tw-border-gray-200">
-                    <div class="tw-flex tw-items-center tw-gap-6">
-                        <button type="button" onclick="$('.add-products-section').toggle();" class="tw-flex tw-flex-col tw-items-center tw-text-blue-500">
-                            <i class="fa fa-plus-circle tw-text-lg"></i>
-                            <div class="tw-mt-1 tw-text-xs tw-leading-3">Add Products</div>
+                <div class="stash-data-view-toolbar d-flex align-items-center justify-content-between" style="min-height: 3.75rem; background-color: white; padding: 0.75rem 1.5rem; border-bottom: 1px solid #e5e7eb;">
+                    <div class="d-flex align-items-center" style="gap: 1.5rem;">
+                        <button type="button" onclick="$('.add-products-section').toggle();" class="d-flex flex-column align-items-center btn btn-link p-0" style="color: #3b82f6; text-decoration: none;">
+                            <i class="fa fa-plus-circle" style="font-size: 1.125rem;"></i>
+                            <div style="margin-top: 0.25rem; font-size: 0.75rem; line-height: 0.75rem;">Add Products</div>
                         </button>
                     </div>
                 </div>

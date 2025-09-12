@@ -195,7 +195,8 @@ public class DownloadController : BaseAdminController
         const int maxFilesInZip = 100;
         const int maxExtractedSizeBytes = 104857600; // 100MB
         
-        _logger.LogInformation("Processing ZIP upload: {FileName}, Size: {FileSize} bytes", file.FileName, file.Length);
+        _logger.LogInformation("Processing ZIP upload: {FileName}, Size: {FileSize} bytes, DownloadType: {DownloadType}, ReferenceId: {ReferenceId}", 
+            file.FileName, file.Length, downloadType, referenceId);
         
         // Validate ZIP file size
         if (file.Length > maxZipSizeBytes)
@@ -304,7 +305,10 @@ public class DownloadController : BaseAdminController
                         new { downloadGuid = download.DownloadGuid, area = Constants.AreaAdmin })
                 });
 
-                // Create document if this is for order documents (DownloadType.Order = 10)
+                // Create document if this is for order documents (DownloadType.Order = 30)
+                _logger.LogInformation("Checking document creation conditions: DownloadType={DownloadType} (Order={OrderValue}), ReferenceId='{ReferenceId}', IsReferenceEmpty={IsEmpty}", 
+                    downloadType, DownloadType.Order, referenceId, string.IsNullOrEmpty(referenceId));
+                
                 if (downloadType == DownloadType.Order && !string.IsNullOrEmpty(referenceId))
                 {
                     try
@@ -336,6 +340,11 @@ public class DownloadController : BaseAdminController
                     {
                         _logger.LogError(docEx, "Failed to create document for file: {FileName}", originalFileName + entryExtension);
                     }
+                }
+                else
+                {
+                    _logger.LogInformation("Skipping document creation for file: {FileName} - DownloadType: {DownloadType}, ReferenceId: '{ReferenceId}'", 
+                        originalFileName + entryExtension, downloadType, referenceId);
                 }
 
                 fileCounter++;

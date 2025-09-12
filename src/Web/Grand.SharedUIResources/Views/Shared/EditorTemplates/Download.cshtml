@@ -34,7 +34,7 @@
                 cache: false,
                 type: "POST",
                 url: "@(Url.Action("SaveDownloadUrl", "Download", new { area }))",
-                data: { "downloadUrl": downloadUrl, DownloadType: '@((int?)ViewData["DownloadType"] ?? 0)', ReferenceId: '@ViewData["ReferenceId"]' },
+                data: { "downloadUrl": downloadUrl, DownloadType: '@((int)(ViewData["DownloadType"] ?? Grand.Domain.Media.DownloadType.None))', ReferenceId: '@ViewData["ReferenceId"]' },
                 success: function (data) {
                     if (data.success) {
                         $('#pnlDownloadURLResult@(randomNumber)').fadeIn("slow").delay(1000).fadeOut("slow");
@@ -131,7 +131,7 @@
                                 request: {
                                     endpoint: '@(Url.Action("AsyncUpload", "Download", new { area }))',
                                     params: {
-                                        DownloadType: '@((int?)ViewData["DownloadType"] ?? 0)',
+                                        DownloadType: '@((int)(ViewData["DownloadType"] ?? Grand.Domain.Media.DownloadType.None))',
                                         ReferenceId: '@ViewData["ReferenceId"]'
                                     },
                                     inputName: "file"

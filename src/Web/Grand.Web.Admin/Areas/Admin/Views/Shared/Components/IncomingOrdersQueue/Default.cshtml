@@ -34,7 +34,7 @@
                 </div>
                 <div class="form-group">
                     <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="sameAddressCheckboxSearch">
+                        <input type="checkbox" class="form-check-input" id="sameAddressCheckboxSearch" checked>
                         <label class="form-check-label" for="sameAddressCheckboxSearch">
                             Use same address for billing and shipping
                         </label>
@@ -965,45 +965,13 @@
         // Hide customer search modal
         $('#customerSearchModal').modal('hide');
         
-        // If we have a specific address from the search results, use it directly
-        if (addressId && matchType === 'address') {
-            console.log('Using specific address from search result:', addressId);
-            createOrderWithSpecificAddress(customerId, customerLabel, addressId);
-            return;
-        }
+        // Check checkbox state first - this determines the overall behavior
+        var useSameAddress = $('#sameAddressCheckboxSearch').is(':checked');
+        console.log('Checkbox "Use same address" checked:', useSameAddress);
         
-        // For customer-only results (matchType === 'customer'), check checkbox behavior
-        if (matchType === 'customer') {
-            var useSameAddress = $('#sameAddressCheckboxSearch').is(':checked');
-            console.log('Customer-only result, checkbox checked:', useSameAddress);
-            
-            if (useSameAddress) {
-                // Skip address modal and create order directly with first address
-                createOrderDirectly(customerId, customerLabel);
-            } else {
-                // Show address selection modal for customer to choose
-                $.ajax({
-                    url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
-                    type: "POST",
-                    data: addAntiForgeryToken({
-                        customerId: customerId
-                    }),
-                    dataType: "json",
-                    success: function(addressData) {
-                        if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
-                            showAddressSelectionModalForIncoming(customerId, customerLabel, addressData.addresses);
-                        } else {
-                            showNotificationIncoming("Customer must have saved addresses before creating an order", "error", 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showNotificationIncoming("Error loading customer addresses", "error", 5000);
-                    }
-                });
-            }
-        } else {
-            // Fallback for any other match types - default to showing address selection
-            console.log('Unknown match type, defaulting to address selection modal');
+        // If checkbox is UNCHECKED, always show address selection modal (manual mode)
+        if (!useSameAddress) {
+            console.log('Manual mode: Showing address selection modal for all result types');
             $.ajax({
                 url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
                 type: "POST",
@@ -1022,7 +990,29 @@
                     showNotificationIncoming("Error loading customer addresses", "error", 5000);
                 }
             });
+            return;
         }
+        
+        // If checkbox is CHECKED, use match type logic (quick mode)
+        console.log('Quick mode: Using match type logic');
+        
+        // Address-specific results: create order directly with that address
+        if (addressId && matchType === 'address') {
+            console.log('Address-specific result: Creating order with address:', addressId);
+            createOrderWithSpecificAddress(customerId, customerLabel, addressId);
+            return;
+        }
+        
+        // Customer-only results: create order with first address
+        if (matchType === 'customer') {
+            console.log('Customer-only result: Creating order with first address');
+            createOrderDirectly(customerId, customerLabel);
+            return;
+        }
+        
+        // Fallback for unknown match types
+        console.log('Unknown match type, defaulting to first address');
+        createOrderDirectly(customerId, customerLabel);
     }
 
     function createOrderWithSpecificAddress(customerId, customerLabel, addressId) {

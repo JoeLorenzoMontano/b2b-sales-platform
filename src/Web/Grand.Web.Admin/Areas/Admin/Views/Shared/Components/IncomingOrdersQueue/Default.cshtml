@@ -904,9 +904,14 @@
             // Create results container with proper styling
             var resultsHtml = '<div class="customer-search-results list-group mt-2">';
             results.forEach(function(customer) {
+                var addressIdAttr = customer.addressId ? 'data-address-id="' + customer.addressId + '"' : '';
+                var matchTypeAttr = customer.matchType ? 'data-match-type="' + customer.matchType + '"' : '';
+                
                 resultsHtml += '<a href="#" class="list-group-item list-group-item-action customer-result-item" ' +
                               'style="color: #333; background-color: #fff; border: 1px solid #ddd;" ' +
-                              'data-customer-id="' + customer.id + '" data-customer-label="' + customer.label + '">' + 
+                              'data-customer-id="' + customer.id + '" ' +
+                              'data-customer-label="' + customer.label + '" ' +
+                              addressIdAttr + ' ' + matchTypeAttr + '>' + 
                               customer.label + '</a>';
             });
             resultsHtml += '</div>';
@@ -919,7 +924,9 @@
                 e.preventDefault();
                 var customerId = $(this).data('customer-id');
                 var customerLabel = $(this).data('customer-label');
-                selectCustomerForOrder(customerId, customerLabel);
+                var addressId = $(this).data('address-id');
+                var matchType = $(this).data('match-type');
+                selectCustomerForOrder(customerId, customerLabel, addressId, matchType);
             }).on('mouseenter', function() {
                 $(this).css({
                     'background-color': '#f5f5f5',
@@ -946,19 +953,25 @@
         console.log('Customer search initialized with namespaced events');
     }
 
-    function selectCustomerForOrder(customerId, customerLabel) {
+    function selectCustomerForOrder(customerId, customerLabel, addressId, matchType) {
         // Hide customer search modal
         $('#customerSearchModal').modal('hide');
         
-        // Check if same address checkbox is checked
+        // If we have a specific address from the search results, use it directly
+        if (addressId && matchType === 'address') {
+            console.log('Using specific address from search result:', addressId);
+            createOrderWithSpecificAddress(customerId, customerLabel, addressId);
+            return;
+        }
+        
+        // For customer-only results, check checkbox behavior
         var useSameAddress = $('#sameAddressCheckboxSearch').is(':checked');
         
         if (useSameAddress) {
-            // Skip address modal and create order directly
+            // Skip address modal and create order directly with first address
             createOrderDirectly(customerId, customerLabel);
         } else {
-            // Use existing flow - show address selection modal
-            // Load customer addresses
+            // Show address selection modal for customer to choose
             $.ajax({
                 url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
                 type: "POST",
@@ -978,6 +991,35 @@
                 }
             });
         }
+    }
+
+    function createOrderWithSpecificAddress(customerId, customerLabel, addressId) {
+        console.log('Creating order with specific address:', { customerId, customerLabel, addressId });
+        
+        // Create order directly using the specific address for both billing and shipping
+        $.ajax({
+            url: "@Html.Raw(Url.Action("StartOrder", "Customer", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: addAntiForgeryToken({
+                customerId: customerId,
+                billingAddressId: addressId,
+                shippingAddressId: addressId
+            }),
+            dataType: "json",
+            success: function(data) {
+                if (data.success) {
+                    // Refresh the incoming orders grid
+                    $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
+                    showNotificationIncoming("Order created successfully for " + customerLabel + " using selected address", "success", 5000);
+                } else {
+                    showNotificationIncoming(data.message || "Error creating order", "error", 5000);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error creating order with specific address:', error);
+                showNotificationIncoming("Error creating order: " + error, "error", 5000);
+            }
+        });
     }
 
     function createOrderDirectly(customerId, customerLabel) {
@@ -1122,7 +1164,7 @@
             }
         });
         
-        // Sync shipping address when billing address changes (if checkbox is checked)
+        // When billing address changes and checkbox is checked, update shipping address too
         $('#billingAddressSelectIncoming').on('change', function() {
             if ($('#sameAddressCheckbox').is(':checked')) {
                 $('#shippingAddressSelectIncoming').val($(this).val());

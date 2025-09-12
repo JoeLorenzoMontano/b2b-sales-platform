@@ -1374,7 +1374,9 @@ public class CustomerController : BaseAdminController
         var result = uniqueMatches.Select(match => new
         {
             id = match.Customer.Id,
-            label = FormatCustomerLabelWithAddress(match)
+            addressId = match.MatchedAddress?.Id,
+            label = FormatCustomerLabelWithAddress(match),
+            matchType = match.MatchType
         }).ToList();
         
         return Json(result);

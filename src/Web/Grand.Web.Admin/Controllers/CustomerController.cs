@@ -1258,118 +1258,117 @@ public class CustomerController : BaseAdminController
     {
         public Customer Customer { get; set; }
         public Address MatchedAddress { get; set; }
-        public string MatchType { get; set; } // "primary" or "address"
+        public string MatchType { get; set; } // "customer" or "address"
         public string MatchedEmail { get; set; }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
-    public async Task<IActionResult> CustomerSearchAutoComplete(string term, string addressKeyword = null)
+    public async Task<IActionResult> CustomerSearchAutoComplete(string term)
     {
-        System.Diagnostics.Debug.WriteLine($"CustomerSearchAutoComplete called with term: {term}, addressKeyword: {addressKeyword}");
+        System.Diagnostics.Debug.WriteLine($"CustomerSearchAutoComplete called with term: '{term}'");
         
         const int searchTermMinimumLength = 1;
         
-        // Check if either term or addressKeyword has sufficient length
-        bool hasValidTerm = !string.IsNullOrWhiteSpace(term) && term.Length >= searchTermMinimumLength;
-        bool hasValidAddress = !string.IsNullOrWhiteSpace(addressKeyword) && addressKeyword.Length >= searchTermMinimumLength;
-        
-        if (!hasValidTerm && !hasValidAddress)
+        if (string.IsNullOrWhiteSpace(term) || term.Length < searchTermMinimumLength)
             return Json(new List<object>());
 
         var allMatches = new List<AddressMatch>();
         
-        // For term search, add primary email matches
-        if (hasValidTerm)
+        // First, search by customer primary fields (email, firstName, lastName)
+        System.Diagnostics.Debug.WriteLine("Searching customers by primary fields...");
+        
+        // Search by email
+        var emailCustomers = await _customerService.GetAllCustomers(email: term, pageSize: 10);
+        foreach (var customer in emailCustomers)
         {
-            // Search by email
-            var emailCustomers = await _customerService.GetAllCustomers(email: term, pageSize: 15);
-            foreach (var customer in emailCustomers)
+            allMatches.Add(new AddressMatch
             {
-                allMatches.Add(new AddressMatch
-                {
-                    Customer = customer,
-                    MatchType = "primary",
-                    MatchedEmail = customer.Email,
-                    MatchedAddress = null
-                });
-            }
+                Customer = customer,
+                MatchType = "customer",
+                MatchedEmail = customer.Email,
+                MatchedAddress = null
+            });
+        }
+        
+        // Search by firstName
+        var firstNameCustomers = await _customerService.GetAllCustomers(firstName: term, pageSize: 10);
+        foreach (var customer in firstNameCustomers)
+        {
+            allMatches.Add(new AddressMatch
+            {
+                Customer = customer,
+                MatchType = "customer",
+                MatchedEmail = customer.Email,
+                MatchedAddress = null
+            });
+        }
+        
+        // Search by lastName
+        var lastNameCustomers = await _customerService.GetAllCustomers(lastName: term, pageSize: 10);
+        foreach (var customer in lastNameCustomers)
+        {
+            allMatches.Add(new AddressMatch
+            {
+                Customer = customer,
+                MatchType = "customer", 
+                MatchedEmail = customer.Email,
+                MatchedAddress = null
+            });
+        }
+        
+        // Then, search by address fields for address-specific matches
+        System.Diagnostics.Debug.WriteLine("Searching customers by address fields...");
+        var addressCustomers = await _customerService.GetAllCustomers(addressKeyword: term, pageSize: 10);
+        
+        foreach (var customer in addressCustomers)
+        {
+            System.Diagnostics.Debug.WriteLine($"Processing address search for customer {customer.Id} with {customer.Addresses?.Count ?? 0} addresses");
             
-            // Search by firstName
-            var firstNameCustomers = await _customerService.GetAllCustomers(firstName: term, pageSize: 15);
-            foreach (var customer in firstNameCustomers)
-            {
-                allMatches.Add(new AddressMatch
-                {
-                    Customer = customer,
-                    MatchType = "primary",
-                    MatchedEmail = customer.Email,
-                    MatchedAddress = null
-                });
-            }
+            // Find ALL matching addresses for this customer
+            var matchingAddresses = customer.Addresses?.Where(addr => 
+                (addr.Email != null && addr.Email.ToLower().Contains(term.ToLower())) ||
+                (addr.FirstName != null && addr.FirstName.ToLower().Contains(term.ToLower())) ||
+                (addr.LastName != null && addr.LastName.ToLower().Contains(term.ToLower())) ||
+                (addr.Company != null && addr.Company.ToLower().Contains(term.ToLower())) ||
+                (addr.Address1 != null && addr.Address1.ToLower().Contains(term.ToLower())) ||
+                (addr.City != null && addr.City.ToLower().Contains(term.ToLower())) ||
+                (addr.ZipPostalCode != null && addr.ZipPostalCode.ToLower().Contains(term.ToLower()))
+            ).ToList() ?? new List<Address>();
             
-            // Search by lastName
-            var lastNameCustomers = await _customerService.GetAllCustomers(lastName: term, pageSize: 15);
-            foreach (var customer in lastNameCustomers)
+            System.Diagnostics.Debug.WriteLine($"Found {matchingAddresses.Count} matching addresses for customer {customer.Id}");
+            
+            // Add separate result for each matching address
+            foreach (var address in matchingAddresses)
             {
+                // Determine what field in the address matched
+                var matchedEmail = !string.IsNullOrEmpty(address.Email) ? address.Email : customer.Email;
+                
+                // Address matches are always "address" type since they came from address search
                 allMatches.Add(new AddressMatch
                 {
                     Customer = customer,
-                    MatchType = "primary", 
-                    MatchedEmail = customer.Email,
-                    MatchedAddress = null
+                    MatchType = "address",
+                    MatchedEmail = matchedEmail,
+                    MatchedAddress = address
                 });
+                
+                System.Diagnostics.Debug.WriteLine($"Added address match: {matchedEmail} - {address.Company ?? "No Company"}, {address.City ?? "No City"}");
             }
         }
         
-        // For address search, add separate results for each matching address
-        if (hasValidAddress)
-        {
-            var addressCustomers = await _customerService.GetAllCustomers(addressKeyword: addressKeyword, pageSize: 15);
-            
-            foreach (var customer in addressCustomers)
-            {
-                System.Diagnostics.Debug.WriteLine($"Processing customer {customer.Id} with {customer.Addresses?.Count ?? 0} addresses");
-                
-                // Find ALL matching addresses for this customer
-                var matchingAddresses = customer.Addresses?.Where(addr => 
-                    (addr.Email != null && addr.Email.ToLower().Contains(addressKeyword.ToLower())) ||
-                    (addr.FirstName != null && addr.FirstName.ToLower().Contains(addressKeyword.ToLower())) ||
-                    (addr.LastName != null && addr.LastName.ToLower().Contains(addressKeyword.ToLower())) ||
-                    (addr.Company != null && addr.Company.ToLower().Contains(addressKeyword.ToLower())) ||
-                    (addr.Address1 != null && addr.Address1.ToLower().Contains(addressKeyword.ToLower())) ||
-                    (addr.City != null && addr.City.ToLower().Contains(addressKeyword.ToLower())) ||
-                    (addr.ZipPostalCode != null && addr.ZipPostalCode.ToLower().Contains(addressKeyword.ToLower()))
-                ).ToList() ?? new List<Address>();
-                
-                System.Diagnostics.Debug.WriteLine($"Found {matchingAddresses.Count} matching addresses for customer {customer.Id}");
-                
-                // Add separate result for each matching address
-                foreach (var address in matchingAddresses)
-                {
-                    var matchedEmail = !string.IsNullOrEmpty(address.Email) ? address.Email : customer.Email;
-                    var matchType = !string.IsNullOrEmpty(address.Email) && !address.Email.Equals(customer.Email, StringComparison.OrdinalIgnoreCase) ? "address" : "primary";
-                    
-                    allMatches.Add(new AddressMatch
-                    {
-                        Customer = customer,
-                        MatchType = matchType,
-                        MatchedEmail = matchedEmail,
-                        MatchedAddress = address
-                    });
-                    
-                    System.Diagnostics.Debug.WriteLine($"Added match: {matchedEmail} ({matchType}) - {address.Company ?? "No Company"}, {address.City ?? "No City"}");
-                }
-            }
-        }
-        
-        // Remove duplicates based on customer ID + address combination, but keep separate addresses
+        // Remove duplicates while preserving separate customer vs address matches
         var uniqueMatches = allMatches
-            .GroupBy(m => new { m.Customer.Id, AddressId = m.MatchedAddress?.Id ?? "primary", m.MatchType })
+            .GroupBy(m => new { 
+                CustomerId = m.Customer.Id, 
+                AddressId = m.MatchedAddress?.Id ?? "", 
+                MatchType = m.MatchType,
+                MatchedEmail = m.MatchedEmail 
+            })
             .Select(g => g.First())
             .Take(15)
             .ToList();
             
-        System.Diagnostics.Debug.WriteLine($"Found {uniqueMatches.Count} unique address matches");
+        System.Diagnostics.Debug.WriteLine($"Found {uniqueMatches.Count} unique matches total");
         
         var result = uniqueMatches.Select(match => new
         {
@@ -1379,6 +1378,7 @@ public class CustomerController : BaseAdminController
             matchType = match.MatchType
         }).ToList();
         
+        System.Diagnostics.Debug.WriteLine($"Returning {result.Count} search results");
         return Json(result);
     }
     
@@ -1392,7 +1392,7 @@ public class CustomerController : BaseAdminController
         var label = $"{emailDisplay} - {customer.GetFullName()}";
         
         // Add location information if we have a specific address
-        if (address != null)
+        if (match.MatchType == "address" && address != null)
         {
             var locationParts = new List<string>();
             

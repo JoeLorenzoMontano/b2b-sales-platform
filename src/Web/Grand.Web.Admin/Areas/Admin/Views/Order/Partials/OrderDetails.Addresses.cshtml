@@ -473,6 +473,23 @@ else
 <vc:admin-widget widget-zone="order_details_address_bottom" additional-data="Model"/>
 
 <style>
+/* Light mode styles for billing and shipping address tables */
+.table.table-bordered.table-striped.table-hover td,
+.table.table-bordered.table-striped.table-hover th {
+    color: #333 !important;
+}
+
+[data-theme="light"] .table.table-bordered.table-striped.table-hover td,
+[data-theme="light"] .table.table-bordered.table-striped.table-hover th {
+    color: #333 !important;
+}
+
+/* Ensure light mode text is dark for all address table elements */
+.card .table.table-bordered.table-striped.table-hover td,
+.card .table.table-bordered.table-striped.table-hover th {
+    color: #333 !important;
+}
+
 /* Dark theme styles for billing and shipping address tables */
 [data-theme="dark"] .table.table-bordered.table-striped.table-hover td,
 [data-theme="dark"] .table.table-bordered.table-striped.table-hover th {

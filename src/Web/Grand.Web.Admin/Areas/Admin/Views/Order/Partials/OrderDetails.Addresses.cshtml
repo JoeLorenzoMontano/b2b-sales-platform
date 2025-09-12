@@ -471,3 +471,66 @@ else
 }
 
 <vc:admin-widget widget-zone="order_details_address_bottom" additional-data="Model"/>
+
+<style>
+/* Dark theme styles for billing and shipping address tables */
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover td,
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover th {
+    color: #fff !important;
+    background-color: #212529 !important;
+    border-color: #6c757d !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover tbody tr:nth-child(odd) td {
+    background-color: #2c3034 !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover tbody tr:nth-child(even) td {
+    background-color: #212529 !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover a {
+    color: #79aecb !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover .k-button {
+    background-color: #495057 !important;
+    border-color: #6c757d !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover .k-button:hover {
+    background-color: #5a6268 !important;
+    border-color: #6c757d !important;
+}
+
+/* Dark theme styles for card elements containing the tables */
+[data-theme="dark"] .card .card-title {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .card .card-body {
+    background-color: #343a40 !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .card {
+    background-color: #343a40 !important;
+    border-color: #6c757d !important;
+}
+
+/* Labels and form controls within shipping method section */
+[data-theme="dark"] .form-horizontal .control-label {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .form-horizontal label {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .note.note-info {
+    background-color: #17a2b8 !important;
+    color: #fff !important;
+    border-color: #138496 !important;
+}
+</style>

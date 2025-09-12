@@ -34,7 +34,7 @@
                 cache: false,
                 type: "POST",
                 url: "@(Url.Action("SaveDownloadUrl", "Download", new { area }))",
-                data: { "downloadUrl": downloadUrl, DownloadType: '@((int)(ViewData["DownloadType"] ?? Grand.Domain.Media.DownloadType.None))', ReferenceId: '@ViewData["ReferenceId"]' },
+                data: { "downloadUrl": downloadUrl, DownloadType: '@(ViewData["DownloadType"]?.ToString() == "Order" ? "30" : "0")', ReferenceId: '@ViewData["ReferenceId"]' },
                 success: function (data) {
                     if (data.success) {
                         $('#pnlDownloadURLResult@(randomNumber)').fadeIn("slow").delay(1000).fadeOut("slow");
@@ -126,12 +126,15 @@
                             // Debug output
                             console.log("Download template debug: @debugInfo");
                             console.log("FineUploader allowed extensions: [@Html.Raw(string.Join(",", allowedDocumentTypes.Select(ext => "'" + ext.TrimStart('.') + "'")))]");
+                            console.log("ViewData DownloadType raw: '@ViewData["DownloadType"]'");
+                            console.log("ViewData DownloadType explicit: '@(ViewData["DownloadType"]?.ToString() == "Order" ? "30" : "0")'");
+                            console.log("ViewData ReferenceId: '@ViewData["ReferenceId"]'");
                             
                             $("#@clientId").fineUploader({
                                 request: {
                                     endpoint: '@(Url.Action("AsyncUpload", "Download", new { area }))',
                                     params: {
-                                        DownloadType: '@((int)(ViewData["DownloadType"] ?? Grand.Domain.Media.DownloadType.None))',
+                                        DownloadType: '@(ViewData["DownloadType"]?.ToString() == "Order" ? "30" : "0")',
                                         ReferenceId: '@ViewData["ReferenceId"]'
                                     },
                                     inputName: "file"

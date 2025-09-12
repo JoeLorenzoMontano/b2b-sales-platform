@@ -1274,6 +1274,8 @@ public class CustomerController : BaseAdminController
 
         var allMatches = new List<AddressMatch>();
         
+        // Customer-level property matching temporarily commented out - only showing address-specific results
+        /*
         // First, search by customer primary fields (email, firstName, lastName)
         System.Diagnostics.Debug.WriteLine("Searching customers by primary fields...");
         
@@ -1315,6 +1317,7 @@ public class CustomerController : BaseAdminController
                 MatchedAddress = null
             });
         }
+        */
         
         // Then, search by address fields for address-specific matches
         System.Diagnostics.Debug.WriteLine("Searching customers by address fields...");

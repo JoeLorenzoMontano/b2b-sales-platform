@@ -605,6 +605,15 @@
         });
         
           // Helper functions for case dropdown functionality
+        // Helper function to detect if current selection is a sample
+        function isSampleSelected_@(Model.Id)() {
+            var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+            if (!caseDropdown) return false;
+
+            var selectedOption = caseDropdown.options[caseDropdown.selectedIndex];
+            return selectedOption && selectedOption.text.includes('(Sample)');
+        }
+
     function updateCaseDropdowns_@(Model.Id)() {
         var caseSize = window['caseSize_@Model.Id'];
         if (!caseSize || caseSize <= 0) return;
@@ -618,7 +627,9 @@
         // Show Units display and hide the interactive quantity dropdown/input
         var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
         if (unitsDisplay) {
-            unitsDisplay.textContent = caseSize.toString();
+            // For samples, show 1; for regular cases, show case size
+            var displayValue = caseSize.toString();
+            unitsDisplay.textContent = displayValue;
             unitsDisplay.style.display = 'block';
         }
 
@@ -757,7 +768,7 @@
               } else {
                   casesForTotal = selectedValue; // For regular cases, use the case value
               }
-              updateTotalField_@(Model.Id)(casesForTotal, currentQty);
+              updateTotalField_@(Model.Id)(casesForTotal, currentQty, isCurrentQtySample);
           }
     }
         
@@ -808,7 +819,7 @@
           } else {
               casesForTotal = parseFloat(newQuantity / caseSize).toFixed(2);
           }
-          updateTotalField_@(Model.Id)(casesForTotal, newQuantity);
+          updateTotalField_@(Model.Id)(casesForTotal, newQuantity, isSample);
 
           // Handle sample indicator visibility - ensure it stays consistent
           var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
@@ -830,35 +841,57 @@
           }
       }
         
-        function updateTotalField_@(Model.Id)(cases, quantity) {
+        function updateTotalField_@(Model.Id)(cases, quantity, isSample) {
             var caseSize = window['caseSize_@Model.Id'];
             if (!caseSize || caseSize <= 0) return;
-            
-            // Update Units display (show units per case)
+
+            // Update Units display
             var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
             if (unitsDisplay) {
-                unitsDisplay.textContent = caseSize.toString();
+                if (isSample) {
+                    // For samples, Units should match Cases (both show 1)
+                    unitsDisplay.textContent = cases.toString();
+                } else {
+                    // For regular cases, show units per case
+                    unitsDisplay.textContent = caseSize.toString();
+                }
             }
             
             // Update Total dropdown/input
             var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
-            
+
             if (totalDropdown) {
-                // Total should be Cases × Units (caseSize)  
-                // For example: 3 cases × 12 units per case = 36 total
-                var correctTotal = parseFloat(cases) * caseSize;
+                var correctTotal;
+                if (isSample) {
+                    // For samples, Total should match Cases (both show 1)
+                    correctTotal = parseFloat(cases);
+                } else {
+                    // For regular cases: Cases × Units per case = Total
+                    // For example: 3 cases × 12 units per case = 36 total
+                    correctTotal = parseFloat(cases) * caseSize;
+                }
                 
                 if (totalDropdown.tagName === 'SELECT') {
                     // For select element - populate with multiple total options
                     totalDropdown.innerHTML = '';
-                    
+
                     // Get available cases from the cases dropdown
                     var casesDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
                     if (casesDropdown) {
                         for (var i = 0; i < casesDropdown.options.length; i++) {
                             var caseValue = parseFloat(casesDropdown.options[i].value);
-                            var totalValue = caseValue * caseSize; // Cases × Units per case = Total
-                            
+                            var caseOptionText = casesDropdown.options[i].text;
+                            var isCaseSample = caseOptionText.includes('(Sample)');
+
+                            var totalValue;
+                            if (isCaseSample) {
+                                // For samples, Total = Cases (same value)
+                                totalValue = caseValue;
+                            } else {
+                                // For regular cases: Cases × Units per case = Total
+                                totalValue = caseValue * caseSize;
+                            }
+
                             var option = document.createElement('option');
                             option.value = totalValue;
                             option.textContent = totalValue.toString();

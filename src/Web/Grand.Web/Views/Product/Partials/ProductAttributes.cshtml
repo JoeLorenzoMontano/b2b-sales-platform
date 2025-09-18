@@ -692,10 +692,16 @@
             }
 
             if (isSampleQty) {
-                // Samples: Show as-is without case calculations
+                // Samples: Show with or without (Sample) text based on checkbox state
+                var enableSamplePricing = window['enableSamplePricing_@(Model.Id)'] !== false; // Default to true
+                var displayText = qty.toString();
+                if (enableSamplePricing) {
+                    displayText += ' (Sample)';
+                }
+
                 caseOptions.push({
                     value: qty,
-                    text: qty.toString() + ' (Sample)',
+                    text: displayText,
                     sortOrder: qty
                 });
             } else if (qty % caseSize === 0) {
@@ -1034,9 +1040,28 @@
                 }
             }
 
+            // Rebuild cases dropdown to update (Sample) text visibility
+            var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+            if (caseDropdown) {
+                // Store current selection to restore after rebuild
+                var currentSelection = caseDropdown.value;
+
+                // Rebuild the cases dropdown with updated text
+                updateCaseDropdowns_@(Model.Id)();
+
+                // Restore selection if it still exists
+                if (currentSelection) {
+                    for (var i = 0; i < caseDropdown.options.length; i++) {
+                        if (caseDropdown.options[i].value === currentSelection) {
+                            caseDropdown.value = currentSelection;
+                            break;
+                        }
+                    }
+                }
+            }
+
             // Update Units and Total fields immediately when checkbox changes
             if (isSampleSelected_@(Model.Id)()) {
-                var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
                 if (caseDropdown && caseDropdown.value) {
                     // Get current cases value and trigger update
                     var currentCases = parseFloat(caseDropdown.value) || 1;

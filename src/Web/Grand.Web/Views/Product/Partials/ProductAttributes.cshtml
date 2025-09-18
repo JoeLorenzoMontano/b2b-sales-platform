@@ -627,9 +627,8 @@
         // Show Units display and hide the interactive quantity dropdown/input
         var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
         if (unitsDisplay) {
-            // For samples, show 1; for regular cases, show case size
-            var displayValue = caseSize.toString();
-            unitsDisplay.textContent = displayValue;
+            // Units display will be updated after cases dropdown is populated and sample detection is done
+            unitsDisplay.textContent = caseSize.toString(); // Temporary - will be updated later
             unitsDisplay.style.display = 'block';
         }
 
@@ -759,16 +758,31 @@
               caseDropdown.value = selectedValue;
           }
 
+          // After setting dropdown value, detect if the currently selected option is a sample
+          var currentSelectedOption = caseDropdown.options[caseDropdown.selectedIndex];
+          var isSelectedSample = currentSelectedOption && currentSelectedOption.text.includes('(Sample)');
+
+          // Update Units display based on sample detection
+          if (unitsDisplay) {
+              if (isSelectedSample) {
+                  // For samples, Units should show the same value as Cases
+                  unitsDisplay.textContent = selectedValue ? selectedValue.toString() : '1';
+              } else {
+                  // For regular cases, show units per case (case size)
+                  unitsDisplay.textContent = caseSize.toString();
+              }
+          }
+
           // Update total field and units display only if we have a valid selection
           if (selectedValue !== null) {
               // Calculate the cases value for the total field update
               var casesForTotal;
-              if (isCurrentQtySample) {
-                  casesForTotal = currentQty; // For samples, use actual quantity
+              if (isSelectedSample) {
+                  casesForTotal = selectedValue; // For samples, use the selected value (which is the quantity)
               } else {
                   casesForTotal = selectedValue; // For regular cases, use the case value
               }
-              updateTotalField_@(Model.Id)(casesForTotal, currentQty, isCurrentQtySample);
+              updateTotalField_@(Model.Id)(casesForTotal, currentQty, isSelectedSample);
           }
     }
         

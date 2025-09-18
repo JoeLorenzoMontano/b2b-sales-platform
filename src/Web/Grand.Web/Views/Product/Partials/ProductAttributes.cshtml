@@ -614,6 +614,13 @@
             return selectedOption && selectedOption.text.includes('(Sample)');
         }
 
+        // Helper function to check if sample synchronization should apply (sample AND checkbox checked)
+        function shouldUseSampleSynchronization_@(Model.Id)() {
+            var isSample = isSampleSelected_@(Model.Id)();
+            var enableSamplePricing = window['enableSamplePricing_@(Model.Id)'] !== false; // Default to true if not set
+            return isSample && enableSamplePricing;
+        }
+
     function updateCaseDropdowns_@(Model.Id)() {
         var caseSize = window['caseSize_@Model.Id'];
         if (!caseSize || caseSize <= 0) return;
@@ -768,6 +775,7 @@
               } else {
                   casesForTotal = selectedValue; // For regular cases, use the case value
               }
+              // Pass the raw sample detection - updateTotalField_ will check the checkbox internally
               updateTotalField_@(Model.Id)(casesForTotal, currentQty, isCurrentQtySample);
           }
     }
@@ -819,6 +827,7 @@
           } else {
               casesForTotal = parseFloat(newQuantity / caseSize).toFixed(2);
           }
+          // Pass the raw sample detection - updateTotalField_ will check the checkbox internally
           updateTotalField_@(Model.Id)(casesForTotal, newQuantity, isSample);
 
           // Handle sample indicator visibility - ensure it stays consistent
@@ -845,28 +854,31 @@
             var caseSize = window['caseSize_@Model.Id'];
             if (!caseSize || caseSize <= 0) return;
 
+            // Check if we should use sample synchronization (sample AND checkbox checked)
+            var useSampleSync = isSample && shouldUseSampleSynchronization_@(Model.Id)();
+
             // Update Units display
             var unitsDisplay = document.getElementById('EnteredUnits_@Model.Id') || document.getElementById('EnteredUnits_input_@Model.Id');
             if (unitsDisplay) {
-                if (isSample) {
-                    // For samples, Units should match Cases (both show 1)
+                if (useSampleSync) {
+                    // For samples with checkbox checked, Units should match Cases (both show 1)
                     unitsDisplay.textContent = cases.toString();
                 } else {
-                    // For regular cases, show units per case
+                    // For regular cases or samples with checkbox unchecked, show units per case
                     unitsDisplay.textContent = caseSize.toString();
                 }
             }
-            
+
             // Update Total dropdown/input
             var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
 
             if (totalDropdown) {
                 var correctTotal;
-                if (isSample) {
-                    // For samples, Total should match Cases (both show 1)
+                if (useSampleSync) {
+                    // For samples with checkbox checked, Total should match Cases (both show 1)
                     correctTotal = parseFloat(cases);
                 } else {
-                    // For regular cases: Cases × Units per case = Total
+                    // For regular cases or samples with checkbox unchecked: Cases × Units per case = Total
                     // For example: 3 cases × 12 units per case = 36 total
                     correctTotal = parseFloat(cases) * caseSize;
                 }
@@ -882,13 +894,14 @@
                             var caseValue = parseFloat(casesDropdown.options[i].value);
                             var caseOptionText = casesDropdown.options[i].text;
                             var isCaseSample = caseOptionText.includes('(Sample)');
+                            var enableSamplePricing = window['enableSamplePricing_@(Model.Id)'] !== false;
 
                             var totalValue;
-                            if (isCaseSample) {
-                                // For samples, Total = Cases (same value)
+                            if (isCaseSample && enableSamplePricing) {
+                                // For samples with checkbox checked, Total = Cases (same value)
                                 totalValue = caseValue;
                             } else {
-                                // For regular cases: Cases × Units per case = Total
+                                // For regular cases or samples with checkbox unchecked: Cases × Units per case = Total
                                 totalValue = caseValue * caseSize;
                             }
 
@@ -1006,7 +1019,7 @@
         function handleSamplePricingChange_@(Model.Id)(enableSamplePricing) {
             // Store the sample pricing preference for use when getting prices
             window['enableSamplePricing_@(Model.Id)'] = enableSamplePricing;
-            
+
             // Update the indicator text based on checkbox state
             var sampleIndicator = document.querySelector('#sample-indicator-@(Model.Id)');
             if (sampleIndicator) {
@@ -1020,7 +1033,20 @@
                     }
                 }
             }
-            
+
+            // Update Units and Total fields immediately when checkbox changes
+            if (isSampleSelected_@(Model.Id)()) {
+                var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
+                if (caseDropdown && caseDropdown.value) {
+                    // Get current cases value and trigger update
+                    var currentCases = parseFloat(caseDropdown.value) || 1;
+                    var currentQuantity = getCurrentSampleQuantity_@(Model.Id)() || currentCases;
+
+                    // Update Units and Total fields with new checkbox state
+                    updateTotalField_@(Model.Id)(currentCases, currentQuantity, true);
+                }
+            }
+
             // Trigger attribute change to update pricing
             if (typeof standardProductAttributes_@(Model.Id) !== 'undefined') {
                 standardProductAttributes_@(Model.Id).attrchange();

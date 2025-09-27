@@ -49,6 +49,7 @@
         .product-section {
             margin-bottom: 25px;
             page-break-inside: avoid;
+            max-height: 80vh;
         }
 
         .product-header {
@@ -78,6 +79,7 @@
             border-collapse: collapse;
             margin-bottom: 15px;
             border: 1px solid #ddd;
+            page-break-inside: auto;
         }
 
         .combination-table th {
@@ -101,6 +103,7 @@
             border-collapse: collapse;
             margin-bottom: 15px;
             border: 1px solid #ddd;
+            page-break-inside: auto;
         }
 
         .simple-attributes-table th {
@@ -164,6 +167,22 @@
         var combinations = product.ProductAttributeCombinations?.Where(c => !string.IsNullOrEmpty(c.Sku) || c.CaseSize > 0).ToList() ?? new List<ProductAttributeCombination>();
         var attributeMappings = product.ProductAttributeMappings?.ToList() ?? new List<ProductAttributeMapping>();
 
+        // Limit combinations to prevent table overflow - split into chunks if too many
+        const int maxCombinationsPerTable = 25;
+        var combinationChunks = new List<List<ProductAttributeCombination>>();
+
+        if (combinations.Count > maxCombinationsPerTable)
+        {
+            for (int i = 0; i < combinations.Count; i += maxCombinationsPerTable)
+            {
+                combinationChunks.Add(combinations.Skip(i).Take(maxCombinationsPerTable).ToList());
+            }
+        }
+        else if (combinations.Any())
+        {
+            combinationChunks.Add(combinations);
+        }
+
         <div class="product-section">
             <div class="product-header">
                 <div class="product-title">@product.Name</div>
@@ -179,53 +198,67 @@
                 }
             </div>
 
-            @* Display Product Attribute Combinations *@
-            @if (combinations.Any())
+            @* Display Product Attribute Combinations in chunks to prevent overflow *@
+            @if (combinationChunks.Any())
             {
-                <table class="combination-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 40%;">Product Variant</th>
-                            <th style="width: 20%;">SKU</th>
-                            <th style="width: 40%;">Price / Case Info</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var combination in combinations.OrderBy(c => c.Text))
-                        {
+                @for (int chunkIndex = 0; chunkIndex < combinationChunks.Count; chunkIndex++)
+                {
+                    var chunk = combinationChunks[chunkIndex];
+
+                    @if (chunkIndex > 0)
+                    {
+                        <div style="page-break-before: always;"></div>
+                        <div class="product-header" style="margin-top: 0;">
+                            <div class="product-title">@product.Name (continued)</div>
+                            <div class="product-sku">Part @(chunkIndex + 1) of @combinationChunks.Count</div>
+                        </div>
+                    }
+
+                    <table class="combination-table">
+                        <thead>
                             <tr>
-                                <td>
-                                    <div style="font-weight: bold;">@(!string.IsNullOrEmpty(combination.Text) ? combination.Text : "Standard Variant")</div>
-                                    @if (!string.IsNullOrEmpty(combination.Sku))
-                                    {
-                                        <div style="font-size: 8px; color: #666;">@combination.Sku</div>
-                                    }
-                                </td>
-                                <td style="text-align: center;">
-                                    @combination.Sku
-                                </td>
-                                <td style="text-align: right;">
-                                    @{
-                                        var casePrice = combination.OverriddenPrice ?? product.Price;
-                                        var caseSize = combination.CaseSize;
-                                    }
-                                    @if (caseSize > 0 && casePrice > 0)
-                                    {
-                                        <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Case</div>
-                                        <div style="font-size: 8px; color: #666;">(@(caseSize.ToString("F0"))x Unit per Case)</div>
-                                    }
-                                    else if (casePrice > 0)
-                                    {
-                                        <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Unit</div>
-                                    }
-                                </td>
+                                <th style="width: 40%;">Product Variant</th>
+                                <th style="width: 20%;">SKU</th>
+                                <th style="width: 40%;">Price / Case Info</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var combination in chunk.OrderBy(c => c.Text))
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: bold;">@(!string.IsNullOrEmpty(combination.Text) ? combination.Text : "Standard Variant")</div>
+                                        @if (!string.IsNullOrEmpty(combination.Sku))
+                                        {
+                                            <div style="font-size: 8px; color: #666;">@combination.Sku</div>
+                                        }
+                                    </td>
+                                    <td style="text-align: center;">
+                                        @combination.Sku
+                                    </td>
+                                    <td style="text-align: right;">
+                                        @{
+                                            var casePrice = combination.OverriddenPrice ?? product.Price;
+                                            var caseSize = combination.CaseSize;
+                                        }
+                                        @if (caseSize > 0 && casePrice > 0)
+                                        {
+                                            <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Case</div>
+                                            <div style="font-size: 8px; color: #666;">(@(caseSize.ToString("F0"))x Unit per Case)</div>
+                                        }
+                                        else if (casePrice > 0)
+                                        {
+                                            <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Unit</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
             }
 
-            @* Display Simple Product Attributes (for products without combinations) *@
+            @* Display Simple Product Attributes (for products without combinations) - limited to prevent overflow *@
             @if (!combinations.Any() && attributeMappings.Any())
             {
                 <table class="simple-attributes-table">
@@ -237,7 +270,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var mapping in attributeMappings.OrderBy(m => m.DisplayOrder))
+                        @foreach (var mapping in attributeMappings.OrderBy(m => m.DisplayOrder).Take(15))
                         {
                             <tr>
                                 <td>
@@ -269,6 +302,14 @@
                                     {
                                         <div style="font-weight: bold;">$@(product.Price.ToString("F2")) /Unit</div>
                                     }
+                                </td>
+                            </tr>
+                        }
+                        @if (attributeMappings.Count() > 15)
+                        {
+                            <tr>
+                                <td colspan="3" style="text-align: center; font-style: italic; color: #666;">
+                                    ... and @(attributeMappings.Count() - 15) more attributes
                                 </td>
                             </tr>
                         }

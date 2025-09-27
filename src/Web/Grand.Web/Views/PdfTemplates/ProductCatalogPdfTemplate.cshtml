@@ -360,7 +360,7 @@
                                         else if (cell.FinalPrice > 0)
                                         {
                                             <div style="font-weight: bold;">$@(cell.FinalPrice.ToString("F2")) /Unit</div>
-                                            @if (cell.Value.OverriddenPrice.HasValue)
+                                            @if (cell.Value.OverriddenPrice != null)
                                             {
                                                 <div style="font-size: 7px; color: #666;">Override Price</div>
                                             }

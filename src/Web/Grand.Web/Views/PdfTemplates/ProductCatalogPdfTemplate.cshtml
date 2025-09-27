@@ -1,0 +1,223 @@
+@using Grand.Business.Core.Interfaces.Catalog.Products
+@using Grand.Business.Core.Interfaces.Common.Directory
+@using Grand.Business.Core.Interfaces.Common.Localization
+@using Grand.Domain.Catalog
+@using System.Globalization
+@model IList<Grand.Domain.Catalog.Product>
+@inject IProductAttributeService _productAttributeService
+@inject IContextAccessor _contextAccessor
+@inject ITranslationService _translationService
+
+@{
+    var companyName = _contextAccessor.StoreContext.CurrentStore.CompanyName;
+    var printDate = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    // Group products by product type for better organization
+    var groupedProducts = Model.GroupBy(p => p.ProductTypeId.ToString())
+        .OrderBy(g => g.Key)
+        .ToList();
+}
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Product Catalog</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            margin: 20px;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .company-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .print-info {
+            font-size: 8px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .category-header {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 8px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .product-group {
+            margin-bottom: 20px;
+        }
+
+        .product-group-header {
+            background-color: #e8e8e8;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+        }
+
+        .product-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .product-table td {
+            border: 1px solid #ddd;
+            padding: 4px 6px;
+            vertical-align: top;
+            font-size: 8px;
+        }
+
+        .product-name {
+            font-weight: bold;
+            font-size: 9px;
+        }
+
+        .product-details {
+            color: #666;
+            font-size: 7px;
+            line-height: 1.2;
+        }
+
+        .price-info {
+            font-weight: bold;
+            color: #000;
+            text-align: right;
+        }
+
+        .strain-info {
+            font-style: italic;
+            color: #555;
+        }
+
+        .footer {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            font-size: 7px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">@companyName</div>
+        <div class="print-info">
+            Product Catalog - Printed on: @printDate
+        </div>
+    </div>
+
+    @foreach (var categoryGroup in groupedProducts)
+    {
+        <div class="category-header">@categoryGroup.Key</div>
+
+        <table class="product-table">
+            @{
+                var productsInRows = categoryGroup.ToList();
+                var itemsPerRow = 3; // Show 3 products per row like in the example
+            }
+
+            @for (int i = 0; i < productsInRows.Count(); i += itemsPerRow)
+            {
+                <tr>
+                    @for (int j = i; j < Math.Min(i + itemsPerRow, productsInRows.Count()); j++)
+                    {
+                        var product = productsInRows[j];
+                        var combinations = product.ProductAttributeCombinations?.Where(c => !string.IsNullOrEmpty(c.Sku)).ToList() ?? new List<ProductAttributeCombination>();
+
+                        <td style="width: 33%;">
+                            <div class="product-name">@product.Name</div>
+                            <div class="product-details">
+                                @if (!string.IsNullOrEmpty(product.Sku))
+                                {
+                                    <div>SKU: @product.Sku</div>
+                                }
+
+                                @if (combinations.Any())
+                                {
+                                    foreach (var combination in combinations.Take(1)) // Show primary combination
+                                    {
+                                        @if (!string.IsNullOrEmpty(combination.Sku))
+                                        {
+                                            <div>@combination.Sku</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(combination.Text))
+                                        {
+                                            <div class="strain-info">@combination.Text</div>
+                                        }
+                                    }
+                                }
+
+                                @if (!string.IsNullOrEmpty(product.ShortDescription))
+                                {
+                                    <div>@Html.Raw(product.ShortDescription.Length > 100 ? product.ShortDescription.Substring(0, 100) + "..." : product.ShortDescription)</div>
+                                }
+                            </div>
+
+                            @{
+                                var priceInfo = "";
+                                var caseSize = 0.0;
+
+                                if (combinations.Any())
+                                {
+                                    var primaryCombo = combinations.FirstOrDefault();
+                                    if (primaryCombo?.CaseSize > 0)
+                                    {
+                                        caseSize = primaryCombo.CaseSize;
+                                        var casePrice = primaryCombo.OverriddenPrice ?? product.Price;
+                                        priceInfo = $"${casePrice:F2} /Case ({caseSize:F0}x Unit per Case)";
+                                    }
+                                }
+
+                                if (string.IsNullOrEmpty(priceInfo) && product.Price > 0)
+                                {
+                                    priceInfo = $"${product.Price:F2} /Unit";
+                                }
+                            }
+
+                            @if (!string.IsNullOrEmpty(priceInfo))
+                            {
+                                <div class="price-info">@priceInfo</div>
+                            }
+
+                            @* Add product type information if available *@
+                            @if (product.ProductTypeId != ProductType.SimpleProduct)
+                            {
+                                <div class="strain-info">@product.ProductTypeId</div>
+                            }
+                        </td>
+                    }
+
+                    @* Fill remaining cells if needed *@
+                    @for (int k = productsInRows.Count() % itemsPerRow; k > 0 && k < itemsPerRow; k++)
+                    {
+                        <td style="width: 33%;"></td>
+                    }
+                </tr>
+            }
+        </table>
+    }
+
+    <div class="footer">
+        Product details and quantities listed are valid as of the date above and may change.<br/>
+        This catalog is strictly intended for clients possessing the proper license to purchase these products.
+    </div>
+</body>
+</html>

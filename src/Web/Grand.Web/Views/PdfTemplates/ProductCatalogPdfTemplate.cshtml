@@ -12,10 +12,8 @@
     var companyName = _contextAccessor.StoreContext.CurrentStore.CompanyName;
     var printDate = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    // Group products by product type for better organization
-    var groupedProducts = Model.GroupBy(p => p.ProductTypeId.ToString())
-        .OrderBy(g => g.Key)
-        .ToList();
+    // Order products by name for individual display
+    var orderedProducts = Model.OrderBy(p => p.Name).ToList();
 }
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -48,40 +46,77 @@
             margin-top: 10px;
         }
 
-        .category-header {
+        .product-section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+
+        .product-header {
             background-color: #f0f0f0;
             font-weight: bold;
             font-size: 12px;
-            padding: 8px;
-            margin-top: 20px;
+            padding: 10px;
             margin-bottom: 10px;
             border: 1px solid #ddd;
+            border-radius: 4px;
         }
 
-        .product-group {
-            margin-bottom: 20px;
-        }
-
-        .product-group-header {
-            background-color: #e8e8e8;
+        .product-title {
+            font-size: 14px;
             font-weight: bold;
-            font-size: 10px;
-            padding: 5px 8px;
-            border: 1px solid #ccc;
-            margin-bottom: 5px;
+            color: #333;
         }
 
-        .product-table {
+        .product-sku {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .combination-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15px;
+            border: 1px solid #ddd;
         }
 
-        .product-table td {
+        .combination-table th {
+            background-color: #e8e8e8;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        .combination-table td {
             border: 1px solid #ddd;
-            padding: 4px 6px;
+            padding: 6px 8px;
             vertical-align: top;
-            font-size: 8px;
+            font-size: 9px;
+        }
+
+        .simple-attributes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+        }
+
+        .simple-attributes-table th {
+            background-color: #d4edda;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 8px;
+            border: 1px solid #28a745;
+            text-align: left;
+        }
+
+        .simple-attributes-table td {
+            border: 1px solid #28a745;
+            padding: 6px 8px;
+            vertical-align: top;
+            font-size: 9px;
         }
 
         .product-name {
@@ -124,95 +159,141 @@
         </div>
     </div>
 
-    @foreach (var categoryGroup in groupedProducts)
+    @foreach (var product in orderedProducts)
     {
-        <div class="category-header">@categoryGroup.Key</div>
+        var combinations = product.ProductAttributeCombinations?.Where(c => !string.IsNullOrEmpty(c.Sku) || c.CaseSize > 0).ToList() ?? new List<ProductAttributeCombination>();
+        var attributeMappings = product.ProductAttributeMappings?.ToList() ?? new List<ProductAttributeMapping>();
 
-        <table class="product-table">
-            @{
-                var productsInRows = categoryGroup.ToList();
-                var itemsPerRow = 3; // Show 3 products per row like in the example
-            }
+        <div class="product-section">
+            <div class="product-header">
+                <div class="product-title">@product.Name</div>
+                @if (!string.IsNullOrEmpty(product.Sku))
+                {
+                    <div class="product-sku">SKU: @product.Sku</div>
+                }
+                @if (!string.IsNullOrEmpty(product.ShortDescription))
+                {
+                    <div style="font-size: 10px; color: #666; margin-top: 5px;">
+                        @Html.Raw(product.ShortDescription.Length > 200 ? product.ShortDescription.Substring(0, 200) + "..." : product.ShortDescription)
+                    </div>
+                }
+            </div>
 
-            @for (int i = 0; i < productsInRows.Count(); i += itemsPerRow)
+            @* Display Product Attribute Combinations *@
+            @if (combinations.Any())
             {
-                <tr>
-                    @for (int j = i; j < Math.Min(i + itemsPerRow, productsInRows.Count()); j++)
-                    {
-                        var product = productsInRows[j];
-                        var combinations = product.ProductAttributeCombinations?.Where(c => !string.IsNullOrEmpty(c.Sku)).ToList() ?? new List<ProductAttributeCombination>();
-
-                        <td style="width: 33%;">
-                            <div class="product-name">@product.Name</div>
-                            <div class="product-details">
-                                @if (!string.IsNullOrEmpty(product.Sku))
-                                {
-                                    <div>SKU: @product.Sku</div>
-                                }
-
-                                @if (combinations.Any())
-                                {
-                                    foreach (var combination in combinations.Take(1)) // Show primary combination
+                <table class="combination-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">Product Variant</th>
+                            <th style="width: 20%;">SKU</th>
+                            <th style="width: 40%;">Price / Case Info</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var combination in combinations.OrderBy(c => c.Text))
+                        {
+                            <tr>
+                                <td>
+                                    <div style="font-weight: bold;">@(!string.IsNullOrEmpty(combination.Text) ? combination.Text : "Standard Variant")</div>
+                                    @if (!string.IsNullOrEmpty(combination.Sku))
                                     {
-                                        @if (!string.IsNullOrEmpty(combination.Sku))
-                                        {
-                                            <div>@combination.Sku</div>
-                                        }
-                                        @if (!string.IsNullOrEmpty(combination.Text))
-                                        {
-                                            <div class="strain-info">@combination.Text</div>
-                                        }
+                                        <div style="font-size: 8px; color: #666;">@combination.Sku</div>
                                     }
-                                }
-
-                                @if (!string.IsNullOrEmpty(product.ShortDescription))
-                                {
-                                    <div>@Html.Raw(product.ShortDescription.Length > 100 ? product.ShortDescription.Substring(0, 100) + "..." : product.ShortDescription)</div>
-                                }
-                            </div>
-
-                            @{
-                                var priceInfo = "";
-                                var caseSize = 0.0;
-
-                                if (combinations.Any())
-                                {
-                                    var primaryCombo = combinations.FirstOrDefault();
-                                    if (primaryCombo?.CaseSize > 0)
+                                </td>
+                                <td style="text-align: center;">
+                                    @combination.Sku
+                                </td>
+                                <td style="text-align: right;">
+                                    @{
+                                        var casePrice = combination.OverriddenPrice ?? product.Price;
+                                        var caseSize = combination.CaseSize;
+                                    }
+                                    @if (caseSize > 0 && casePrice > 0)
                                     {
-                                        caseSize = primaryCombo.CaseSize;
-                                        var casePrice = primaryCombo.OverriddenPrice ?? product.Price;
-                                        priceInfo = $"${casePrice:F2} /Case ({caseSize:F0}x Unit per Case)";
+                                        <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Case</div>
+                                        <div style="font-size: 8px; color: #666;">(@(caseSize.ToString("F0"))x Unit per Case)</div>
                                     }
-                                }
-
-                                if (string.IsNullOrEmpty(priceInfo) && product.Price > 0)
-                                {
-                                    priceInfo = $"${product.Price:F2} /Unit";
-                                }
-                            }
-
-                            @if (!string.IsNullOrEmpty(priceInfo))
-                            {
-                                <div class="price-info">@priceInfo</div>
-                            }
-
-                            @* Add product type information if available *@
-                            @if (product.ProductTypeId != ProductType.SimpleProduct)
-                            {
-                                <div class="strain-info">@product.ProductTypeId</div>
-                            }
-                        </td>
-                    }
-
-                    @* Fill remaining cells if needed *@
-                    @for (int k = productsInRows.Count() % itemsPerRow; k > 0 && k < itemsPerRow; k++)
-                    {
-                        <td style="width: 33%;"></td>
-                    }
-                </tr>
+                                    else if (casePrice > 0)
+                                    {
+                                        <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Unit</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             }
-        </table>
+
+            @* Display Simple Product Attributes (for products without combinations) *@
+            @if (!combinations.Any() && attributeMappings.Any())
+            {
+                <table class="simple-attributes-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">Attribute</th>
+                            <th style="width: 30%;">Options</th>
+                            <th style="width: 40%;">Price Information</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mapping in attributeMappings.OrderBy(m => m.DisplayOrder))
+                        {
+                            <tr>
+                                <td>
+                                    <div style="font-weight: bold;">@mapping.ProductAttributeId</div>
+                                    @if (mapping.IsRequired)
+                                    {
+                                        <div style="font-size: 8px; color: #d32f2f;">*Required</div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (mapping.ProductAttributeValues?.Any() == true)
+                                    {
+                                        @foreach (var value in mapping.ProductAttributeValues.Take(3))
+                                        {
+                                            <div style="font-size: 8px;">• @value.Name</div>
+                                        }
+                                        @if (mapping.ProductAttributeValues.Count() > 3)
+                                        {
+                                            <div style="font-size: 8px; color: #666;">+@(mapping.ProductAttributeValues.Count() - 3) more...</div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div style="font-size: 8px; color: #666;">Various options</div>
+                                    }
+                                </td>
+                                <td style="text-align: right;">
+                                    @if (product.Price > 0)
+                                    {
+                                        <div style="font-weight: bold;">$@(product.Price.ToString("F2")) /Unit</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            @* Fallback for products with no combinations and no attributes *@
+            @if (!combinations.Any() && !attributeMappings.Any() && product.Price > 0)
+            {
+                <table class="simple-attributes-table">
+                    <tbody>
+                        <tr>
+                            <td style="width: 60%;">
+                                <div style="font-weight: bold;">Standard Product</div>
+                                <div style="font-size: 8px; color: #666;">No variations available</div>
+                            </td>
+                            <td style="width: 40%; text-align: right;">
+                                <div style="font-weight: bold;">$@(product.Price.ToString("F2")) /Unit</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+        </div>
     }
 
     <div class="footer">

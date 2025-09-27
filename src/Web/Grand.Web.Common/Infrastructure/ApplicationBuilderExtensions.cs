@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
+using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -191,8 +192,42 @@ public static class ApplicationBuilderExtensions
     /// <param name="application">Builder for configuring an application's request pipeline</param>
     public static void UseGrandForwardedHeaders(this WebApplication application)
     {
-        application.UseForwardedHeaders(new ForwardedHeadersOptions {
-            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        var forwardedHeadersOptions = new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+            RequireHeaderSymmetry = false,
+            ForwardLimit = 5 // Allow for multiple proxy hops
+        };
+
+        // Trust your HAProxy server (both IPs seen in logs)
+        forwardedHeadersOptions.KnownProxies.Add(IPAddress.Parse("192.168.1.40"));
+        forwardedHeadersOptions.KnownProxies.Add(IPAddress.Parse("192.168.1.175"));
+
+        // Trust Docker gateway (in case HAProxy connects through Docker network)
+        forwardedHeadersOptions.KnownProxies.Add(IPAddress.Parse("172.19.0.1"));
+
+        // Trust entire local network range - this should handle the HAProxy IP forwarding
+        forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("192.168.1.0"), 24));
+
+        // Trust entire Docker network range
+        forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("172.19.0.0"), 16));
+
+        // Clear known networks and proxies to trust all (more permissive approach)
+        forwardedHeadersOptions.KnownNetworks.Clear();
+        forwardedHeadersOptions.KnownProxies.Clear();
+
+        application.UseForwardedHeaders(forwardedHeadersOptions);
+
+        // Debug middleware to log forwarded headers
+        application.Use(async (context, next) =>
+        {
+            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ForwardedHeadersDebug");
+            logger.LogInformation($"Original RemoteIpAddress: {context.Connection.RemoteIpAddress}");
+            logger.LogInformation($"X-Forwarded-For: {context.Request.Headers["X-Forwarded-For"]}");
+            logger.LogInformation($"X-Forwarded-Proto: {context.Request.Headers["X-Forwarded-Proto"]}");
+            logger.LogInformation($"X-Forwarded-Host: {context.Request.Headers["X-Forwarded-Host"]}");
+
+            await next();
         });
     }
 

@@ -135,9 +135,18 @@
                                         break;
                                 }
                             }
-                            <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId })">
-                                @Model.PaymentStatus
-                            </a>
+                            @if (string.IsNullOrEmpty(Model.PaymentTransactionId))
+                            {
+                                <a class="btn btn-primary btn-sm" href="@Url.Action("CreatePaymentTransaction", "Order", new { id = Model.Id })">
+                                    <i class="fa fa-plus"></i> Create Payment
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId })">
+                                    @Model.PaymentStatus
+                                </a>
+                            }
                         </div>
                     </div>
                     

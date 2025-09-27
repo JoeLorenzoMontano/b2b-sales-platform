@@ -2,6 +2,7 @@
 using Grand.Business.Core.Interfaces.Catalog.Brands;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Checkout.Orders;
+using Grand.Business.Core.Interfaces.Checkout.Payments;
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
@@ -47,7 +48,8 @@ public class OrderController(
     IMediator mediator,
     ISalesEmployeeService _salesEmployeeService,
     IPermissionService _permissionService,
-    IWarehouseService warehouseService)
+    IWarehouseService warehouseService,
+    IPaymentTransactionService paymentTransactionService)
     : BaseAdminController
 {
     #region Utilities
@@ -1258,7 +1260,47 @@ public class OrderController(
 
         return RedirectToAction("Edit", "Order", new { id });
     }
-    
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    public async Task<IActionResult> CreatePaymentTransaction(string id)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            //No order found with the specified id
+            return RedirectToAction("List");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return RedirectToAction("Edit", "Order", new { id });
+
+        // Check if payment transaction already exists
+        var existingTransaction = await paymentTransactionService.GetOrderByGuid(order.OrderGuid);
+        if (existingTransaction != null)
+            return RedirectToAction("Edit", "PaymentTransaction", new { id = existingTransaction.Id, area = "Admin" });
+
+        // Create new payment transaction
+        var paymentTransaction = new Domain.Payments.PaymentTransaction
+        {
+            OrderCode = order.Code,
+            OrderGuid = order.OrderGuid,
+            CustomerEmail = order.CustomerEmail,
+            CustomerId = order.CustomerId,
+            CurrencyCode = order.CustomerCurrencyCode,
+            TransactionAmount = order.OrderTotal,
+            PaidAmount = 0,
+            RefundedAmount = 0,
+            PaymentMethodSystemName = order.PaymentMethodSystemName ?? "Manual",
+            TransactionStatus = TransactionStatus.Pending,
+            StoreId = order.StoreId,
+            IPAddress = string.Empty,
+            CreatedOnUtc = DateTime.UtcNow
+        };
+
+        await paymentTransactionService.InsertPaymentTransaction(paymentTransaction);
+
+        return RedirectToAction("Edit", "PaymentTransaction", new { id = paymentTransaction.Id, area = "Admin" });
+    }
+
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
     [ValidateAntiForgeryToken]

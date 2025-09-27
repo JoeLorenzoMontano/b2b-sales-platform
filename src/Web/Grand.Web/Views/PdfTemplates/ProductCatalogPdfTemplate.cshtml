@@ -258,63 +258,125 @@
                 }
             }
 
-            @* Display Simple Product Attributes (for products without combinations) - limited to prevent overflow *@
+            @* Display Simple Product Attributes as Individual Product Cells (for products without combinations) *@
             @if (!combinations.Any() && attributeMappings.Any())
             {
-                <table class="simple-attributes-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 30%;">Attribute</th>
-                            <th style="width: 30%;">Options</th>
-                            <th style="width: 40%;">Price Information</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var mapping in attributeMappings.OrderBy(m => m.DisplayOrder).Take(15))
+                // Collect all attribute values into individual product cells
+                var attributeValueCells = new List<dynamic>();
+                foreach (var mapping in attributeMappings.OrderBy(m => m.DisplayOrder))
+                {
+                    if (mapping.ProductAttributeValues?.Any() == true)
+                    {
+                        foreach (var value in mapping.ProductAttributeValues.OrderBy(v => v.DisplayOrder))
                         {
-                            <tr>
-                                <td>
-                                    <div style="font-weight: bold;">@mapping.ProductAttributeId</div>
-                                    @if (mapping.IsRequired)
-                                    {
-                                        <div style="font-size: 8px; color: #d32f2f;">*Required</div>
-                                    }
-                                </td>
-                                <td>
-                                    @if (mapping.ProductAttributeValues?.Any() == true)
-                                    {
-                                        @foreach (var value in mapping.ProductAttributeValues.Take(3))
-                                        {
-                                            <div style="font-size: 8px;">• @value.Name</div>
-                                        }
-                                        @if (mapping.ProductAttributeValues.Count() > 3)
-                                        {
-                                            <div style="font-size: 8px; color: #666;">+@(mapping.ProductAttributeValues.Count() - 3) more...</div>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <div style="font-size: 8px; color: #666;">Various options</div>
-                                    }
-                                </td>
-                                <td style="text-align: right;">
-                                    @if (product.Price > 0)
-                                    {
-                                        <div style="font-weight: bold;">$@(product.Price.ToString("F2")) /Unit</div>
-                                    }
-                                </td>
-                            </tr>
+                            attributeValueCells.Add(new {
+                                Mapping = mapping,
+                                Value = value,
+                                FinalPrice = value.OverriddenPrice ?? (product.Price + value.PriceAdjustment)
+                            });
                         }
-                        @if (attributeMappings.Count() > 15)
-                        {
+                    }
+                }
+
+                // Chunk the attribute values to prevent table overflow - max 20 per table
+                const int maxAttributeValuesPerTable = 20;
+                var attributeValueChunks = new List<List<dynamic>>();
+
+                if (attributeValueCells.Count > maxAttributeValuesPerTable)
+                {
+                    for (int i = 0; i < attributeValueCells.Count; i += maxAttributeValuesPerTable)
+                    {
+                        attributeValueChunks.Add(attributeValueCells.Skip(i).Take(maxAttributeValuesPerTable).ToList());
+                    }
+                }
+                else if (attributeValueCells.Any())
+                {
+                    attributeValueChunks.Add(attributeValueCells);
+                }
+
+                @for (int chunkIndex = 0; chunkIndex < attributeValueChunks.Count; chunkIndex++)
+                {
+                    var chunk = attributeValueChunks[chunkIndex];
+
+                    @if (chunkIndex > 0)
+                    {
+                        <div style="page-break-before: always;"></div>
+                        <div class="product-header" style="margin-top: 0;">
+                            <div class="product-title">@product.Name (continued)</div>
+                            <div class="product-sku">Part @(chunkIndex + 1) of @attributeValueChunks.Count</div>
+                        </div>
+                    }
+
+                    <table class="simple-attributes-table">
+                        <thead>
                             <tr>
-                                <td colspan="3" style="text-align: center; font-style: italic; color: #666;">
-                                    ... and @(attributeMappings.Count() - 15) more attributes
-                                </td>
+                                <th style="width: 50%;">Product Variant</th>
+                                <th style="width: 25%;">Details</th>
+                                <th style="width: 25%;">Price Information</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var cell in chunk)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: bold; font-size: 9px;">@cell.Value.Name</div>
+                                        @if (cell.Mapping.IsRequired)
+                                        {
+                                            <div style="font-size: 7px; color: #d32f2f;">*Required</div>
+                                        }
+                                        @if (cell.Value.AllowSample)
+                                        {
+                                            <div style="font-size: 7px; color: #2e7d32;">Sample Available</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (cell.Value.PriceAdjustment != 0)
+                                        {
+                                            <div style="font-size: 8px;">
+                                                Price Adj: @(cell.Value.PriceAdjustment > 0 ? "+" : "")@cell.Value.PriceAdjustment.ToString("F2")
+                                            </div>
+                                        }
+                                        @if (cell.Value.WeightAdjustment != 0)
+                                        {
+                                            <div style="font-size: 8px;">
+                                                Weight: @(cell.Value.WeightAdjustment > 0 ? "+" : "")@cell.Value.WeightAdjustment.ToString("F2")
+                                            </div>
+                                        }
+                                        @if (cell.Value.Cost > 0)
+                                        {
+                                            <div style="font-size: 8px;">Cost: $@cell.Value.Cost.ToString("F2")</div>
+                                        }
+                                        @if (cell.Value.Quantity > 0)
+                                        {
+                                            <div style="font-size: 8px;">Qty: @cell.Value.Quantity.ToString("F0")</div>
+                                        }
+                                    </td>
+                                    <td style="text-align: right;">
+                                        @if (cell.Value.AllowSample)
+                                        {
+                                            <div style="font-weight: bold; color: #2e7d32;">Sample - Free</div>
+                                        }
+                                        else if (cell.FinalPrice > 0)
+                                        {
+                                            <div style="font-weight: bold;">$@(cell.FinalPrice.ToString("F2")) /Unit</div>
+                                            @if (cell.Value.OverriddenPrice.HasValue)
+                                            {
+                                                <div style="font-size: 7px; color: #666;">Override Price</div>
+                                            }
+                                            else if (cell.Value.PriceAdjustment != 0)
+                                            {
+                                                <div style="font-size: 7px; color: #666;">
+                                                    Base: $@product.Price.ToString("F2")
+                                                </div>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
             }
 
             @* Fallback for products with no combinations and no attributes *@

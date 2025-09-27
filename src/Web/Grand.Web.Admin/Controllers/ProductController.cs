@@ -3,6 +3,7 @@ using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
+using Grand.Business.Core.Interfaces.Common.Pdf;
 using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Interfaces.Storage;
@@ -1562,6 +1563,26 @@ public class ProductController : BaseAdminController
 
             Success(_translationService.GetResource("Admin.Catalog.Products.Imported"));
             return RedirectToAction("List");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportProductsPdf(ProductListModel model,
+        [FromServices] IPdfService pdfService)
+    {
+        var products = await _productViewModelService.PrepareProducts(model);
+        try
+        {
+            var fileName = $"products_catalog_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";
+            using var stream = new MemoryStream();
+            await pdfService.PrintProductCatalogToPdf(stream, products);
+            return File(stream.ToArray(), "application/pdf", fileName);
         }
         catch (Exception exc)
         {

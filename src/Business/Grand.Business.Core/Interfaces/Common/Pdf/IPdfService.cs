@@ -1,3 +1,4 @@
+using Grand.Domain.Catalog;
 using Grand.Domain.Orders;
 using Grand.Domain.Shipping;
 
@@ -51,4 +52,11 @@ public interface IPdfService
     /// <param name="shipments">Shipments</param>
     /// <param name="languageId">Language identifier; 0 to use a language used when placing an order</param>
     Task PrintPackagingSlipsToPdf(Stream stream, IList<Shipment> shipments, string languageId = "");
+
+    /// <summary>
+    ///     Print product catalog to PDF
+    /// </summary>
+    /// <param name="stream">Stream</param>
+    /// <param name="products">Products</param>
+    Task PrintProductCatalogToPdf(Stream stream, IList<Product> products);
 }

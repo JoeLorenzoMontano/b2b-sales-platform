@@ -367,6 +367,9 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
     [GrandResourceDisplayName("Admin.Catalog.Products.Fields.Published")]
     public bool Published { get; set; }
 
+    [GrandResourceDisplayName("Admin.Catalog.Products.Fields.HideFromCatalog")]
+    public bool HideFromCatalog { get; set; }
+
     [GrandResourceDisplayName("Admin.Catalog.Products.Fields.CreatedOn")]
     public DateTime? CreatedOn { get; set; }
 

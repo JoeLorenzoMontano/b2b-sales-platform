@@ -1576,7 +1576,9 @@ public class ProductController : BaseAdminController
     public async Task<IActionResult> ExportProductsPdf(ProductListModel model,
         [FromServices] IPdfService pdfService)
     {
-        var products = await _productViewModelService.PrepareProducts(model);
+        var allProducts = await _productViewModelService.PrepareProducts(model);
+        // Filter out products hidden from catalog
+        var products = allProducts.Where(p => !p.HideFromCatalog).ToList();
         try
         {
             var fileName = $"products_catalog_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";

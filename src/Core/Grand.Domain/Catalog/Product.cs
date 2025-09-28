@@ -593,6 +593,11 @@ public class Product : BaseEntity, ITranslationEntity, ISlugEntity, IGroupLinkEn
     public bool Published { get; set; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether the product should be hidden from catalog exports (like PDF catalogs)
+    /// </summary>
+    public bool HideFromCatalog { get; set; }
+
+    /// <summary>
     ///     Gets or sets the sold
     /// </summary>
     public int Sold { get; set; }

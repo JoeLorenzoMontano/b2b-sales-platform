@@ -741,7 +741,7 @@ function checkShipmentsForInfoTab() {
     }
 
     $.ajax({
-        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))",
         type: "POST",
         data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
         dataType: "json",
@@ -779,7 +779,7 @@ function sendToReverificationFromInfoTab(orderId) {
     }
 
     $.ajax({
-        url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Constants.AreaAdmin }))",
+          url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))",
         type: "POST",
         data: addAntiForgeryToken({ orderId: orderId }),
         dataType: "json",

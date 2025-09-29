@@ -76,6 +76,7 @@
                                     </content>
                                 </tabstrip-item>
                             }
+                            @* Products tab commented out - all functionality now available in Info tab
                             <tabstrip-item text="@Loc["Admin.Orders.Products"]" tab-index="3">
                                 <content>
                                     <div>
@@ -83,6 +84,7 @@
                                     </div>
                                 </content>
                             </tabstrip-item>
+                            *@
                             @if (Model.IsShippable)
                             {
                                 <tabstrip-item text="@Loc["Admin.Orders.Fulfillment"]" tab-index="4">

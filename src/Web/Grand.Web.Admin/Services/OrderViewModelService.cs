@@ -732,6 +732,8 @@ public class OrderViewModelService : IOrderViewModelService
             model.Profit = _priceFormatter.FormatPrice(profit, primaryStoreCurrency);
         }
 
+        // Currency conversion display disabled - site uses USD only
+        /*
         if (order.PrimaryCurrencyCode != order.CustomerCurrencyCode)
         {
             model.OrderTotal +=
@@ -772,6 +774,7 @@ public class OrderViewModelService : IOrderViewModelService
                 model.RefundedAmount +=
                     $" ({_priceFormatter.FormatPrice(order.RefundedAmount / order.CurrencyRate, primaryStoreCurrency)})";
         }
+        */
 
         #endregion
 
@@ -976,6 +979,8 @@ public class OrderViewModelService : IOrderViewModelService
             orderItemModel.SubTotalInclTax = _priceFormatter.FormatPrice(orderItem.PriceInclTax, orderCurrency);
             orderItemModel.SubTotalExclTax = _priceFormatter.FormatPrice(orderItem.PriceExclTax, orderCurrency);
 
+            // Currency conversion display disabled - site uses USD only
+            /*
             if (order.PrimaryCurrencyCode != order.CustomerCurrencyCode)
             {
                 orderItemModel.UnitPriceInclTax +=
@@ -991,6 +996,7 @@ public class OrderViewModelService : IOrderViewModelService
                 orderItemModel.SubTotalExclTax +=
                     $" ({_priceFormatter.FormatPrice(orderItem.PriceExclTax / order.CurrencyRate, primaryStoreCurrency)})";
             }
+            */
 
             // commission
             orderItemModel.CommissionValue = orderItem.Commission;

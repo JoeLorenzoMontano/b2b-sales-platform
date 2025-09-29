@@ -348,13 +348,14 @@ public class ProductController : BasePublicController
         {
             quantity = parsedQuantity;
         }
-        
-        // Get sample pricing preference from the request
+        // COMMENTED OUT: Get sample pricing preference from the request
+        /*
         bool enableSamplePricing = true; // Default to true
         if (Request.Form.ContainsKey("EnableSamplePricing") && bool.TryParse(Request.Form["EnableSamplePricing"], out bool parsedSamplePricing))
         {
             enableSamplePricing = parsedSamplePricing;
         }
+        */
 
         var modelProduct = await _mediator.Send(new GetProductDetailsAttributeChange {
             Currency = _contextAccessor.WorkContext.WorkingCurrency,
@@ -363,7 +364,7 @@ public class ProductController : BasePublicController
             Model = model,
             Product = product,
             Quantity = quantity,
-            EnableSamplePricing = enableSamplePricing
+            EnableSamplePricing = true // enableSamplePricing
         });
 
         // Properly serialize SelectListItem objects into simpler JSON objects
@@ -385,7 +386,7 @@ public class ProductController : BasePublicController
             notAvailableAttributeMappingids = modelProduct.NotAvailableAttributeMappingids.ToArray(),
             pictureFullSizeUrl = modelProduct.PictureFullSizeUrl,
             pictureDefaultSizeUrl = modelProduct.PictureDefaultSizeUrl,
-            sampleEnabled = modelProduct.SampleEnabled,
+            sampleEnabled = false, // modelProduct.SampleEnabled,
             allowedQuantities = allowedQuantitiesArray,
             caseSize = modelProduct.CaseSize
         });

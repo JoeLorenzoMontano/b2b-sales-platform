@@ -318,8 +318,8 @@
                                 var event = new Event('change');
                                 quantitySelect.dispatchEvent(event);
                             }
-                            
-                            // Show or hide the sample notification
+                            // COMMENTED OUT: Show or hide the sample notification
+                            /*
                             var sampleNotification = document.querySelector('#sample-notification-@Model.Id');
                             if (!sampleNotification) {
                                 // Create notification if it doesn't exist
@@ -328,13 +328,13 @@
                                 sampleNotification.className = 'sample-notification alert alert-info mt-2';
                                 sampleNotification.style.display = 'none';
                                 sampleNotification.innerHTML = '<small>Sample size (1) available for this product</small>';
-                                
+
                                 // Insert after the quantity dropdown
                                 if (quantitySelect) {
                                     quantitySelect.parentNode.insertBefore(sampleNotification, quantitySelect.nextSibling);
                                 }
                             }
-                            
+
                             // Show or hide based on SampleEnabled
                             if (response.data.sampleEnabled) {
                                 sampleNotification.style.display = 'block';
@@ -479,13 +479,14 @@
                                 }
                             } else {
                                 sampleNotification.style.display = 'none';
-                                
+
                                 // Hide the sample indicator if it exists
                                 var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
                                 if (sampleIndicator) {
                                     sampleIndicator.style.display = 'none';
                                 }
                             }
+                            */
                         }
                     });
                 },

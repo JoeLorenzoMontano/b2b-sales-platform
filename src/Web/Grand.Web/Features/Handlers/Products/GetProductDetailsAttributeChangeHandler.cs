@@ -142,8 +142,8 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
                     
                 finalPrice = unitprice.unitprice;
             }
-            
-            // Check if this is a sample selection (just for UI indication, not price)
+            // COMMENTED OUT: Check if this is a sample selection (just for UI indication, not price)
+            /*
             if (customAttributes != null && customAttributes.Any())
             {
                 var attributeValues = request.Product.ParseProductAttributeValues(customAttributes);
@@ -151,13 +151,14 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
                 {
                     model.SampleEnabled = true;
                 }
-                
+
                 var combination = request.Product.FindProductAttributeCombination(customAttributes);
                 if (combination != null && combination.AllowSample)
                 {
                     model.SampleEnabled = true;
                 }
             }
+            */
             
             var productprice = await _taxService.GetProductPrice(request.Product, finalPrice);
             var finalPriceWithDiscount = productprice.productprice;
@@ -272,13 +273,14 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         
         if (combination != null)
         {
-            // Check if combination has sample quantities defined
+            // COMMENTED OUT: Check if combination has sample quantities defined
+            /*
             var sampleQuantities = combination.GetSampleQuantities();
             if (sampleQuantities.Length > 0)
             {
                 // Set the sample availability flag on the model
                 model.SampleEnabled = true;
-                
+
                 // Add all sample quantities to the allowed quantities list
                 foreach (var sampleQty in sampleQuantities)
                 {
@@ -293,12 +295,13 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             {
                 // Set the sample availability flag on the model
                 model.SampleEnabled = true;
-                
+
                 // Remove 1 if it exists already (to avoid duplicates)
                 allowedQuantitiesList.Remove(1);
                 // Add sample quantity (1) at the beginning of the list
                 allowedQuantitiesList.Insert(0, 1);
             }
+            */
         }
         
         // Set case size if combination exists
@@ -308,17 +311,18 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         }
         else
         {
-            model.SampleEnabled = false;
+            // COMMENTED OUT: Set sample enabled to false
+            // model.SampleEnabled = false;
         }
         
         // Add quantities to the model
         foreach (var qty in allowedQuantitiesList)
         {
-            // Check if this quantity is a sample quantity
-            bool isSampleQuantity = combination != null && combination.IsSampleQuantity(qty);
-            
+            // COMMENTED OUT: Check if this quantity is a sample quantity
+            // bool isSampleQuantity = combination != null && combination.IsSampleQuantity(qty);
+
             model.AllowedQuantities.Add(new SelectListItem {
-                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.') + (isSampleQuantity ? " (Sample)" : ""),
+                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.'), // + (isSampleQuantity ? " (Sample)" : ""),
                 Value = qty.ToString("F2").TrimEnd('0').TrimEnd('.')
             });
         }

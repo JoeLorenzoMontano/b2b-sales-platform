@@ -211,11 +211,11 @@
                         // Add the current quantity value
                         data.append('EnteredQuantity', qtyInput.value);
                     }
-                    
-                    // Add sample pricing preference to form data
-                    var enableSamplePricing = window['enableSamplePricing_@(Model.Id)'] !== undefined ? 
-                        window['enableSamplePricing_@(Model.Id)'] : true;
-                    data.append('EnableSamplePricing', enableSamplePricing);
+
+                    // COMMENTED OUT: Add sample pricing preference to form data
+                    // var enableSamplePricing = window['enableSamplePricing_@(Model.Id)'] !== undefined ?
+                    //     window['enableSamplePricing_@(Model.Id)'] : true;
+                    // data.append('EnableSamplePricing', enableSamplePricing);
                     
                     axios({
                         url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
@@ -322,7 +322,8 @@
                                 // to prevent recursion/infinite loops
                             }
                             
-                            // Show or hide the sample notification
+                            // COMMENTED OUT: Show or hide the sample notification
+                            /*
                             var sampleNotification = document.querySelector('#sample-notification-@Model.Id');
                             if (!sampleNotification) {
                                 // Create notification if it doesn't exist
@@ -331,7 +332,7 @@
                                 sampleNotification.className = 'sample-notification alert alert-info mt-2';
                                 sampleNotification.style.display = 'none';
                                 sampleNotification.innerHTML = '<small>Sample size (1) available for this product</small>';
-                                
+
                                 // Insert after the quantity group box instead of inside it
                                 var quantityGroup = document.getElementById('quantity-group-@Model.Id') || document.getElementById('quantity-group-input-@Model.Id');
                                 if (quantityGroup && quantityGroup.parentNode) {
@@ -341,16 +342,16 @@
                                     quantitySelect.parentNode.insertBefore(sampleNotification, quantitySelect.nextSibling);
                                 }
                             }
-                            
+
                             // Show or hide based on SampleEnabled
                             if (response.data.sampleEnabled) {
                                 sampleNotification.style.display = 'block';
-                                
+
                                 // Add event listener to quantity dropdown to show/hide "Ordering Sample" badge
                                 // For case-enabled products, we also need to listen to the case dropdown
                                 var caseSize = window['caseSize_@Model.Id'];
                                 var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
-                                
+
                                 if (quantitySelect && !quantitySelect.hasAttribute('data-sample-listener')) {
                                     // Create or get the sample indicator badge
                                     var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
@@ -366,7 +367,7 @@
                                                 '<small>Free Sample</small>' +
                                             '</label>' +
                                         '</div>';
-                                        
+
                                         // For grouped products, we need to add the indicator within the card body for associated products
                                         var isGroupedProduct = document.querySelector('.product-grouped') !== null;
                                         var formContainer, targetContainer;
@@ -377,11 +378,11 @@
                                             if (formContainer) {
                                                 // Find the card body containing this product's details within the form
                                                 targetContainer = formContainer.querySelector('.card-body');
-                                                
+
                                                 // Create a more noticeable indicator for grouped products
                                                 sampleIndicator.className = 'sample-indicator badge badge-warning mt-2 mb-2 p-2';
                                                 sampleIndicator.style.cssText = 'display:none; font-size:1rem; width:100%; text-align:center; background-color:#ff9800; color:white;';
-                                                
+
                                                 // Insert at beginning of card body, right after the header
                                                 if (targetContainer) {
                                                     var firstElement = targetContainer.querySelector('h5') || targetContainer.firstChild;
@@ -399,7 +400,7 @@
                                                 // Create a more noticeable indicator
                                                 sampleIndicator.className = 'sample-indicator badge badge-warning mt-2 mb-2 p-2';
                                                 sampleIndicator.style.cssText = 'display:none; font-size:1rem; width:100%; text-align:center; background-color:#ff9800; color:white;';
-                                                
+
                                                 // Insert at the top of the form for better visibility
                                                 if (formContainer.firstChild) {
                                                     formContainer.insertBefore(sampleIndicator, formContainer.firstChild);
@@ -409,31 +410,31 @@
                                             }
                                         }
                                     }
-                                    
+
                                     // Add change event listener to update indicator visibility
                                     quantitySelect.addEventListener('change', function() {
                                         // Check if quantity 1 is a sample (look for "(Sample)" in the option text)
                                         var isSample = false;
                                         for (var i = 0; i < quantitySelect.options.length; i++) {
-                                            if (quantitySelect.options[i].value === '1' && 
+                                            if (quantitySelect.options[i].value === '1' &&
                                                 quantitySelect.options[i].text.includes('(Sample)')) {
                                                 isSample = true;
                                                 break;
                                             }
                                         }
-                                        
+
                                         if (this.value === '1' && isSample) {
                                             // Use visibility rather than display for more reliable showing
                                             sampleIndicator.style.display = 'block';
                                             sampleIndicator.style.visibility = 'visible';
                                             sampleIndicator.style.opacity = '1';
-                                            
+
                                             // Removed debug logging
                                         } else {
                                             sampleIndicator.style.display = 'none';
                                             sampleIndicator.style.visibility = 'hidden';
                                             sampleIndicator.style.opacity = '0';
-                                            
+
                                             // Auto-change from 1 if sample is not available
                                             if (this.value === '1' && !isSample && quantitySelect.options.length > 1) {
                                                 // Find the next available quantity (the smallest non-1 value)
@@ -444,7 +445,7 @@
                                                         nextQuantity = val;
                                                     }
                                                 }
-                                                
+
                                                 if (nextQuantity !== null) {
                                                     // Change to the next quantity automatically
                                                     this.value = nextQuantity.toString();
@@ -452,18 +453,18 @@
                                             }
                                         }
                                     });
-                                    
+
                                     // Set initial state based on quantity dropdown value
                                     // First check if quantity 1 is a sample (look for "(Sample)" in the option text)
                                     var initialIsSample = false;
                                     for (var i = 0; i < quantitySelect.options.length; i++) {
-                                        if (quantitySelect.options[i].value === '1' && 
+                                        if (quantitySelect.options[i].value === '1' &&
                                             quantitySelect.options[i].text.includes('(Sample)')) {
                                             initialIsSample = true;
                                             break;
                                         }
                                     }
-                                    
+
                                     if (quantitySelect.value === '1' && initialIsSample) {
                                         sampleIndicator.style.display = 'block';
                                         sampleIndicator.style.visibility = 'visible';
@@ -477,26 +478,26 @@
                                                 nextQuantity = val;
                                             }
                                         }
-                                        
+
                                         if (nextQuantity !== null) {
                                             // Change to the next quantity automatically
                                             quantitySelect.value = nextQuantity.toString();
                                         }
                                     }
-                                    
+
                                     // Mark that we've attached the listener
                                     quantitySelect.setAttribute('data-sample-listener', 'true');
                                 }
-                                
+
                                 // Add event listener to case dropdown for sample detection
                                 if (caseDropdown && caseSize && caseSize > 0 && !caseDropdown.hasAttribute('data-sample-listener')) {
                                     var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
-                                    
+
                                     caseDropdown.addEventListener('change', function() {
                                         // Check if selected case option includes "(Sample)"
                                         var selectedOption = this.options[this.selectedIndex];
                                         var isSample = selectedOption && selectedOption.text.includes('(Sample)');
-                                        
+
                                         if (sampleIndicator) {
                                             if (isSample) {
                                                 sampleIndicator.style.display = 'block';
@@ -509,28 +510,29 @@
                                             }
                                         }
                                     });
-                                    
+
                                     // Set initial state for case dropdown
                                     var initialSelectedOption = caseDropdown.options[caseDropdown.selectedIndex];
                                     var initialIsSample = initialSelectedOption && initialSelectedOption.text.includes('(Sample)');
-                                    
+
                                     if (sampleIndicator && initialIsSample) {
                                         sampleIndicator.style.display = 'block';
                                         sampleIndicator.style.visibility = 'visible';
                                         sampleIndicator.style.opacity = '1';
                                     }
-                                    
+
                                     caseDropdown.setAttribute('data-sample-listener', 'true');
                                 }
                             } else {
                                 sampleNotification.style.display = 'none';
-                                
+
                                 // Hide the sample indicator if it exists
                                 var sampleIndicator = document.querySelector('#sample-indicator-@Model.Id');
                                 if (sampleIndicator) {
                                     sampleIndicator.style.display = 'none';
                                 }
                             }
+                            */
                         }
                         
                         // Update case calculations if case size is available
@@ -605,7 +607,8 @@
         });
         
           // Helper functions for case dropdown functionality
-        // Helper function to detect if current selection is a sample
+        // COMMENTED OUT: Helper function to detect if current selection is a sample
+        /*
         function isSampleSelected_@(Model.Id)() {
             var caseDropdown = document.getElementById('EnteredCases_@Model.Id') || document.getElementById('EnteredCases_input_@Model.Id');
             if (!caseDropdown) return false;
@@ -1093,8 +1096,9 @@
             }
             return '1';
         }
-        
-        // Initialize sample pricing state
-        window['enableSamplePricing_@(Model.Id)'] = true; // Default to enabled
+        */
+
+        // COMMENTED OUT: Initialize sample pricing state
+        // window['enableSamplePricing_@(Model.Id)'] = true; // Default to enabled
     </script>
 }

@@ -996,6 +996,13 @@ public class OrderViewModelService : IOrderViewModelService
             orderItemModel.CommissionValue = orderItem.Commission;
             orderItemModel.Commission = _priceFormatter.FormatPrice(orderItem.Commission, orderCurrency);
 
+            // case size from attribute combination
+            var combination = product.FindProductAttributeCombination(orderItem.Attributes);
+            if (combination != null)
+            {
+                orderItemModel.CaseSize = combination.CaseSize;
+            }
+
             orderItemModel.AttributeInfo = orderItem.AttributeDescription;
             if (product.IsRecurring)
                 orderItemModel.RecurringInfo = string.Format(

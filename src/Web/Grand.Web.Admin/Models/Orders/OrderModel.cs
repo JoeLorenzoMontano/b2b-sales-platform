@@ -331,6 +331,8 @@ public class OrderModel : BaseEntityModel
 
         public string Commission { get; set; }
         public double CommissionValue { get; set; }
+
+        public double CaseSize { get; set; }
     }
 
     public class TaxRate : BaseModel

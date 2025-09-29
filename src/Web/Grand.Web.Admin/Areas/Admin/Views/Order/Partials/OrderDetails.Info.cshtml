@@ -377,7 +377,31 @@
                                                 }
                                             </td>
                                             <td class="text-center">
-                                                <input asp-for="@Model.Items[i].Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px; margin: 0 auto;" min="1"/>
+                                                @if (item.CaseSize > 0)
+                                                {
+                                                    <div class="quantity-unit-case-wrapper" data-case-size="@item.CaseSize">
+                                                        <div class="d-flex align-items-center justify-content-center">
+                                                            <input type="number"
+                                                                   class="form-control inline-edit-field quantity-display-input"
+                                                                   data-item-id="@item.Id"
+                                                                   value="@item.Quantity"
+                                                                   style="width:60px; margin-right: 5px;"
+                                                                   min="1"/>
+                                                            <select class="form-control unit-case-selector"
+                                                                    data-item-id="@item.Id"
+                                                                    style="width:70px;">
+                                                                <option value="unit">Unit</option>
+                                                                <option value="case">Case</option>
+                                                            </select>
+                                                        </div>
+                                                        <input asp-for="@Model.Items[i].Quantity" type="hidden" class="actual-quantity-input"/>
+                                                        <small class="text-muted d-block mt-1">@item.CaseSize per case</small>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <input asp-for="@Model.Items[i].Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px; margin: 0 auto;" min="1"/>
+                                                }
                                             </td>
                                             <td class="text-right">
                                                 <input asp-for="@Model.Items[i].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px; margin-left: auto;"/>
@@ -539,6 +563,29 @@
     max-width: 100%;
     box-sizing: border-box;
 }
+
+/* Unit/Case quantity selector styling */
+.quantity-unit-case-wrapper {
+    display: inline-block;
+}
+
+.quantity-unit-case-wrapper .d-flex {
+    gap: 4px;
+}
+
+.quantity-unit-case-wrapper .quantity-display-input {
+    text-align: center;
+}
+
+.quantity-unit-case-wrapper .unit-case-selector {
+    font-size: 13px;
+    padding: 4px 8px;
+}
+
+.quantity-unit-case-wrapper small {
+    font-size: 11px;
+    text-align: center;
+}
 </style>
 
 <script>
@@ -599,6 +646,9 @@ $(document).ready(function() {
 
     // Check shipments on page load for ProductSearchAdd component
     checkShipmentsForInfoTab();
+
+    // Initialize unit/case quantity handlers
+    initializeUnitCaseQuantityHandlers();
 });
 
 function showSuccessMessage(message) {
@@ -744,6 +794,67 @@ function sendToReverificationFromInfoTab(orderId) {
         error: function() {
             alert('Error occurred while sending order to reverification.');
         }
+    });
+}
+
+function initializeUnitCaseQuantityHandlers() {
+    // Handle unit/case selector change
+    $(document).on('change', '.unit-case-selector', function() {
+        const $selector = $(this);
+        const $wrapper = $selector.closest('.quantity-unit-case-wrapper');
+        const $displayInput = $wrapper.find('.quantity-display-input');
+        const $hiddenInput = $wrapper.find('.actual-quantity-input');
+        const caseSize = parseFloat($wrapper.data('case-size'));
+        const currentActualQty = parseFloat($hiddenInput.val());
+        const selectedUnit = $selector.val();
+
+        if (selectedUnit === 'case') {
+            // Convert units to cases for display
+            const cases = Math.round(currentActualQty / caseSize);
+            $displayInput.val(cases || 1);
+            $displayInput.attr('step', '1');
+        } else {
+            // Show actual units
+            $displayInput.val(currentActualQty);
+            $displayInput.attr('step', '1');
+        }
+    });
+
+    // Handle display input change - update hidden field with unit quantity
+    $(document).on('change blur', '.quantity-display-input', function() {
+        const $displayInput = $(this);
+        const $wrapper = $displayInput.closest('.quantity-unit-case-wrapper');
+        const $selector = $wrapper.find('.unit-case-selector');
+        const $hiddenInput = $wrapper.find('.actual-quantity-input');
+        const caseSize = parseFloat($wrapper.data('case-size'));
+        const displayValue = parseFloat($displayInput.val());
+        const selectedUnit = $selector.val();
+
+        if (selectedUnit === 'case') {
+            // Convert cases to units
+            const units = displayValue * caseSize;
+            $hiddenInput.val(units);
+        } else {
+            // Direct unit value
+            $hiddenInput.val(displayValue);
+        }
+
+        // Trigger change on hidden input to fire auto-save
+        $hiddenInput.trigger('change');
+    });
+
+    // Initialize display values based on current quantities
+    $('.quantity-unit-case-wrapper').each(function() {
+        const $wrapper = $(this);
+        const $displayInput = $wrapper.find('.quantity-display-input');
+        const $hiddenInput = $wrapper.find('.actual-quantity-input');
+        const $selector = $wrapper.find('.unit-case-selector');
+        const caseSize = parseFloat($wrapper.data('case-size'));
+        const actualQty = parseFloat($hiddenInput.val());
+
+        // Default to units view
+        $selector.val('unit');
+        $displayInput.val(actualQty);
     });
 }
 </script>

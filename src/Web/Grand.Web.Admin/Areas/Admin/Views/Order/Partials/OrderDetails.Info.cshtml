@@ -810,18 +810,22 @@ function initializeUnitCaseQuantityHandlers() {
 
         if (selectedUnit === 'case') {
             // Convert units to cases for display
-            const cases = Math.round(currentActualQty / caseSize);
-            $displayInput.val(cases || 1);
-            $displayInput.attr('step', '1');
+            const cases = currentActualQty / caseSize;
+            // Round to 2 decimal places for display
+            $displayInput.val(Math.round(cases * 100) / 100 || 1);
+            $displayInput.attr('step', '0.01');
         } else {
             // Show actual units
             $displayInput.val(currentActualQty);
             $displayInput.attr('step', '1');
         }
+
+        // Store the current display value as original to prevent auto-save on unit switch
+        $displayInput.data('display-original-value', $displayInput.val());
     });
 
     // Handle display input change - update hidden field with unit quantity
-    $(document).on('change blur', '.quantity-display-input', function() {
+    $(document).on('blur', '.quantity-display-input', function() {
         const $displayInput = $(this);
         const $wrapper = $displayInput.closest('.quantity-unit-case-wrapper');
         const $selector = $wrapper.find('.unit-case-selector');
@@ -830,17 +834,21 @@ function initializeUnitCaseQuantityHandlers() {
         const displayValue = parseFloat($displayInput.val());
         const selectedUnit = $selector.val();
 
+        // Convert to unit quantity
+        let unitQuantity;
         if (selectedUnit === 'case') {
             // Convert cases to units
-            const units = displayValue * caseSize;
-            $hiddenInput.val(units);
+            unitQuantity = displayValue * caseSize;
         } else {
             // Direct unit value
-            $hiddenInput.val(displayValue);
+            unitQuantity = displayValue;
         }
 
-        // Trigger change on hidden input to fire auto-save
-        $hiddenInput.trigger('change');
+        // Update hidden input value
+        $hiddenInput.val(unitQuantity);
+
+        // Trigger blur on hidden input to fire the existing auto-save logic
+        $hiddenInput.trigger('blur');
     });
 
     // Initialize display values based on current quantities

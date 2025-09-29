@@ -495,24 +495,27 @@
                             </table>
                         </div>
 
-                        <!-- Add Products Section -->
-                        <div class="add-products-section mt-3">
-                            <div class="x_panel light form-fit">
-                                <div class="x_title">
-                                    <div class="caption">
-                                        <i class="fa fa-plus"></i>
-                                        Add Products to Order
+                        <!-- Add Products Section and Order Summary Side-by-Side -->
+                        <div class="row mt-4">
+                            <!-- Add Products Section -->
+                            <div class="col-lg-6">
+                                <div class="add-products-section">
+                                    <div class="x_panel light form-fit">
+                                        <div class="x_title">
+                                            <div class="caption">
+                                                <i class="fa fa-plus"></i>
+                                                Add Products to Order
+                                            </div>
+                                        </div>
+                                        <div class="x_content form">
+                                            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, contextType = "order" })
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="x_content form">
-                                    @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, contextType = "order" })
-                                </div>
                             </div>
-                        </div>
 
-                        <!-- Order Summary -->
-                        <div class="row mt-4">
-                            <div class="col-lg-6 offset-lg-6">
+                            <!-- Order Summary -->
+                            <div class="col-lg-6">
                                 <div class="card">
                                     <div class="card-body">
                                         @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)

@@ -939,8 +939,27 @@ function displayShipmentDetails(shipments) {
 
     if (shipments.length > 0) {
         html += '<div class="card mt-3">';
-        html += '<div class="card-header"><h6 class="mb-0">Shipment Details</h6></div>';
+        html += '<div class="card-header d-flex justify-content-between align-items-center">';
+        html += '<h6 class="mb-0">Shipment Details</h6>';
+        html += '<button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#shipmentDetailsCollapse">';
+        html += '<i class="fa fa-chevron-down"></i> Toggle';
+        html += '</button>';
+        html += '</div>';
+        html += '<div class="collapse" id="shipmentDetailsCollapse">';
         html += '<div class="card-body">';
+
+        // Customer Requested Shipment Date (order-level field, shown once)
+        if (shipments.length > 0) {
+            html += '<div class="mb-3 order-level-field">';
+            html += '<label class="form-label"><strong>Customer Requested Shipment Date:</strong></label>';
+            html += '<input type="datetime-local" class="form-control order-edit-field" ';
+            html += 'data-field-type="requestedshipmentdate" ';
+            html += 'value="" '; // Will be populated by loadOrderRequestedShipmentDate()
+            html += 'data-original-value="" ';
+            html += 'placeholder="Customer requested shipment date"/>';
+            html += '</div>';
+            html += '<hr>';
+        }
 
         shipments.forEach(function(shipment, index) {
             html += '<div class="shipment-item" data-shipment-id="' + shipment.Id + '">';
@@ -1006,18 +1025,32 @@ function displayShipmentDetails(shipments) {
 
         html += '</div>';
         html += '</div>';
+        html += '</div>';
     }
 
     $section.html(html);
 
     // Initialize auto-save for shipment fields
     initializeShipmentFieldAutoSave();
+
+    // Load and populate the customer requested shipment date
+    loadOrderRequestedShipmentDate();
+
+    // Initialize collapse toggle functionality
+    $('#shipmentDetailsCollapse').on('show.bs.collapse', function () {
+        $(this).prev().find('i').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    });
+
+    $('#shipmentDetailsCollapse').on('hide.bs.collapse', function () {
+        $(this).prev().find('i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+    });
 }
 
 // Initialize auto-save functionality for shipment fields
 function initializeShipmentFieldAutoSave() {
-    $(document).off('blur change', '.shipment-edit-field');
+    $(document).off('blur change', '.shipment-edit-field, .order-edit-field');
 
+    // Handle shipment-level fields
     $(document).on('blur change', '.shipment-edit-field', function() {
         var $field = $(this);
         var currentValue = $field.val();
@@ -1026,6 +1059,21 @@ function initializeShipmentFieldAutoSave() {
         // Only save if value has changed
         if (currentValue !== originalValue) {
             saveShipmentField($field);
+        }
+    });
+
+    // Handle order-level fields (like requested shipment date)
+    $(document).on('blur change', '.order-edit-field', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || '';
+        var fieldType = $field.data('field-type');
+
+        // Only save if value has changed
+        if (currentValue !== originalValue) {
+            if (fieldType === 'requestedshipmentdate') {
+                saveOrderRequestedShipmentDate($field);
+            }
         }
     });
 }
@@ -1075,6 +1123,104 @@ function saveShipmentField($field) {
                 $field.val(originalValue);
 
                 var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> ' + (result.message || 'Save failed') + '</small>');
+                $field.after($error);
+                setTimeout(function() {
+                    $error.fadeOut(function() {
+                        $error.remove();
+                    });
+                }, 3000);
+            }
+        },
+        error: function() {
+            $indicator.remove();
+            $field.prop('disabled', false);
+
+            // Revert value on error
+            var originalValue = $field.data('original-value') || '';
+            $field.val(originalValue);
+
+            var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Network error</small>');
+            $field.after($error);
+            setTimeout(function() {
+                $error.fadeOut(function() {
+                    $error.remove();
+                });
+            }, 3000);
+        }
+    });
+}
+
+// Load and populate the customer requested shipment date
+function loadOrderRequestedShipmentDate() {
+    $.ajax({
+        url: '@Url.Action("GetRequestedShipmentDate", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'GET',
+        data: {
+            orderId: '@Model.Id'
+        },
+        success: function(result) {
+            if (result.success && result.value) {
+                var $field = $('.order-edit-field[data-field-type="requestedshipmentdate"]');
+                if ($field.length > 0) {
+                    // Convert date to datetime-local format (YYYY-MM-DDTHH:mm)
+                    var date = new Date(result.value + 'T00:00:00');
+                    var localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+                    var formattedValue = localDate.toISOString().slice(0, 16);
+
+                    $field.val(formattedValue);
+                    $field.data('original-value', formattedValue);
+                }
+            }
+        },
+        error: function() {
+            console.log('Error loading requested shipment date');
+        }
+    });
+}
+
+// Save order-level requested shipment date
+function saveOrderRequestedShipmentDate($field) {
+    var value = $field.val();
+    var orderId = '@Model.Id';
+
+    // Show saving indicator
+    var $indicator = $('<small class="text-muted ml-2"><i class="fa fa-spinner fa-spin"></i> Saving...</small>');
+    $field.after($indicator);
+    $field.prop('disabled', true);
+
+    // Convert datetime-local to date format for the API (YYYY-MM-DD)
+    var dateValue = value ? value.split('T')[0] : '';
+
+    $.ajax({
+        url: '@Url.Action("SaveRequestedShipmentDate", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            date: dateValue,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            $indicator.remove();
+            $field.prop('disabled', false);
+
+            if (result.success) {
+                // Update original value to prevent re-saving
+                $field.data('original-value', value);
+
+                // Show success indicator briefly
+                var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
+                $field.after($success);
+                setTimeout(function() {
+                    $success.fadeOut(function() {
+                        $success.remove();
+                    });
+                }, 2000);
+            } else {
+                // Show error and revert value
+                var originalValue = $field.data('original-value') || '';
+                $field.val(originalValue);
+
+                var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Save failed</small>');
                 $field.after($error);
                 setTimeout(function() {
                     $error.fadeOut(function() {

@@ -1182,40 +1182,43 @@
                 currentQty = parseFloat(qtyDropdown.value) || 1;
             }
 
+            // Select the appropriate case value if current quantity matches
             if (currentQty % caseSize === 0) {
                 var currentCases = currentQty / caseSize;
                 if (currentCases >= 1) {
                     caseDropdown.value = currentCases;
-
-                    // Populate Total dropdown immediately in the same execution context
-                    var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
-                    if (totalDropdown) {
-                        var correctTotal = currentCases * caseSize;
-
-                        if (totalDropdown.tagName === 'SELECT') {
-                            totalDropdown.innerHTML = '';
-
-                            // Use the caseOptions array we just created to populate Total
-                            caseOptions.forEach(function(caseOption) {
-                                var totalValue = caseOption.value * caseSize;
-                                var option = document.createElement('option');
-                                option.value = totalValue;
-                                option.textContent = totalValue.toString();
-                                if (Math.abs(totalValue - correctTotal) < 0.01) {
-                                    option.selected = true;
-                                }
-                                totalDropdown.appendChild(option);
-                            });
-                        } else {
-                            totalDropdown.value = correctTotal;
-                        }
-                    }
-
-                    // Update Units display
-                    if (unitsDisplay) {
-                        unitsDisplay.textContent = caseSize.toString();
-                    }
                 }
+            }
+
+            // Always populate Total dropdown based on available case options
+            var totalDropdown = document.getElementById('EnteredTotal_@Model.Id') || document.getElementById('EnteredTotal_input_@Model.Id');
+            if (totalDropdown) {
+                // Get the selected case value (or first option if none selected)
+                var selectedCases = parseFloat(caseDropdown.value) || (caseOptions.length > 0 ? caseOptions[0].value : 1);
+                var correctTotal = selectedCases * caseSize;
+
+                if (totalDropdown.tagName === 'SELECT') {
+                    totalDropdown.innerHTML = '';
+
+                    // Use the caseOptions array we just created to populate Total
+                    caseOptions.forEach(function(caseOption) {
+                        var totalValue = caseOption.value * caseSize;
+                        var option = document.createElement('option');
+                        option.value = totalValue;
+                        option.textContent = totalValue.toString();
+                        if (Math.abs(totalValue - correctTotal) < 0.01) {
+                            option.selected = true;
+                        }
+                        totalDropdown.appendChild(option);
+                    });
+                } else {
+                    totalDropdown.value = correctTotal;
+                }
+            }
+
+            // Update Units display
+            if (unitsDisplay) {
+                unitsDisplay.textContent = caseSize.toString();
             }
         }
 

@@ -152,7 +152,44 @@
                     
                     <div class="mb-3">
                         <label class="form-label"><strong>Shipping Status:</strong></label>
-                        <div>@Model.ShippingStatus</div>
+                        <div>
+                            @{
+                                string shippingLabelStatus = "secondary";
+                                switch (Model.ShippingStatus.ToLower())
+                                {
+                                    case "shipped":
+                                    case "delivered":
+                                        shippingLabelStatus = "success";
+                                        break;
+                                    case "not yet shipped":
+                                    case "processing":
+                                        shippingLabelStatus = "warning";
+                                        break;
+                                    case "returned":
+                                        shippingLabelStatus = "danger";
+                                        break;
+                                }
+
+                                // Determine shipment tab index (Info=0, Addresses=1, Shipments=2 if shippable, otherwise Products=2)
+                                var shipmentTabIndex = Model.IsShippable ? 2 : -1;
+                            }
+                            @if (Model.IsShippable && Model.CanAddNewShipments)
+                            {
+                                <a class="btn btn-primary btn-sm" href="@Url.Action("AddShipment", "Shipment", new { orderId = Model.Id })">
+                                    <i class="fa fa-plus"></i> Create Shipment
+                                </a>
+                            }
+                            else if (Model.IsShippable)
+                            {
+                                <a class="btn btn-@shippingLabelStatus btn-sm" href="#" onclick="$('a[href=\'#tab-@shipmentTabIndex\']').click(); return false;">
+                                    @Model.ShippingStatus
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="badge badge-@shippingLabelStatus">@Model.ShippingStatus</span>
+                            }
+                        </div>
                     </div>
                     
                     <div class="mb-3">

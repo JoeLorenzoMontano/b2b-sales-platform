@@ -356,6 +356,7 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
+                                        <input asp-for="@Model.Items[i].Id" type="hidden"/>
                                         <tr>
                                             <td>@(i + 1)</td>
                                             <td>
@@ -375,18 +376,29 @@
                                                     <br><small class="text-muted">Warehouse: @item.WarehouseName</small>
                                                 }
                                             </td>
-                                            <td class="text-center">@item.Quantity</td>
-                                            <td class="text-right">@item.UnitPriceExclTax</td>
+                                            <td class="text-center">
+                                                <input asp-for="@Model.Items[i].Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px; margin: 0 auto;" min="1"/>
+                                            </td>
                                             <td class="text-right">
-                                                @switch (Model.TaxDisplayType)
-                                                {
-                                                    case TaxDisplayType.ExcludingTax:
-                                                        @item.SubTotalExclTax
-                                                        break;
-                                                    case TaxDisplayType.IncludingTax:
-                                                        @item.SubTotalInclTax
-                                                        break;
-                                                }
+                                                <input asp-for="@Model.Items[i].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px; margin-left: auto;"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span class="subtotal-display" data-order-item-id="@item.Id">
+                                                    @switch (Model.TaxDisplayType)
+                                                    {
+                                                        case TaxDisplayType.ExcludingTax:
+                                                            @item.SubTotalExclTax
+                                                            break;
+                                                        case TaxDisplayType.IncludingTax:
+                                                            @item.SubTotalInclTax
+                                                            break;
+                                                    }
+                                                </span>
+                                                <div class="auto-save-status" id="save-status-@item.Id" style="display:none; margin-top: 4px;">
+                                                    <small class="text-muted">
+                                                        <i class="fa fa-spinner fa-spin"></i> Saving...
+                                                    </small>
+                                                </div>
                                             </td>
                                         </tr>
                                     }

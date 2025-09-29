@@ -872,16 +872,31 @@ function initializeUnitCaseQuantityHandlers() {
         color: #212529 !important;
         border-bottom: 2px solid #dee2e6 !important;
     }
-    
+
     .table-striped td {
         border-top: 1px solid #dee2e6 !important;
         color: #212529 !important;
     }
-    
+
+    /* Ensure quantity, price, and total columns have dark text in light mode */
+    .table-striped td:nth-child(3),
+    .table-striped td:nth-child(4),
+    .table-striped td:nth-child(5) {
+        color: #212529 !important;
+    }
+
+    /* Ensure spans within these cells also have dark text */
+    .table-striped td:nth-child(3) span,
+    .table-striped td:nth-child(4) span,
+    .table-striped td:nth-child(5) span,
+    .table-striped .subtotal-display {
+        color: #212529 !important;
+    }
+
     .table-striped tbody tr:nth-of-type(odd) {
         background-color: rgba(0, 0, 0, 0.05) !important;
     }
-    
+
     .table-info th {
         background-color: #d1ecf1 !important;
         color: #0c5460 !important;
@@ -898,6 +913,21 @@ function initializeUnitCaseQuantityHandlers() {
 
 .table-striped td {
     border-top: 1px solid #dee2e6 !important;
+    color: #212529 !important;
+}
+
+/* Ensure quantity, price, and total columns have dark text in light mode */
+.table-striped td:nth-child(3),
+.table-striped td:nth-child(4),
+.table-striped td:nth-child(5) {
+    color: #212529 !important;
+}
+
+/* Ensure spans within these cells also have dark text */
+.table-striped td:nth-child(3) span,
+.table-striped td:nth-child(4) span,
+.table-striped td:nth-child(5) span,
+.table-striped .subtotal-display {
     color: #212529 !important;
 }
 

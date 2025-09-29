@@ -501,17 +501,11 @@
                         </div>
 
                         <!-- Add Products Section and Order Summary Side-by-Side -->
-                        <div class="row mt-4">
+                        <div class="row mt-4 align-items-start">
                             <!-- Add Products Section -->
                             <div class="col-lg-6">
                                 <div class="add-products-section">
                                     <div class="x_panel light form-fit">
-                                        <div class="x_title">
-                                            <div class="caption">
-                                                <i class="fa fa-plus"></i>
-                                                Add Products to Order
-                                            </div>
-                                        </div>
                                         <div class="x_content form">
                                             @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, contextType = "order" })
                                         </div>

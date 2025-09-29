@@ -40,7 +40,7 @@
                             <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
                             <div id="EnteredUnits_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
                             <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control" style="width: 120px;"
-                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); /* if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); */ }"></select>
                             <div style="color: black;"><span id="unit-price-@Model.ProductId"></span></div>
                         </div>
                         
@@ -84,7 +84,7 @@
                             <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
                             <div id="EnteredUnits_input_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
                             <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="form-control text-center" style="width: 120px;"
-                                onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
+                                onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); /* if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); */ }">
                             <div style="color: black;"><span id="unit-price-input-@Model.ProductId">-</span></div>
                         </div>
                         

@@ -540,18 +540,18 @@
                         if (response.data.caseSize && typeof response.data.caseSize === 'number' && response.data.caseSize > 0) {
                             // Store case size globally for this product
                             window['caseSize_@Model.Id'] = response.data.caseSize;
-                            
-                            // Populate case dropdowns and sync with quantity
-                            updateCaseDropdowns_@(Model.Id)();
-                            
+
+                            // COMMENTED OUT: Populate case dropdowns and sync with quantity
+                            // updateCaseDropdowns_@(Model.Id)();
+
                             // Show case info and total elements
                             var caseInfoElements = document.querySelectorAll('#case-info-@Model.Id, #case-info-input-@Model.Id, #total-info-@Model.Id, #total-info-input-@Model.Id');
                             caseInfoElements.forEach(function(element) {
                                 element.style.display = 'block';
                             });
-                            
-                            // Update case pricing display
-                            updateCasePricing_@(Model.Id)();
+
+                            // COMMENTED OUT: Update case pricing display
+                            // updateCasePricing_@(Model.Id)();
                         } else {
                             // Hide case info and total if no case size, show interactive Units dropdown/input
                             console.log('Hiding case info - case size not valid');

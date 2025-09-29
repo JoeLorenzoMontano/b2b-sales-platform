@@ -192,6 +192,20 @@
                         </div>
                     </div>
 
+                    <!-- Customer Requested Shipment Date (always visible for shippable orders) -->
+                    @if (Model.IsShippable)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Customer Requested Shipment Date:</strong></label>
+                            <input type="datetime-local" class="form-control order-edit-field"
+                                   data-field-type="requestedshipmentdate"
+                                   value=""
+                                   data-original-value=""
+                                   placeholder="Customer requested shipment date"
+                                   id="customer-requested-shipment-date"/>
+                        </div>
+                    }
+
                     <!-- Shipment Details Section -->
                     @if (Model.IsShippable)
                     {
@@ -381,7 +395,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Order Products (@Model.Items.Count items)</h5>
                     <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#productsCollapse">
-                        <i class="fa fa-chevron-down"></i> Toggle
+                        <i class="fa fa-chevron-down"></i>
                     </button>
                 </div>
                 <div class="collapse show" id="productsCollapse">
@@ -691,6 +705,11 @@ $(document).ready(function() {
     // Load shipment details for inline editing
     loadShipmentDetailsForInfoTab();
 
+    // Always load customer requested shipment date for shippable orders
+    if (@Json.Serialize(Model.IsShippable)) {
+        loadOrderRequestedShipmentDate();
+    }
+
     // Initialize unit/case quantity handlers
     initializeUnitCaseQuantityHandlers();
 });
@@ -942,24 +961,12 @@ function displayShipmentDetails(shipments) {
         html += '<div class="card-header d-flex justify-content-between align-items-center">';
         html += '<h6 class="mb-0">Shipment Details</h6>';
         html += '<button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#shipmentDetailsCollapse">';
-        html += '<i class="fa fa-chevron-down"></i> Toggle';
+        html += '<i class="fa fa-chevron-down"></i>';
         html += '</button>';
         html += '</div>';
         html += '<div class="collapse" id="shipmentDetailsCollapse">';
         html += '<div class="card-body">';
 
-        // Customer Requested Shipment Date (order-level field, shown once)
-        if (shipments.length > 0) {
-            html += '<div class="mb-3 order-level-field">';
-            html += '<label class="form-label"><strong>Customer Requested Shipment Date:</strong></label>';
-            html += '<input type="datetime-local" class="form-control order-edit-field" ';
-            html += 'data-field-type="requestedshipmentdate" ';
-            html += 'value="" '; // Will be populated by loadOrderRequestedShipmentDate()
-            html += 'data-original-value="" ';
-            html += 'placeholder="Customer requested shipment date"/>';
-            html += '</div>';
-            html += '<hr>';
-        }
 
         shipments.forEach(function(shipment, index) {
             html += '<div class="shipment-item" data-shipment-id="' + shipment.Id + '">';
@@ -1032,9 +1039,6 @@ function displayShipmentDetails(shipments) {
 
     // Initialize auto-save for shipment fields
     initializeShipmentFieldAutoSave();
-
-    // Load and populate the customer requested shipment date
-    loadOrderRequestedShipmentDate();
 
     // Initialize collapse toggle functionality
     $('#shipmentDetailsCollapse').on('show.bs.collapse', function () {
@@ -1160,7 +1164,7 @@ function loadOrderRequestedShipmentDate() {
         },
         success: function(result) {
             if (result.success && result.value) {
-                var $field = $('.order-edit-field[data-field-type="requestedshipmentdate"]');
+                var $field = $('#customer-requested-shipment-date');
                 if ($field.length > 0) {
                     // Convert date to datetime-local format (YYYY-MM-DDTHH:mm)
                     var date = new Date(result.value + 'T00:00:00');

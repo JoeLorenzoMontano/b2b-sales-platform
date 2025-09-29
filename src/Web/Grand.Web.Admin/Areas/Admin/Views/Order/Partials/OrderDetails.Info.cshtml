@@ -405,9 +405,7 @@
                                 </tbody>
                                 <tfoot>
                                     <tr class="table-info">
-                                        <th colspan="2">Total</th>
-                                        <th class="text-center"><span id="total-quantity">@Model.Items.Sum(x => x.Quantity)</span></th>
-                                        <th></th>
+                                        <th colspan="4" class="text-right">Total:</th>
                                         <th class="text-right"><span id="total-amount">@Model.OrderTotal</span></th>
                                     </tr>
                                 </tfoot>
@@ -468,7 +466,80 @@
             </div>
         </div>
     </div>
+
+    <!-- Add Products Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="add-products-section">
+                <div class="x_panel light form-fit">
+                    <div class="x_title">
+                        <div class="caption">
+                            <i class="fa fa-plus"></i>
+                            Add Products to Order
+                        </div>
+                    </div>
+                    <div class="x_content form">
+                        @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, contextType = "order" })
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+/* ProductSearchAdd component integration with Order Info tab - Transparent styling */
+.add-products-section {
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-products-section .x_panel {
+    margin-bottom: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.add-products-section .x_title {
+    background: transparent;
+    padding: 10px 15px;
+    margin-bottom: 0;
+}
+
+.add-products-section .x_title .caption {
+    color: white;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.add-products-section .x_content {
+    padding: 10px;
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure Bootstrap grid stays within bounds */
+.add-products-section .row {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+}
+
+.add-products-section [class*="col-"] {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Ensure form controls don't overflow */
+.add-products-section .form-control,
+.add-products-section .form-group {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+</style>
 
 <script>
 $(document).ready(function() {
@@ -525,6 +596,9 @@ $(document).ready(function() {
     $('#productsCollapse').on('hide.bs.collapse', function () {
         $(this).prev().find('i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
     });
+
+    // Check shipments on page load for ProductSearchAdd component
+    checkShipmentsForInfoTab();
 });
 
 function showSuccessMessage(message) {
@@ -571,6 +645,106 @@ function toggleOrderTotals(editmode) {
         $('#btnSaveOrderTotals').hide();
         $('#btnCancelOrderTotals').hide();
     }
+}
+
+// Function expected by the ProductSearchAdd component in Info tab
+function refreshCurrentProductsGrid() {
+    // Info tab is index 0 in the order edit tabstrip
+    var infoTabIndex = 0;
+
+    // Set URL hash to preserve Info tab state after reload
+    if (window.location.hash !== '#tab-' + infoTabIndex) {
+        window.location.hash = '#tab-' + infoTabIndex;
+    }
+
+    // Reload page with hash preserved - admin-tabstrip will restore the active tab
+    window.location.reload();
+}
+
+// Check for existing shipments and hide ProductSearchAdd if shipments exist or order is in fulfillment
+var isCheckingShipmentsForInfoTab = false; // Flag to prevent multiple simultaneous calls
+
+function checkShipmentsForInfoTab() {
+    // Prevent multiple simultaneous executions
+    if (isCheckingShipmentsForInfoTab) {
+        return;
+    }
+    isCheckingShipmentsForInfoTab = true;
+
+    var isVerifiedOrder = @Json.Serialize(Model.IsVerifiedOrder);
+
+    if (isVerifiedOrder) {
+        // Remove any existing warnings first, then hide ProductSearchAdd section for verified orders (in fulfillment queue)
+        $('.shipment-warning').remove();
+        $('.add-products-section').hide();
+        $('.add-products-section').after(
+            '<div class="shipment-warning alert alert-warning mt-3">' +
+            '<i class="fa fa-warning"></i> ' +
+            'Cannot add products to orders in fulfillment queue. ' +
+            '<button type="button" class="btn btn-primary btn-sm ml-2" onclick="sendToReverificationFromInfoTab(\'@Model.Id\')">' +
+            '<i class="fa fa-undo"></i> Send to Reverification' +
+            '</button>' +
+            '</div>'
+        );
+        isCheckingShipmentsForInfoTab = false; // Reset flag
+        return;
+    }
+
+    $.ajax({
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+        dataType: "json",
+        success: function(data) {
+            if (data && data.Total > 0) {
+                // Remove any existing warnings first, then hide ProductSearchAdd section and show warning
+                $('.shipment-warning').remove();
+                $('.add-products-section').hide();
+                $('.add-products-section').after(
+                    '<div class="shipment-warning alert alert-warning mt-3">' +
+                    '<i class="fa fa-warning"></i> ' +
+                    'Cannot add products when shipments exist. Please delete existing shipments first to add new products.' +
+                    '</div>'
+                );
+            } else {
+                // Show ProductSearchAdd section if no shipments and not verified
+                $('.add-products-section').show();
+                $('.shipment-warning').remove();
+            }
+            isCheckingShipmentsForInfoTab = false; // Reset flag on success
+        },
+        error: function() {
+            // On error, show ProductSearchAdd (fail safe) only if not verified
+            if (!isVerifiedOrder) {
+                $('.add-products-section').show();
+            }
+            isCheckingShipmentsForInfoTab = false; // Reset flag on error
+        }
+    });
+}
+
+function sendToReverificationFromInfoTab(orderId) {
+    if (!confirm('Are you sure you want to send this order back to reverification? This will delete any existing shipments.')) {
+        return;
+    }
+
+    $.ajax({
+        url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: addAntiForgeryToken({ orderId: orderId }),
+        dataType: "json",
+        success: function(result) {
+            if (result.success) {
+                // Refresh the page to update the UI state
+                window.location.reload();
+            } else {
+                alert('Error: ' + (result.message || 'Failed to send order to reverification'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while sending order to reverification.');
+        }
+    });
 }
 </script>
 

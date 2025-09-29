@@ -283,7 +283,10 @@
                         }*@
                         setTimeout(function () {
                             if (response.data.pictureDefaultSizeUrl) {
-                                document.getElementById('main-product-img-@Model.Id').setAttribute("src", response.data.pictureDefaultSizeUrl);
+                                var imgElement = document.getElementById('main-product-img-@Model.Id');
+                                if (imgElement) {
+                                    imgElement.setAttribute("src", response.data.pictureDefaultSizeUrl);
+                                }
                             }
                         }, 100);
                         

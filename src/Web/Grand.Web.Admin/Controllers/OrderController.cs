@@ -1603,6 +1603,93 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
+    public async Task<IActionResult> UpdateShipmentField(string orderId, string shipmentId, string fieldType, string value, [FromServices] IShipmentService shipmentService, [FromServices] IDateTimeService dateTimeService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null || await CheckSalesManager(order))
+                return Json(new { success = false, message = "Order not found or access denied" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+                return Json(new { success = false, message = "Access denied" });
+
+            var shipment = await shipmentService.GetShipmentById(shipmentId);
+            if (shipment == null || shipment.OrderId != orderId)
+                return Json(new { success = false, message = "Shipment not found" });
+
+            // Update the shipment field based on fieldType
+            switch (fieldType.ToLower())
+            {
+                case "trackingnumber":
+                    shipment.TrackingNumber = value?.Trim();
+                    break;
+
+                case "shippeddate":
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        shipment.ShippedDateUtc = null;
+                    }
+                    else if (DateTime.TryParse(value, out var shippedDate))
+                    {
+                        shipment.ShippedDateUtc = dateTimeService.ConvertToUtcTime(shippedDate, dateTimeService.CurrentTimeZone);
+                    }
+                    else
+                    {
+                        return Json(new { success = false, message = "Invalid shipped date format" });
+                    }
+                    break;
+
+                case "deliverydate":
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        shipment.DeliveryDateUtc = null;
+                    }
+                    else if (DateTime.TryParse(value, out var deliveryDate))
+                    {
+                        shipment.DeliveryDateUtc = dateTimeService.ConvertToUtcTime(deliveryDate, dateTimeService.CurrentTimeZone);
+                    }
+                    else
+                    {
+                        return Json(new { success = false, message = "Invalid delivery date format" });
+                    }
+                    break;
+
+                case "admincomment":
+                    shipment.AdminComment = value?.Trim();
+                    break;
+
+                default:
+                    return Json(new { success = false, message = "Unknown field type" });
+            }
+
+            await shipmentService.UpdateShipment(shipment);
+
+            var response = new
+            {
+                success = true,
+                message = "Shipment field updated successfully",
+                displayValue = fieldType.ToLower() switch
+                {
+                    "shippeddate" => shipment.ShippedDateUtc?.ToString("yyyy-MM-dd"),
+                    "deliverydate" => shipment.DeliveryDateUtc?.ToString("yyyy-MM-dd"),
+                    "trackingnumber" => shipment.TrackingNumber,
+                    "admincomment" => shipment.AdminComment,
+                    _ => value
+                }
+            };
+
+            return Json(response);
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error updating shipment field: {ex.Message}" });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
     public async Task<IActionResult> DeleteOrderItem(string id, string orderItemId, [FromServices] IShipmentService shipmentService)
     {
         var order = await orderService.GetOrderById(id);

@@ -191,7 +191,15 @@
                             }
                         </div>
                     </div>
-                    
+
+                    <!-- Shipment Details Section -->
+                    @if (Model.IsShippable)
+                    {
+                        <div class="mb-3" id="shipment-details-section">
+                            <!-- This section will be populated by JavaScript when shipments exist -->
+                        </div>
+                    }
+
                     <div class="mb-3">
                         <label class="form-label"><strong>Order Total:</strong></label>
                         <div><strong>@Model.OrderTotal</strong></div>
@@ -680,6 +688,9 @@ $(document).ready(function() {
     // Check shipments on page load for ProductSearchAdd component
     checkShipmentsForInfoTab();
 
+    // Load shipment details for inline editing
+    loadShipmentDetailsForInfoTab();
+
     // Initialize unit/case quantity handlers
     initializeUnitCaseQuantityHandlers();
 });
@@ -896,6 +907,198 @@ function initializeUnitCaseQuantityHandlers() {
         // Default to units view
         $selector.val('unit');
         $displayInput.val(actualQty);
+    });
+}
+
+// Load and display shipment details for inline editing
+function loadShipmentDetailsForInfoTab() {
+    if (!@Json.Serialize(Model.IsShippable)) {
+        return;
+    }
+
+    $.ajax({
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))",
+        type: "POST",
+        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+        dataType: "json",
+        success: function(data) {
+            if (data && data.Data && data.Data.length > 0) {
+                displayShipmentDetails(data.Data);
+            }
+        },
+        error: function() {
+            console.log('Error loading shipment details');
+        }
+    });
+}
+
+// Display shipment details with inline editing
+function displayShipmentDetails(shipments) {
+    var $section = $('#shipment-details-section');
+    var html = '';
+
+    if (shipments.length > 0) {
+        html += '<div class="card mt-3">';
+        html += '<div class="card-header"><h6 class="mb-0">Shipment Details</h6></div>';
+        html += '<div class="card-body">';
+
+        shipments.forEach(function(shipment, index) {
+            html += '<div class="shipment-item" data-shipment-id="' + shipment.Id + '">';
+            html += '<h6>Shipment #' + (shipment.ShipmentNumber || (index + 1)) + '</h6>';
+
+            // Tracking Number
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Tracking Number:</strong></label>';
+            html += '<input type="text" class="form-control shipment-edit-field" ';
+            html += 'data-field-type="trackingnumber" ';
+            html += 'value="' + (shipment.TrackingNumber || '') + '" ';
+            html += 'data-original-value="' + (shipment.TrackingNumber || '') + '" ';
+            html += 'placeholder="Enter tracking number"/>';
+            html += '</div>';
+
+            // Shipped Date
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Shipped Date:</strong></label>';
+            html += '<input type="datetime-local" class="form-control shipment-edit-field" ';
+            html += 'data-field-type="shippeddate" ';
+            var shippedDate = shipment.ShippedDateUtc ? new Date(shipment.ShippedDateUtc) : null;
+            if (shippedDate) {
+                // Convert to local datetime-local format (YYYY-MM-DDTHH:mm)
+                var localDate = new Date(shippedDate.getTime() - shippedDate.getTimezoneOffset() * 60000);
+                html += 'value="' + localDate.toISOString().slice(0, 16) + '" ';
+                html += 'data-original-value="' + localDate.toISOString().slice(0, 16) + '" ';
+            } else {
+                html += 'value="" data-original-value="" ';
+            }
+            html += '/>';
+            html += '</div>';
+
+            // Delivery Date
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Delivery Date:</strong></label>';
+            html += '<input type="datetime-local" class="form-control shipment-edit-field" ';
+            html += 'data-field-type="deliverydate" ';
+            var deliveryDate = shipment.DeliveryDateUtc ? new Date(shipment.DeliveryDateUtc) : null;
+            if (deliveryDate) {
+                var localDate = new Date(deliveryDate.getTime() - deliveryDate.getTimezoneOffset() * 60000);
+                html += 'value="' + localDate.toISOString().slice(0, 16) + '" ';
+                html += 'data-original-value="' + localDate.toISOString().slice(0, 16) + '" ';
+            } else {
+                html += 'value="" data-original-value="" ';
+            }
+            html += '/>';
+            html += '</div>';
+
+            // Admin Comment
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Admin Comment:</strong></label>';
+            html += '<textarea class="form-control shipment-edit-field" rows="2" ';
+            html += 'data-field-type="admincomment" ';
+            html += 'data-original-value="' + (shipment.AdminComment || '') + '" ';
+            html += 'placeholder="Enter admin comment">' + (shipment.AdminComment || '') + '</textarea>';
+            html += '</div>';
+
+            if (index < shipments.length - 1) {
+                html += '<hr>';
+            }
+            html += '</div>';
+        });
+
+        html += '</div>';
+        html += '</div>';
+    }
+
+    $section.html(html);
+
+    // Initialize auto-save for shipment fields
+    initializeShipmentFieldAutoSave();
+}
+
+// Initialize auto-save functionality for shipment fields
+function initializeShipmentFieldAutoSave() {
+    $(document).off('blur change', '.shipment-edit-field');
+
+    $(document).on('blur change', '.shipment-edit-field', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || '';
+
+        // Only save if value has changed
+        if (currentValue !== originalValue) {
+            saveShipmentField($field);
+        }
+    });
+}
+
+// Save individual shipment field
+function saveShipmentField($field) {
+    var $shipmentItem = $field.closest('.shipment-item');
+    var shipmentId = $shipmentItem.data('shipment-id');
+    var fieldType = $field.data('field-type');
+    var value = $field.val();
+    var orderId = '@Model.Id';
+
+    // Show saving indicator
+    var $indicator = $('<small class="text-muted ml-2"><i class="fa fa-spinner fa-spin"></i> Saving...</small>');
+    $field.after($indicator);
+    $field.prop('disabled', true);
+
+    $.ajax({
+        url: '@Url.Action("UpdateShipmentField", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            shipmentId: shipmentId,
+            fieldType: fieldType,
+            value: value,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            $indicator.remove();
+            $field.prop('disabled', false);
+
+            if (result.success) {
+                // Update original value to prevent re-saving
+                $field.data('original-value', value);
+
+                // Show success indicator briefly
+                var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
+                $field.after($success);
+                setTimeout(function() {
+                    $success.fadeOut(function() {
+                        $success.remove();
+                    });
+                }, 2000);
+            } else {
+                // Show error and revert value
+                var originalValue = $field.data('original-value') || '';
+                $field.val(originalValue);
+
+                var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> ' + (result.message || 'Save failed') + '</small>');
+                $field.after($error);
+                setTimeout(function() {
+                    $error.fadeOut(function() {
+                        $error.remove();
+                    });
+                }, 3000);
+            }
+        },
+        error: function() {
+            $indicator.remove();
+            $field.prop('disabled', false);
+
+            // Revert value on error
+            var originalValue = $field.data('original-value') || '';
+            $field.val(originalValue);
+
+            var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Network error</small>');
+            $field.after($error);
+            setTimeout(function() {
+                $error.fadeOut(function() {
+                    $error.remove();
+                });
+            }, 3000);
+        }
     });
 }
 </script>

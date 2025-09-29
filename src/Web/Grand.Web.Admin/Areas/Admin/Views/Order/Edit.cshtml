@@ -569,10 +569,10 @@ function autoSaveOrderItem(orderItemId, $field, newValue) {
             if (response.success) {
                 // Update the original value data attribute
                 $field.data('original-value', newValue);
-                
+
                 // Show success state
                 $statusDiv.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
-                
+
                 // Update display values if provided
                 if (response.newSubTotal) {
                     updateSubTotal(orderItemId, response.newSubTotal);
@@ -580,7 +580,12 @@ function autoSaveOrderItem(orderItemId, $field, newValue) {
                 if (response.displayValue) {
                     updateDisplayValue(orderItemId, fieldType, response.displayValue);
                 }
-                
+
+                // Update order totals if provided (for Info tab)
+                if (response.orderTotals) {
+                    updateOrderTotals(response.orderTotals);
+                }
+
                 // Clear any existing errors
                 clearFieldError($field);
             } else {
@@ -636,6 +641,28 @@ function updateDisplayValue(orderItemId, fieldType, displayValue) {
     const $field = $('[name^="Items"][name$="Id"][value="' + orderItemId + '"]').closest('tr');
     if (fieldType === 'price') {
         $field.find('.text-info span').text('Display: ' + displayValue);
+    }
+}
+
+function updateOrderTotals(totals) {
+    // Update the totals in the Info tab (only if elements exist)
+    if ($('#total-quantity').length) {
+        $('#total-quantity').text(totals.totalQuantity);
+    }
+    if ($('#total-amount').length) {
+        $('#total-amount').text(totals.orderTotal);
+    }
+    if ($('#summary-subtotal').length) {
+        $('#summary-subtotal').text(totals.orderSubtotal);
+    }
+    if ($('#summary-shipping').length) {
+        $('#summary-shipping').text(totals.orderShipping);
+    }
+    if ($('#summary-tax').length) {
+        $('#summary-tax').text(totals.orderTax);
+    }
+    if ($('#summary-total').length) {
+        $('#summary-total').text(totals.orderTotal);
     }
 }
 </script>

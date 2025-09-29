@@ -406,9 +406,9 @@
                                 <tfoot>
                                     <tr class="table-info">
                                         <th colspan="2">Total</th>
-                                        <th class="text-center">@Model.Items.Sum(x => x.Quantity)</th>
+                                        <th class="text-center"><span id="total-quantity">@Model.Items.Sum(x => x.Quantity)</span></th>
                                         <th></th>
-                                        <th class="text-right">@Model.OrderTotal</th>
+                                        <th class="text-right"><span id="total-amount">@Model.OrderTotal</span></th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -423,41 +423,41 @@
                                         {
                                             <div class="d-flex justify-content-between">
                                                 <span>Subtotal:</span>
-                                                <span>@Model.OrderSubtotalInclTax</span>
+                                                <span id="summary-subtotal">@Model.OrderSubtotalInclTax</span>
                                             </div>
                                         }
                                         @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
                                         {
                                             <div class="d-flex justify-content-between">
                                                 <span>Subtotal:</span>
-                                                <span>@Model.OrderSubtotalExclTax</span>
+                                                <span id="summary-subtotal">@Model.OrderSubtotalExclTax</span>
                                             </div>
                                         }
                                         @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
                                         {
                                             <div class="d-flex justify-content-between">
                                                 <span>Shipping:</span>
-                                                <span>@Model.OrderShippingInclTax</span>
+                                                <span id="summary-shipping">@Model.OrderShippingInclTax</span>
                                             </div>
                                         }
                                         @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
                                         {
                                             <div class="d-flex justify-content-between">
                                                 <span>Shipping:</span>
-                                                <span>@Model.OrderShippingExclTax</span>
+                                                <span id="summary-shipping">@Model.OrderShippingExclTax</span>
                                             </div>
                                         }
                                         @if (Model.DisplayTax)
                                         {
                                             <div class="d-flex justify-content-between">
                                                 <span>Tax:</span>
-                                                <span>@Model.Tax</span>
+                                                <span id="summary-tax">@Model.Tax</span>
                                             </div>
                                         }
                                         <hr>
                                         <div class="d-flex justify-content-between font-weight-bold">
                                             <span>Total:</span>
-                                            <span>@Model.OrderTotal</span>
+                                            <span id="summary-total">@Model.OrderTotal</span>
                                         </div>
                                     </div>
                                 </div>

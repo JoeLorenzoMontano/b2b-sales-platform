@@ -1535,17 +1535,20 @@ public class OrderController(
             // Save the changes
             await mediator.Send(new UpdateOrderItemCommand { Order = order, OrderItem = orderItem });
 
+            // Refresh order from database to get updated totals
+            order = await orderService.GetOrderById(orderId);
+
             // If order was previously verified, mark for reverification
             if (order.IsVerifiedOrder)
             {
                 // Delete all shipments before reverification
                 await DeleteOrderShipmentsForReverification(order, shipmentService);
-                
+
                 order.NeedsReverification = true;
                 order.IsVerifiedOrder = false;
                 order.UpdatedOnUtc = DateTime.UtcNow;
                 await orderService.UpdateOrder(order);
-                
+
                 // Add order note for audit trail
                 var orderNote = new OrderNote
                 {
@@ -1559,18 +1562,35 @@ public class OrderController(
 
             // Prepare response with updated values
             var primaryCurrency = await currencyService.GetPrimaryStoreCurrency();
-            
+            var cultureInfo = new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US");
+
+            // Calculate total quantity
+            var totalQuantity = order.OrderItems.Sum(x => x.Quantity);
+
             var response = new
             {
                 success = true,
                 message = "Saved successfully",
-                newSubTotal = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ? 
-                    orderItem.PriceInclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")) :
-                    orderItem.PriceExclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")),
-                displayValue = fieldType == "price" ? 
-                    (order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ? 
-                        orderItem.UnitPriceInclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US")) :
-                        orderItem.UnitPriceExclTax.ToString("C", new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US"))) : null
+                newSubTotal = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                    orderItem.PriceInclTax.ToString("C", cultureInfo) :
+                    orderItem.PriceExclTax.ToString("C", cultureInfo),
+                displayValue = fieldType == "price" ?
+                    (order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                        orderItem.UnitPriceInclTax.ToString("C", cultureInfo) :
+                        orderItem.UnitPriceExclTax.ToString("C", cultureInfo)) : null,
+                // Order totals for Info tab
+                orderTotals = new
+                {
+                    totalQuantity = totalQuantity,
+                    orderSubtotal = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                        order.OrderSubtotalInclTax.ToString("C", cultureInfo) :
+                        order.OrderSubtotalExclTax.ToString("C", cultureInfo),
+                    orderShipping = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                        order.OrderShippingInclTax.ToString("C", cultureInfo) :
+                        order.OrderShippingExclTax.ToString("C", cultureInfo),
+                    orderTax = order.OrderTax.ToString("C", cultureInfo),
+                    orderTotal = order.OrderTotal.ToString("C", cultureInfo)
+                }
             };
 
             return Json(response);

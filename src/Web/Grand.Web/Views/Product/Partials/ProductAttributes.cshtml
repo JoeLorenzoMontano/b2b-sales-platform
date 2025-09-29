@@ -1181,7 +1181,10 @@
                 var currentCases = currentQty / caseSize;
                 if (currentCases >= 1) {
                     caseDropdown.value = currentCases;
-                    updateTotalField_@(Model.Id)(currentCases, currentQty);
+                    // Use setTimeout to ensure DOM updates complete before updating total
+                    setTimeout(function() {
+                        updateTotalField_@(Model.Id)(currentCases, currentQty);
+                    }, 10);
                 }
             }
         }

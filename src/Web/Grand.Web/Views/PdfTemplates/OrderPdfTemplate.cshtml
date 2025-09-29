@@ -210,6 +210,12 @@
                             <br/>
                         }
 
+                        @if (order.RequestedShipmentDate.HasValue)
+                        {
+                            <b>@(string.Format(_translationService.GetResource("PDFInvoice.RequestedShipmentDate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
+                            <br/>
+                        }
+
                         @if (!string.IsNullOrEmpty(order.SeId))
                         {
                             var salesEmployee = await _salesEmployeeService.GetSalesEmployeeById(order.SeId);
@@ -374,6 +380,12 @@
                             <br/>
                             <b>@(string.Format(_translationService.GetResource("PDFInvoice.ShippingMethod", order.CustomerLanguageId), order.ShippingMethod))</b>
                             <br/>
+
+                            @if (order.RequestedShipmentDate.HasValue)
+                            {
+                                <b>@(string.Format(_translationService.GetResource("PDFInvoice.RequestedShipmentDate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
+                                <br/>
+                            }
                         }
                     </td>
                 </tr>

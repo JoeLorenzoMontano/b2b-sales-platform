@@ -463,7 +463,12 @@
                                                 }
                                             </td>
                                             <td class="text-right">
-                                                <input asp-for="@Model.Items[i].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px; margin-left: auto;"/>
+                                                <div class="position-relative d-flex justify-content-end align-items-center">
+                                                    <input asp-for="@Model.Items[i].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;" data-product-id="@item.ProductId"/>
+                                                    <div class="savings-indicator ml-2" id="savings-@item.Id" style="display:none;">
+                                                        <small class="text-success font-weight-bold"></small>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td class="text-right">
                                                 <span class="subtotal-display" data-order-item-id="@item.Id">
@@ -644,6 +649,36 @@
     font-size: 11px;
     text-align: center;
 }
+
+/* Product savings indicator styling */
+.savings-indicator {
+    min-width: 80px;
+    white-space: nowrap;
+}
+
+.savings-indicator small {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    background-color: rgba(40, 167, 69, 0.1);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+    border-radius: 3px;
+    color: #28a745;
+}
+
+/* Dark mode adjustments for savings indicator */
+@@media (prefers-color-scheme: dark) {
+    .savings-indicator small {
+        background-color: rgba(40, 167, 69, 0.2);
+        border-color: rgba(40, 167, 69, 0.4);
+        color: #48d96e;
+    }
+}
+
+[data-theme="dark"] .savings-indicator small {
+    background-color: rgba(40, 167, 69, 0.2);
+    border-color: rgba(40, 167, 69, 0.4);
+    color: #48d96e;
+}
 </style>
 
 <script>
@@ -715,6 +750,9 @@ $(document).ready(function() {
 
     // Initialize unit/case quantity handlers
     initializeUnitCaseQuantityHandlers();
+
+    // Load product savings indicators
+    loadProductSavings();
 });
 
 function showSuccessMessage(message) {
@@ -1253,6 +1291,60 @@ function saveOrderRequestedShipmentDate($field) {
             }, 3000);
         }
     });
+}
+
+// Load and display product savings indicators
+function loadProductSavings() {
+    // Find all price input fields with product IDs
+    $('.inline-edit-field[data-product-id]').each(function() {
+        var $priceInput = $(this);
+        var productId = $priceInput.data('product-id');
+        var currentPrice = parseFloat($priceInput.val()) || 0;
+        var orderItemId = $priceInput.attr('name').match(/Items\[(\d+)\]/)?.[1];
+
+        if (productId && currentPrice > 0 && orderItemId !== undefined) {
+            checkProductSavings(productId, currentPrice, orderItemId);
+        }
+    });
+}
+
+// Check individual product for savings
+function checkProductSavings(productId, currentPrice, orderItemId) {
+    $.ajax({
+        url: '@Url.Action("GetProductSavings", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            productId: productId,
+            currentPrice: currentPrice,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            if (result.hasSavings) {
+                var orderId = '@Model.Id';
+                var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id })));
+                var orderItem = orderItems.find(item => item.Index == orderItemId);
+
+                if (orderItem) {
+                    displaySavingsIndicator(orderItem.Id, result.savings);
+                }
+            }
+        },
+        error: function() {
+            console.log('Error checking product savings for product: ' + productId);
+        }
+    });
+}
+
+// Display savings indicator for a specific order item
+function displaySavingsIndicator(orderItemId, savings) {
+    var $indicator = $('#savings-' + orderItemId);
+    var $small = $indicator.find('small');
+
+    // Format savings amount (assuming currency formatting)
+    var formattedSavings = '$' + savings.toFixed(2);
+
+    $small.text('Save ' + formattedSavings);
+    $indicator.show();
 }
 </script>
 

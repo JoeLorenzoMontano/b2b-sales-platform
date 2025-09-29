@@ -212,7 +212,7 @@
 
                         @if (order.RequestedShipmentDate.HasValue)
                         {
-                            <b>@(string.Format(_translationService.GetResource("PDFInvoice.RequestedShipmentDate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
+                            <b>@(string.Format(_translationService.GetResource("pdfinvoice.requestedshipmentdate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
                             <br/>
                         }
 
@@ -383,7 +383,7 @@
 
                             @if (order.RequestedShipmentDate.HasValue)
                             {
-                                <b>@(string.Format(_translationService.GetResource("PDFInvoice.RequestedShipmentDate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
+                                <b>@(string.Format(_translationService.GetResource("pdfinvoice.requestedshipmentdate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
                                 <br/>
                             }
                         }

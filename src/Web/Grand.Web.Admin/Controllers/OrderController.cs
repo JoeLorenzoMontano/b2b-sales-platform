@@ -2843,10 +2843,42 @@ public class OrderController(
         {
             order.RequestedShipmentDate = null;
         }
-        
+
         await orderService.UpdateOrder(order);
-        
+
         return Json(new { success = true });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetProductSavings(string productId, double currentPrice, [FromServices] IProductService productService)
+    {
+        try
+        {
+            var product = await productService.GetProductById(productId);
+            if (product == null)
+                return Json(new { hasSavings = false });
+
+            var standardPrice = product.Price;
+
+            // Only show savings when current price is lower than standard price
+            if (currentPrice < standardPrice && (standardPrice - currentPrice) > 0.01)
+            {
+                var savings = standardPrice - currentPrice;
+                return Json(new {
+                    hasSavings = true,
+                    standardPrice = standardPrice,
+                    currentPrice = currentPrice,
+                    savings = savings
+                });
+            }
+
+            return Json(new { hasSavings = false });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { hasSavings = false, error = ex.Message });
+        }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]

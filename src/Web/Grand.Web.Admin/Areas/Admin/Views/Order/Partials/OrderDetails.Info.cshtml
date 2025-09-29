@@ -362,6 +362,10 @@
                                                 <a href="@Url.Action("Edit", "Product", new { id = item.ProductId })" class="text-primary">
                                                     @item.ProductName
                                                 </a>
+                                                @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                                                {
+                                                    <br><small>@Html.Raw(item.AttributeInfo)</small>
+                                                }
                                                 @if (!string.IsNullOrEmpty(item.Sku))
                                                 {
                                                     <br><small class="text-muted">SKU: @item.Sku</small>

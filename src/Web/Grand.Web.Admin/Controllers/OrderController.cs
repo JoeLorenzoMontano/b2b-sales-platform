@@ -2342,9 +2342,28 @@ public class OrderController(
             if (product.ProductAttributeCombinations?.Any() == true && product.ProductAttributeMappings?.Any() == true)
             {
                 // Detect attribute type: weight-based conversion or regular combinations
-                bool hasWeightBasedAttributes = product.ProductAttributeMappings
-                    .SelectMany(m => m.ProductAttributeValues ?? new List<ProductAttributeValue>())
-                    .Any(v => v.AttributeValueTypeId == AttributeValueType.WeightBasedConversion);
+                bool hasWeightBasedAttributes = false;
+
+                // Check each mapping to see if it has weight-based attribute values
+                foreach (var mapping in product.ProductAttributeMappings)
+                {
+                    if (mapping.ProductAttributeValues != null && mapping.ProductAttributeValues.Any())
+                    {
+                        foreach (var attrValue in mapping.ProductAttributeValues)
+                        {
+                            Console.WriteLine($"  Checking value: {attrValue.Name}, TypeId: {attrValue.AttributeValueTypeId}, IsWeightBased: {attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion}");
+                            if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                            {
+                                hasWeightBasedAttributes = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasWeightBasedAttributes) break;
+                }
+
+                // Debug logging
+                Console.WriteLine($"Product: {product.Name}, HasWeightBased: {hasWeightBasedAttributes}, Mappings: {product.ProductAttributeMappings?.Count ?? 0}, Values: {product.ProductAttributeMappings?.Sum(m => m.ProductAttributeValues?.Count ?? 0) ?? 0}");
 
                 if (hasWeightBasedAttributes)
                 {

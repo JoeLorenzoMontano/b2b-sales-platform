@@ -623,14 +623,23 @@
             }
         });
 
-        // Initialize weight attribute selectors with current conversion ratio
+        // Initialize weight selectors on page load
+        initializeWeightSelectors();
+    });
+
+    // Initialize weight attribute selectors with current conversion ratio
+    // This function is called on page load and after AJAX refreshes
+    function initializeWeightSelectors() {
         $('.weight-attribute-selector').each(function() {
             var $selector = $(this);
             var selectedOption = $selector.find('option:selected');
             var conversionRatio = parseFloat(selectedOption.data('conversion-ratio')) || 1;
             $selector.data('previous-option', conversionRatio);
         });
-    });
+    }
+
+    // Expose initialization function globally so it can be called after refreshes
+    window.initializeWeightSelectors = initializeWeightSelectors;
 })();
 
 // Delete order item function

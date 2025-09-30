@@ -711,16 +711,15 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
 
     // Calculate quantity based on attribute type
     if (product.hasWeightBasedAttributes) {
-        // For weight-based, read quantity from the weight quantity input
+        // For weight-based, use the quantity directly without conversion
         var weightQty = parseFloat($('#weight-quantity-@componentId').val());
         if (!weightQty || weightQty <= 0) {
             alert('Please enter a valid quantity.');
             return;
         }
 
-        // Apply conversion ratio to get base quantity (similar to Case/Unit pattern)
-        var conversionRatio = product.conversionRatio || 1;
-        quantity = Math.round(weightQty * conversionRatio);
+        // Use weight quantity directly (no conversion)
+        quantity = Math.round(weightQty);
 
         // Ensure a weight option is selected
         if (!product.combinationId && !product.attributeValueId) {

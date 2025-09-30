@@ -88,8 +88,15 @@
                                                             var selectedOption = item.WeightOptions.FirstOrDefault(w => w.CombinationId == item.SelectedWeightCombinationId);
                                                             var weightName = selectedOption?.Name ?? "unit";
                                                             var plural = item.Quantity != 1 ? "s" : "";
+                                                            var conversionRatio = selectedOption?.ConversionRatio ?? 1;
+                                                            var baseUnits = item.Quantity * conversionRatio;
                                                         }
                                                         <span class="weight-quantity-info">@item.Quantity @weightName@(plural)</span>
+                                                        @if (conversionRatio > 1)
+                                                        {
+                                                            <br />
+                                                            <span class="text-muted" style="font-size: 0.85em;">(@baseUnits base units)</span>
+                                                        }
                                                         <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>
                                                     </small>
                                                 </div>

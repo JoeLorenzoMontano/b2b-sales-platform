@@ -1472,7 +1472,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> UpdateOrderItemField(string orderId, string orderItemId, string fieldType, string value, [FromServices] ICurrencyService currencyService, [FromServices] IShipmentService shipmentService)
+    public async Task<IActionResult> UpdateOrderItemField(string orderId, string orderItemId, string fieldType, string value, string additionalData, [FromServices] ICurrencyService currencyService, [FromServices] IShipmentService shipmentService, [FromServices] IProductService productService, [FromServices] IProductAttributeService productAttributeService)
     {
         try
         {
@@ -1526,6 +1526,88 @@ public class OrderController(
                 orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
                 orderItem.DiscountAmountInclTax = 0;
                 orderItem.DiscountAmountExclTax = 0;
+            }
+            else if (fieldType == "weightAttribute")
+            {
+                // value contains the combinationId
+                var combinationId = value;
+                if (string.IsNullOrEmpty(combinationId))
+                    return Json(new { success = false, message = "Invalid combination ID" });
+
+                // Parse additional data to get the price
+                double newPrice = 0;
+                string productId = orderItem.ProductId;
+
+                if (!string.IsNullOrEmpty(additionalData))
+                {
+                    try
+                    {
+                        var dataObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(additionalData);
+                        if (dataObj != null && dataObj.ContainsKey("price"))
+                        {
+                            newPrice = Convert.ToDouble(dataObj["price"].ToString());
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore parsing errors
+                    }
+                }
+
+                // Get the product to find the combination
+                var product = await productService.GetProductById(productId);
+                if (product == null)
+                    return Json(new { success = false, message = "Product not found" });
+
+                var combination = product.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == combinationId);
+                if (combination == null)
+                    return Json(new { success = false, message = "Combination not found" });
+
+                // Update the order item's attributes to the selected combination
+                orderItem.Attributes = combination.Attributes;
+
+                // Update price based on combination
+                var combinationPrice = (combination.OverriddenPrice.HasValue && combination.OverriddenPrice.Value > 0) ? combination.OverriddenPrice.Value : product.Price;
+                orderItem.UnitPriceExclTax = combinationPrice;
+                orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+
+                // Update SKU if combination has one
+                if (!string.IsNullOrEmpty(combination.Sku))
+                {
+                    orderItem.Sku = combination.Sku;
+                }
+
+                // Update attribute description for display
+                var attributeNames = new List<string>();
+                foreach (var attr in combination.Attributes)
+                {
+                    var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                    if (mapping != null)
+                    {
+                        var productAttribute = await productAttributeService.GetProductAttributeById(mapping.ProductAttributeId);
+                        var attrValue = attr.Value;
+                        var valueIds = attrValue?.Split(',') ?? new string[0];
+                        foreach (var valueId in valueIds)
+                        {
+                            var trimmedValueId = valueId.Trim();
+                            if (!string.IsNullOrEmpty(trimmedValueId))
+                            {
+                                var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                if (attributeValue != null && productAttribute != null)
+                                {
+                                    attributeNames.Add($"{productAttribute.Name}: {attributeValue.Name}");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (attributeNames.Any())
+                {
+                    orderItem.AttributeDescription = string.Join("<br/>", attributeNames);
+                }
             }
             else
             {

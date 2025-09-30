@@ -333,6 +333,18 @@ public class OrderModel : BaseEntityModel
         public double CommissionValue { get; set; }
 
         public double CaseSize { get; set; }
+
+        public bool HasWeightBasedAttributes { get; set; }
+        public List<WeightAttributeOption> WeightOptions { get; set; } = new List<WeightAttributeOption>();
+        public string SelectedWeightCombinationId { get; set; }
+    }
+
+    public class WeightAttributeOption
+    {
+        public string CombinationId { get; set; }
+        public string Name { get; set; }
+        public double Price { get; set; }
+        public string Sku { get; set; }
     }
 
     public class TaxRate : BaseModel

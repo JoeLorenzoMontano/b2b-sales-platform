@@ -54,7 +54,30 @@
                                             }
                                         </td>
                                         <td class="text-center">
-                                            @if (item.CaseSize > 0)
+                                            @if (item.HasWeightBasedAttributes && item.WeightOptions?.Count > 0)
+                                            {
+                                                <div class="weight-attribute-wrapper" data-item-id="@item.Id">
+                                                    <select class="form-control weight-attribute-selector inline-edit-field"
+                                                            data-item-id="@item.Id"
+                                                            data-product-id="@item.ProductId"
+                                                            style="width:100%; max-width:150px; margin: 0 auto;">
+                                                        @foreach (var weightOption in item.WeightOptions)
+                                                        {
+                                                            <option value="@weightOption.CombinationId"
+                                                                    data-price="@weightOption.Price"
+                                                                    data-sku="@weightOption.Sku"
+                                                                    selected="@(weightOption.CombinationId == item.SelectedWeightCombinationId)">
+                                                                @weightOption.Name
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                    <input name="Items[@i].Quantity" value="1" type="hidden" class="actual-quantity-input"/>
+                                                    <small class="text-muted d-block mt-1">
+                                                        <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>
+                                                    </small>
+                                                </div>
+                                            }
+                                            else if (item.CaseSize > 0)
                                             {
                                                 <div class="quantity-unit-case-wrapper" data-case-size="@item.CaseSize">
                                                     <div class="d-flex align-items-center justify-content-center">
@@ -435,6 +458,82 @@
                 saveOrderItemPrice($field, currentValue);
             }
         }
+    });
+
+    // Weight attribute selector handler
+    $(document).on('change', '.weight-attribute-selector', function() {
+        var $selector = $(this);
+        var selectedOption = $selector.find('option:selected');
+        var combinationId = selectedOption.val();
+        var newPrice = selectedOption.data('price');
+        var orderItemId = $selector.data('item-id');
+        var productId = $selector.data('product-id');
+
+        if (!combinationId || !orderItemId) {
+            console.log('Missing combination ID or order item ID');
+            return;
+        }
+
+        // Find the order ID from the closest parent container with data-order-id
+        var $container = $selector.closest('[data-order-id]');
+        if ($container.length === 0) {
+            console.log('Could not find order ID container');
+            return;
+        }
+        var orderId = $container.data('order-id');
+
+        // Show saving indicator
+        var $saveStatus = $('#save-status-' + orderItemId);
+        if ($saveStatus.length === 0) {
+            $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItemId + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+            $selector.closest('td').append($saveStatus);
+        }
+        $saveStatus.show();
+        $selector.prop('disabled', true);
+
+        $.ajax({
+            url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                orderItemId: orderItemId,
+                fieldType: 'weightAttribute',
+                value: combinationId,
+                additionalData: JSON.stringify({ price: newPrice, productId: productId }),
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                $selector.prop('disabled', false);
+
+                if (result.success) {
+                    // Show success indicator briefly
+                    $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 2000);
+
+                    // Reload the component to reflect updated price and totals
+                    if (typeof window.refreshCurrentProductsGrid === 'function') {
+                        setTimeout(function() {
+                            window.refreshCurrentProductsGrid();
+                        }, 500);
+                    }
+                } else {
+                    // Show error
+                    $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 5000);
+                }
+            },
+            error: function() {
+                $selector.prop('disabled', false);
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        });
     });
 
     // Initialize original values on page load

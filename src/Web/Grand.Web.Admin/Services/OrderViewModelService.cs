@@ -1009,6 +1009,62 @@ public class OrderViewModelService : IOrderViewModelService
                 orderItemModel.CaseSize = combination.CaseSize;
             }
 
+            // Check for weight-based attributes
+            if (product.ProductAttributeMappings?.Any() == true)
+            {
+                bool hasWeightBasedAttributes = product.ProductAttributeMappings
+                    .SelectMany(m => m.ProductAttributeValues ?? new List<ProductAttributeValue>())
+                    .Any(v => v.AttributeValueTypeId == AttributeValueType.WeightBasedConversion);
+
+                if (hasWeightBasedAttributes && product.ProductAttributeCombinations?.Any() == true)
+                {
+                    orderItemModel.HasWeightBasedAttributes = true;
+
+                    // Populate weight options
+                    foreach (var comb in product.ProductAttributeCombinations)
+                    {
+                        var attributeNames = new List<string>();
+                        foreach (var attr in comb.Attributes)
+                        {
+                            var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                            if (mapping != null)
+                            {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                foreach (var valueId in valueIds)
+                                {
+                                    var trimmedValueId = valueId.Trim();
+                                    if (!string.IsNullOrEmpty(trimmedValueId))
+                                    {
+                                        var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                        if (attributeValue != null)
+                                        {
+                                            attributeNames.Add(attributeValue.Name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        var combinationPrice = (comb.OverriddenPrice.HasValue && comb.OverriddenPrice.Value > 0) ? comb.OverriddenPrice.Value : product.Price;
+                        var optionName = attributeNames.Any() ? string.Join(", ", attributeNames) : "Default";
+
+                        orderItemModel.WeightOptions.Add(new OrderModel.WeightAttributeOption
+                        {
+                            CombinationId = comb.Id,
+                            Name = optionName,
+                            Price = combinationPrice,
+                            Sku = !string.IsNullOrEmpty(comb.Sku) ? comb.Sku : product.Sku
+                        });
+                    }
+
+                    // Set selected weight combination (from current order item)
+                    if (combination != null)
+                    {
+                        orderItemModel.SelectedWeightCombinationId = combination.Id;
+                    }
+                }
+            }
+
             orderItemModel.AttributeInfo = orderItem.AttributeDescription;
             if (product.IsRecurring)
                 orderItemModel.RecurringInfo = string.Format(

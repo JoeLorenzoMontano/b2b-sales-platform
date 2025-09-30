@@ -22,8 +22,6 @@
 		<ProjectReference Include="..\..\Core\Grand.Domain\Grand.Domain.csproj" />
 		<ProjectReference Include="..\..\Core\Grand.Infrastructure\Grand.Infrastructure.csproj" />
 		<ProjectReference Include="..\..\Core\Grand.SharedKernel\Grand.SharedKernel.csproj" />
-		<ProjectReference Include="..\..\Plugins\Payments.CashOnDelivery\Payments.CashOnDelivery.csproj" />
-		<ProjectReference Include="..\..\Plugins\Payments.Consignment\Payments.Consignment.csproj" />
 		<ProjectReference Include="..\Grand.Web.Common\Grand.Web.Common.csproj" />
 		<ProjectReference Include="..\Grand.Web.Admin\Grand.Web.Admin.csproj" />
 		<ProjectReference Include="..\Grand.Web.Vendor\Grand.Web.Vendor.csproj" />

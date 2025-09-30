@@ -2851,7 +2851,9 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
     [HttpPost]
-    public async Task<IActionResult> GetProductSavings(string productId, double currentPrice, [FromServices] IProductService productService)
+    public async Task<IActionResult> GetProductSavings(string productId, double currentPrice,
+        [FromServices] IProductService productService,
+        [FromServices] IWarehouseService warehouseService)
     {
         try
         {
@@ -2861,6 +2863,22 @@ public class OrderController(
 
             var standardPrice = product.Price;
 
+            // Get inventory and warehouse information
+            var stockQuantity = product.StockQuantity;
+
+            // Get primary warehouse information
+            string warehouseName = "Default";
+            if (product.ProductWarehouseInventory?.Any() == true)
+            {
+                var primaryInventory = product.ProductWarehouseInventory.OrderByDescending(x => x.StockQuantity).First();
+                var warehouse = await warehouseService.GetWarehouseById(primaryInventory.WarehouseId);
+                if (warehouse != null)
+                {
+                    warehouseName = warehouse.Name;
+                    stockQuantity = primaryInventory.StockQuantity; // Use warehouse-specific stock
+                }
+            }
+
             // Only show savings when current price is lower than standard price
             if (currentPrice < standardPrice && (standardPrice - currentPrice) > 0.01)
             {
@@ -2869,11 +2887,17 @@ public class OrderController(
                     hasSavings = true,
                     standardPrice = standardPrice,
                     currentPrice = currentPrice,
-                    savings = savings
+                    savings = savings,
+                    stockQuantity = stockQuantity,
+                    warehouseName = warehouseName
                 });
             }
 
-            return Json(new { hasSavings = false });
+            return Json(new {
+                hasSavings = false,
+                stockQuantity = stockQuantity,
+                warehouseName = warehouseName
+            });
         }
         catch (Exception ex)
         {

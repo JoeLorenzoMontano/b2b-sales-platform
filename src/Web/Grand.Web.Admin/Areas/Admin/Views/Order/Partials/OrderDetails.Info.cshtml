@@ -454,7 +454,10 @@
                                                             </select>
                                                         </div>
                                                         <input asp-for="@Model.Items[i].Quantity" type="hidden" class="actual-quantity-input"/>
-                                                        <small class="text-muted d-block mt-1">@item.CaseSize per case</small>
+                                                        <small class="text-muted d-block mt-1">
+                                                            @item.CaseSize per case
+                                                            <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>
+                                                        </small>
                                                     </div>
                                                 }
                                                 else
@@ -462,7 +465,7 @@
                                                     <input asp-for="@Model.Items[i].Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px; margin: 0 auto;" min="1"/>
                                                 }
                                             </td>
-                                            <td class="text-right">
+                                            <td>
                                                 <div class="position-relative">
                                                     <input asp-for="@Model.Items[i].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;" data-product-id="@item.ProductId"/>
                                                     <div class="savings-indicator mt-1" id="savings-@item.Id" style="display:none;">
@@ -646,7 +649,7 @@
 
 /* Product savings indicator styling */
 .savings-indicator {
-    text-align: right;
+    text-align: left;
     white-space: nowrap;
 }
 
@@ -1245,6 +1248,8 @@ function saveOrderRequestedShipmentDate($field) {
             if (result.success) {
                 // Update original value to prevent re-saving
                 $field.data('original-value', value);
+                // Also update the field's stored value attribute to ensure consistency
+                $field.attr('data-original-value', value);
 
                 // Show success indicator briefly
                 var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
@@ -1313,13 +1318,19 @@ function checkProductSavings(productId, currentPrice, orderItemId) {
             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
         },
         success: function(result) {
-            if (result.hasSavings) {
-                var orderId = '@Model.Id';
-                var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id })));
-                var orderItem = orderItems.find(item => item.Index == orderItemId);
+            var orderId = '@Model.Id';
+            var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize })));
+            var orderItem = orderItems.find(item => item.Index == orderItemId);
 
-                if (orderItem) {
+            if (orderItem) {
+                // Display savings if available
+                if (result.hasSavings) {
                     displaySavingsIndicator(orderItem.Id, result.savings);
+                }
+
+                // Display inventory information
+                if (result.stockQuantity !== undefined && result.warehouseName) {
+                    displayInventoryInfo(orderItem.Id, result.stockQuantity, orderItem.CaseSize, result.warehouseName);
                 }
             }
         },
@@ -1341,6 +1352,18 @@ function displaySavingsIndicator(orderItemId, savings) {
     $indicator.show();
 }
 
+// Display inventory information for a specific order item
+function displayInventoryInfo(orderItemId, stockQuantity, caseSize, warehouseName) {
+    var $indicator = $('#inventory-' + orderItemId);
+
+    if (stockQuantity > 0 && caseSize > 0) {
+        var casesAvailable = Math.floor(stockQuantity / caseSize);
+        var inventoryText = ' • ' + stockQuantity + ' Available (' + casesAvailable + ' cases) - ' + warehouseName;
+        $indicator.text(inventoryText);
+        $indicator.show();
+    }
+}
+
 // Add real-time price change detection
 $(document).on('input change', '.inline-edit-field[data-product-id]', function() {
     var $priceInput = $(this);
@@ -1349,26 +1372,28 @@ $(document).on('input change', '.inline-edit-field[data-product-id]', function()
     var orderItemId = $priceInput.attr('name').match(/Items\[(\d+)\]/)?.[1];
 
     if (productId && currentPrice > 0 && orderItemId !== undefined) {
-        // Hide existing savings indicator first
+        // Hide existing indicators first
         var orderId = '@Model.Id';
-        var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id })));
+        var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize })));
         var orderItem = orderItems.find(item => item.Index == orderItemId);
 
         if (orderItem) {
             $('#savings-' + orderItem.Id).hide();
+            $('#inventory-' + orderItem.Id).hide();
         }
 
-        // Recalculate savings with new price
+        // Recalculate savings and inventory with new price
         checkProductSavings(productId, currentPrice, orderItemId);
     } else {
-        // If price is 0 or invalid, hide savings indicator
+        // If price is 0 or invalid, hide indicators
         if (orderItemId !== undefined) {
             var orderId = '@Model.Id';
-            var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id })));
+            var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize })));
             var orderItem = orderItems.find(item => item.Index == orderItemId);
 
             if (orderItem) {
                 $('#savings-' + orderItem.Id).hide();
+                $('#inventory-' + orderItem.Id).hide();
             }
         }
     }

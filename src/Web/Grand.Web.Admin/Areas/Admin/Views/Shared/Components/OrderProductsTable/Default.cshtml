@@ -1,0 +1,214 @@
+@using Grand.Domain.Tax
+@using Grand.Web.Admin.Components.OrderProductsTable
+@using Grand.Web.Admin.Extensions
+@model OrderProductsTableModel
+
+<!-- Products Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Order Products (@Model.Items.Count items)</h5>
+                @if (Model.Collapsible)
+                {
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#productsCollapse-@Model.OrderId">
+                        <i class="fa fa-chevron-down"></i>
+                    </button>
+                }
+            </div>
+            <div class="collapse show" id="productsCollapse-@Model.OrderId">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-right">Price</th>
+                                    <th class="text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var i = 0; i < Model.Items.Count; i++)
+                                {
+                                    var item = Model.Items[i];
+                                    <input name="Items[@i].Id" value="@item.Id" type="hidden"/>
+                                    <tr>
+                                        <td>@(i + 1)</td>
+                                        <td>
+                                            <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })" class="text-primary">
+                                                @item.ProductName
+                                            </a>
+                                            @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                                            {
+                                                <br><small>@Html.Raw(item.AttributeInfo)</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.Sku))
+                                            {
+                                                <br><small class="text-muted">SKU: @item.Sku</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.WarehouseName))
+                                            {
+                                                <br><small class="text-muted">Warehouse: @item.WarehouseName</small>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.CaseSize > 0)
+                                            {
+                                                <div class="quantity-unit-case-wrapper" data-case-size="@item.CaseSize">
+                                                    <div class="d-flex align-items-center justify-content-center">
+                                                        <input type="number"
+                                                               class="form-control inline-edit-field quantity-display-input"
+                                                               data-item-id="@item.Id"
+                                                               value="@item.Quantity"
+                                                               style="width:60px; margin-right: 5px;"
+                                                               min="1"/>
+                                                        <select class="form-control unit-case-selector"
+                                                                data-item-id="@item.Id"
+                                                                style="width:70px;">
+                                                            <option value="unit">Unit</option>
+                                                            <option value="case">Case</option>
+                                                        </select>
+                                                    </div>
+                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input"/>
+                                                    <small class="text-muted d-block mt-1">
+                                                        @item.CaseSize per case
+                                                        <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>
+                                                    </small>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <input name="Items[@i].Quantity" value="@item.Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px; margin: 0 auto;" min="1"/>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="position-relative">
+                                                <input name="Items[@i].UnitPriceExclTaxValue" value="@item.UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;" data-product-id="@item.ProductId"/>
+                                                <div class="savings-indicator mt-1" id="savings-@item.Id" style="display:none;">
+                                                    <small class="text-success font-weight-bold"></small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-right">
+                                            <span class="subtotal-display" data-order-item-id="@item.Id">
+                                                @switch (Model.TaxDisplayType)
+                                                {
+                                                    case TaxDisplayType.ExcludingTax:
+                                                        @item.SubTotalExclTax
+                                                        break;
+                                                    case TaxDisplayType.IncludingTax:
+                                                        @item.SubTotalInclTax
+                                                        break;
+                                                }
+                                            </span>
+                                            <div class="auto-save-status" id="save-status-@item.Id" style="display:none; margin-top: 4px;">
+                                                <small class="text-muted">
+                                                    <i class="fa fa-spinner fa-spin"></i> Saving...
+                                                </small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <th colspan="4" class="text-right">Total:</th>
+                                    <th class="text-right"><span id="total-amount">@Model.OrderTotal</span></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Add Products Section and Order Summary Side-by-Side -->
+                    <div class="row mt-4 align-items-start">
+                        <!-- Add Products Section -->
+                        @if (Model.ShowAddProducts)
+                        {
+                            <div class="col-lg-6">
+                                <div class="add-products-section">
+                                    <div class="x_panel light form-fit">
+                                        <div class="x_content form">
+                                            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.OrderId, contextType = "order" })
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Order Summary -->
+                        @if (Model.ShowSummary)
+                        {
+                            <div class="@(Model.ShowAddProducts ? "col-lg-6" : "col-12")">
+                                <div class="card">
+                                    <div class="card-body">
+                                        @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Subtotal:</span>
+                                                <span id="summary-subtotal">@Model.OrderSubtotalInclTax</span>
+                                            </div>
+                                        }
+                                        @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Subtotal:</span>
+                                                <span id="summary-subtotal">@Model.OrderSubtotalExclTax</span>
+                                            </div>
+                                        }
+                                        @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Shipping:</span>
+                                                <span id="summary-shipping">@Model.OrderShippingInclTax</span>
+                                            </div>
+                                        }
+                                        @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Shipping:</span>
+                                                <span id="summary-shipping">@Model.OrderShippingExclTax</span>
+                                            </div>
+                                        }
+                                        <div class="d-flex justify-content-between">
+                                            <span>Tax:</span>
+                                            <span id="summary-tax">@Model.OrderTax</span>
+                                        </div>
+                                        <hr>
+                                        <div class="d-flex justify-content-between font-weight-bold">
+                                            <span>Total:</span>
+                                            <span id="summary-total">@Model.OrderTotal</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ProductSearchAdd component integration - Transparent styling */
+.add-products-section {
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-products-section .x_panel {
+    margin-bottom: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.add-products-section .x_title {
+    background: transparent;
+    padding: 10px 15px;
+    margin-bottom: 0;
+}
+</style>

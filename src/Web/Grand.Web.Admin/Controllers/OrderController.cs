@@ -3234,10 +3234,42 @@ public class OrderController(
         }
         catch (Exception ex)
         {
-            return Json(new { 
-                success = false, 
-                message = "Error loading component: " + ex.Message 
+            return Json(new {
+                success = false,
+                message = "Error loading component: " + ex.Message
             });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetOrderProductsTableComponent(string orderId, bool showAddProducts = false, bool showSummary = false, bool collapsible = false)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Content("<div class='alert alert-danger'>Order not found or access denied</div>");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Content("<div class='alert alert-danger'>Access denied</div>");
+
+        try
+        {
+            // Prepare the order model
+            var model = new OrderModel();
+            await orderViewModelService.PrepareOrderDetailsModel(model, order);
+
+            // Return the OrderProductsTable ViewComponent as HTML
+            return ViewComponent("OrderProductsTable", new {
+                model = model,
+                showAddProducts = showAddProducts,
+                showSummary = showSummary,
+                collapsible = collapsible
+            });
+        }
+        catch (Exception ex)
+        {
+            return Content($"<div class='alert alert-danger'>Error loading component: {ex.Message}</div>");
         }
     }
 

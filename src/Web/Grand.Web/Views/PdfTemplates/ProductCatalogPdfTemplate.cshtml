@@ -29,9 +29,9 @@
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             border-bottom: 2px solid #333;
-            padding-bottom: 10px;
+            padding-bottom: 5px;
         }
 
         .company-name {
@@ -243,12 +243,10 @@
                                         }
                                         @if (caseSize > 0 && basePrice > 0)
                                         {
-                                            @{
-                                                var unitPrice = basePrice / caseSize;
-                                                var totalCasePrice = basePrice;
-                                                var unitCost = product.ProductCost > 0 ? product.ProductCost / caseSize : 0;
-                                                var totalCaseCost = product.ProductCost;
-                                            }
+                                            var unitPrice = basePrice / caseSize;
+                                            var totalCasePrice = basePrice;
+                                            var unitCost = product.ProductCost > 0 ? product.ProductCost / caseSize : 0;
+                                            var totalCaseCost = product.ProductCost;
                                             <div style="font-weight: bold; color: #2e7d32;">$@(totalCasePrice.ToString("F2")) /Case</div>
                                             <div style="font-size: 8px; color: #666; margin-bottom: 2px;">@(caseSize.ToString("F0")) units per case</div>
                                             <div style="font-size: 8px; color: #666;">Unit Price: $@(unitPrice.ToString("F2"))</div>
@@ -337,14 +335,14 @@
                                 <tr>
                                     <td>
                                         <div style="font-weight: bold; font-size: 9px;">@cell.Value.Name</div>
-                                        @if (cell.Mapping.IsRequired)
+                                        @* @if (cell.Mapping.IsRequired)
                                         {
                                             <div style="font-size: 7px; color: #d32f2f;">*Required</div>
                                         }
                                         @if (cell.Value.AllowSample)
                                         {
                                             <div style="font-size: 7px; color: #2e7d32;">Sample Available</div>
-                                        }
+                                        } *@
                                     </td>
                                     <td>
                                         @if (cell.Value.PriceAdjustment != 0)
@@ -376,11 +374,11 @@
                                         else if (cell.FinalPrice > 0)
                                         {
                                             <div style="font-weight: bold;">$@(cell.FinalPrice.ToString("F2")) /Unit</div>
-                                            @if (cell.Value.OverriddenPrice != null)
+                                            @* @if (cell.Value.OverriddenPrice != null)
                                             {
                                                 <div style="font-size: 7px; color: #666;">Override Price</div>
-                                            }
-                                            else if (cell.Value.PriceAdjustment != 0)
+                                            } *@
+                                            if (cell.Value.PriceAdjustment != 0)
                                             {
                                                 <div style="font-size: 7px; color: #666;">
                                                     Base: $@product.Price.ToString("F2")
@@ -398,12 +396,10 @@
             @* Fallback for products with no combinations and no attributes *@
             @if (!combinations.Any() && !attributeMappings.Any() && product.Price > 0)
             {
-                @{
-                    // Check if product has any combinations with case sizes to determine pricing structure
-                    var allCombinations = product.ProductAttributeCombinations?.ToList() ?? new List<ProductAttributeCombination>();
-                    var hasCaseSizing = allCombinations.Any(c => c.CaseSize > 0);
-                    var avgCaseSize = hasCaseSizing ? allCombinations.Where(c => c.CaseSize > 0).Average(c => c.CaseSize) : 0;
-                }
+                // Check if product has any combinations with case sizes to determine pricing structure
+                var allCombinations = product.ProductAttributeCombinations?.ToList() ?? new List<ProductAttributeCombination>();
+                var hasCaseSizing = allCombinations.Any(c => c.CaseSize > 0);
+                var avgCaseSize = hasCaseSizing ? allCombinations.Where(c => c.CaseSize > 0).Average(c => c.CaseSize) : 0;
                 <table class="simple-attributes-table">
                     <tbody>
                         <tr>

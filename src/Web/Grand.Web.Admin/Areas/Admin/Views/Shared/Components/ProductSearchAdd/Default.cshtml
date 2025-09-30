@@ -35,13 +35,23 @@
 
                     <!-- Attribute Selection Section -->
                     <div id="attribute-selection-@componentId" style="display: none;">
-                        <!-- Weight-based attributes: Dropdown replaces quantity input -->
+                        <!-- Weight-based attributes: Dropdown + Quantity input -->
                         <div class="col-12" id="weight-attributes-@componentId" style="display: none;">
                             <div class="form-group">
                                 <label>Select Size/Weight</label>
                                 <select id="attribute-dropdown-@componentId" class="form-control">
                                     <option value="">Select...</option>
                                 </select>
+                            </div>
+                            <div class="form-group">
+                                <label id="weight-quantity-label-@componentId">Quantity</label>
+                                <input type="number"
+                                       id="weight-quantity-@componentId"
+                                       class="form-control"
+                                       value="1"
+                                       min="0.01"
+                                       step="0.01" />
+                                <small class="text-muted" id="weight-quantity-info-@componentId"></small>
                             </div>
                         </div>
 
@@ -601,8 +611,9 @@ function handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product) {
         dropdown.append(optionEl);
     });
 
-    // Set default price
+    // Set default price and quantity
     $('#selected-price-@componentId').val(product.price || 0);
+    $('#weight-quantity-@componentId').val(1);
 
     // Handle selection change
     dropdown.off('change.attribute').on('change.attribute', function() {
@@ -614,8 +625,13 @@ function handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product) {
             var mappingId = selectedOption.data('mapping-id');
             var attributeValueId = selectedOption.data('attribute-value-id');
             var conversionRatio = selectedOption.data('conversion-ratio');
+            var optionName = selectedOption.text();
 
             $('#selected-price-@componentId').val(price || 0);
+
+            // Update quantity label to show selected unit
+            $('#weight-quantity-label-@componentId').text('Quantity (' + optionName + ')');
+            $('#weight-quantity-info-@componentId').text('Conversion ratio: ' + conversionRatio + ' per unit');
 
             // Store both types of IDs
             if (attributeValueId) {
@@ -631,6 +647,8 @@ function handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product) {
             }
         } else {
             $('#selected-price-@componentId').val(product.price || 0);
+            $('#weight-quantity-label-@componentId').text('Quantity');
+            $('#weight-quantity-info-@componentId').text('');
             selectedProduct@(componentId.Replace("-", "_")).combinationId = null;
             selectedProduct@(componentId.Replace("-", "_")).attributeValueId = null;
         }
@@ -693,12 +711,17 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
 
     // Calculate quantity based on attribute type
     if (product.hasWeightBasedAttributes) {
-        // For weight-based, quantity is always 1 (user selects the size via dropdown)
-        quantity = 1;
+        // For weight-based, read quantity from the weight quantity input
+        var weightQty = parseFloat($('#weight-quantity-@componentId').val());
+        if (!weightQty || weightQty <= 0) {
+            alert('Please enter a valid quantity.');
+            return;
+        }
+        quantity = weightQty;
 
-        // Ensure a combination is selected
-        if (!product.combinationId) {
-            alert('Please select a size/option.');
+        // Ensure a weight option is selected
+        if (!product.combinationId && !product.attributeValueId) {
+            alert('Please select a size/weight option.');
             return;
         }
     } else if (product.hasCombinationAttributes && product.caseSize) {
@@ -756,7 +779,9 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
         quantity: quantity,
         unitPrice: unitPrice,
         warehouseId: warehouseId,
-        attributeCombinationId: selectedProduct@(componentId.Replace("-", "_")).combinationId || ''
+        attributeCombinationId: selectedProduct@(componentId.Replace("-", "_")).combinationId || '',
+        attributeValueId: selectedProduct@(componentId.Replace("-", "_")).attributeValueId || '',
+        mappingId: selectedProduct@(componentId.Replace("-", "_")).mappingId || ''
     };
     
     addAntiForgeryToken(data);

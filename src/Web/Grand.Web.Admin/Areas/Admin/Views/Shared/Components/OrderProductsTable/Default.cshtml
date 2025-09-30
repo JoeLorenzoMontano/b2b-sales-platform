@@ -565,14 +565,12 @@
     });
 
     // Weight quantity input handler
-    $(document).on('blur change', '.weight-quantity-input', function() {
-        var $quantityInput = $(this);
-        var currentValue = parseFloat($quantityInput.val());
-        var originalValue = parseFloat($quantityInput.data('original-value')) || 0;
-
-        // Update the info text
-        var $wrapper = $quantityInput.closest('.weight-attribute-wrapper');
+    $(document).on('blur', '.weight-quantity-input', function() {
+        var $displayInput = $(this);
+        var $wrapper = $displayInput.closest('.weight-attribute-wrapper');
+        var $hiddenInput = $wrapper.find('.actual-quantity-input');
         var $selector = $wrapper.find('.weight-attribute-selector');
+        var currentValue = parseFloat($displayInput.val());
         var weightName = $selector.find('option:selected').text();
 
         // Update info text with defensive check
@@ -582,10 +580,11 @@
             $infoSpan.text(currentValue + ' ' + weightName + pluralSuffix);
         }
 
-        // Only save if value has changed
-        if (currentValue !== originalValue && currentValue > 0) {
-            saveOrderItemQuantity($quantityInput, currentValue);
-        }
+        // Update hidden input value
+        $hiddenInput.val(currentValue);
+
+        // Trigger blur on hidden input to fire the existing auto-save logic
+        $hiddenInput.trigger('blur');
     });
 
     // Initialize original values on page load

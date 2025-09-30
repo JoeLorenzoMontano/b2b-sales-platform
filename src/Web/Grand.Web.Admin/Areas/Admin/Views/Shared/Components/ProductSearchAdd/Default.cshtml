@@ -579,7 +579,26 @@ function handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product) {
     dropdown.append('<option value="">Select size/weight...</option>');
 
     product.attributeOptions.forEach(function(option) {
-        dropdown.append(`<option value="${option.combinationId}" data-price="${option.price}" data-sku="${option.sku}">${option.name}</option>`);
+        // Handle both combination-based and non-combination weight attributes
+        var optionValue = option.combinationId || option.attributeValueId;
+        var optionData = {
+            price: option.price,
+            sku: option.sku,
+            mappingId: option.mappingId || '',
+            attributeValueId: option.attributeValueId || '',
+            conversionRatio: option.conversionRatio || 1
+        };
+
+        var optionEl = $('<option></option>')
+            .val(optionValue)
+            .text(option.name)
+            .data('price', optionData.price)
+            .data('sku', optionData.sku)
+            .data('mapping-id', optionData.mappingId)
+            .data('attribute-value-id', optionData.attributeValueId)
+            .data('conversion-ratio', optionData.conversionRatio);
+
+        dropdown.append(optionEl);
     });
 
     // Set default price
@@ -588,21 +607,39 @@ function handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product) {
     // Handle selection change
     dropdown.off('change.attribute').on('change.attribute', function() {
         var selectedOption = $(this).find('option:selected');
-        var combinationId = selectedOption.val();
+        var optionValue = selectedOption.val();
 
-        if (combinationId) {
+        if (optionValue) {
             var price = selectedOption.data('price');
+            var mappingId = selectedOption.data('mapping-id');
+            var attributeValueId = selectedOption.data('attribute-value-id');
+            var conversionRatio = selectedOption.data('conversion-ratio');
+
             $('#selected-price-@componentId').val(price || 0);
-            selectedProduct@(componentId.Replace("-", "_")).combinationId = combinationId;
+
+            // Store both types of IDs
+            if (attributeValueId) {
+                // Non-combination weight attribute
+                selectedProduct@(componentId.Replace("-", "_")).attributeValueId = attributeValueId;
+                selectedProduct@(componentId.Replace("-", "_")).mappingId = mappingId;
+                selectedProduct@(componentId.Replace("-", "_")).conversionRatio = conversionRatio;
+                selectedProduct@(componentId.Replace("-", "_")).combinationId = null;
+            } else {
+                // Combination-based weight attribute
+                selectedProduct@(componentId.Replace("-", "_")).combinationId = optionValue;
+                selectedProduct@(componentId.Replace("-", "_")).attributeValueId = null;
+            }
         } else {
             $('#selected-price-@componentId').val(product.price || 0);
             selectedProduct@(componentId.Replace("-", "_")).combinationId = null;
+            selectedProduct@(componentId.Replace("-", "_")).attributeValueId = null;
         }
     });
 
     // Auto-select first option
     if (product.attributeOptions.length > 0) {
-        dropdown.val(product.attributeOptions[0].combinationId).trigger('change.attribute');
+        var firstValue = product.attributeOptions[0].combinationId || product.attributeOptions[0].attributeValueId;
+        dropdown.val(firstValue).trigger('change.attribute');
     }
 }
 

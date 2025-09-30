@@ -2483,9 +2483,101 @@ public class OrderController(
                     }
                 }
             }
+            else if (product.ProductAttributeMappings?.Any() == true)
+            {
+                // Check for weight-based attributes (products without combinations but with attribute mappings)
+                bool hasWeightBasedAttributes = false;
+
+                // Check each mapping to see if it has weight-based attribute values
+                foreach (var mapping in product.ProductAttributeMappings)
+                {
+                    if (mapping.ProductAttributeValues != null && mapping.ProductAttributeValues.Any())
+                    {
+                        foreach (var attrValue in mapping.ProductAttributeValues)
+                        {
+                            Console.WriteLine($"  [No Combo] Checking value: {attrValue.Name}, TypeId: {attrValue.AttributeValueTypeId}, IsWeightBased: {attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion}");
+                            if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                            {
+                                hasWeightBasedAttributes = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasWeightBasedAttributes) break;
+                }
+
+                Console.WriteLine($"[No Combo] Product: {product.Name}, HasWeightBased: {hasWeightBasedAttributes}, Mappings: {product.ProductAttributeMappings?.Count ?? 0}");
+
+                if (hasWeightBasedAttributes)
+                {
+                    // WEIGHT-BASED: Return base product with attribute options for dropdown
+                    var attributeOptions = new List<object>();
+
+                    // Build options from attribute values directly (no combinations)
+                    foreach (var mapping in product.ProductAttributeMappings)
+                    {
+                        if (mapping.ProductAttributeValues != null)
+                        {
+                            foreach (var attrValue in mapping.ProductAttributeValues)
+                            {
+                                if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                                {
+                                    var optionPrice = (attrValue.OverriddenPrice.HasValue && attrValue.OverriddenPrice.Value > 0)
+                                        ? attrValue.OverriddenPrice.Value
+                                        : product.Price;
+
+                                    attributeOptions.Add(new {
+                                        attributeValueId = attrValue.Id,
+                                        mappingId = mapping.Id,
+                                        name = attrValue.Name,
+                                        price = optionPrice,
+                                        conversionRatio = attrValue.Quantity,
+                                        sku = product.Sku
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    // Return base product only
+                    searchResultItems.Add(new {
+                        id = product.Id,
+                        name = product.Name,
+                        sku = product.Sku,
+                        price = product.Price,
+                        combinationId = (string)null,
+                        hasWeightBasedAttributes = true,
+                        hasCombinationAttributes = false,
+                        attributeOptions = attributeOptions,
+                        published = product.Published,
+                        brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                        warehouses = warehouseInventory,
+                        attributeInfo = (string)null
+                    });
+                }
+                else
+                {
+                    // Regular product with attributes but not weight-based
+                    searchResultItems.Add(new {
+                        id = product.Id,
+                        name = product.Name,
+                        sku = product.Sku,
+                        price = product.Price,
+                        combinationId = (string)null,
+                        hasAttributes = true,
+                        hasWeightBasedAttributes = false,
+                        hasCombinationAttributes = false,
+                        attributeOptions = new List<object>(),
+                        published = product.Published,
+                        brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                        warehouses = warehouseInventory,
+                        attributeInfo = (string)null
+                    });
+                }
+            }
             else
             {
-                // Add regular product without attribute combinations
+                // Add regular product without any attributes
                 searchResultItems.Add(new {
                     id = product.Id,
                     name = product.Name,

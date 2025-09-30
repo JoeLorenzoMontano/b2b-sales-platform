@@ -346,20 +346,14 @@
                         <tbody>
                             @foreach (var conversion in weightBasedConversions)
                             {
-                                @{
-                                    var packagePrice = conversion.FinalPrice;
-                                    var conversionRatio = conversion.Value.Quantity;
-                                    var perUnitPrice = conversionRatio > 0 ? packagePrice / conversionRatio : 0;
-                                    var packageCost = conversion.Value.Cost > 0 ? conversion.Value.Cost : 0;
-                                    var perUnitCost = conversionRatio > 0 && packageCost > 0 ? packageCost / conversionRatio : 0;
-                                }
+                                var packagePrice = conversion.FinalPrice;
+                                var conversionRatio = conversion.Value.Quantity;
+                                var perUnitPrice = conversionRatio > 0 ? packagePrice / conversionRatio : 0;
+                                var packageCost = conversion.Value.Cost > 0 ? conversion.Value.Cost : 0;
+                                var perUnitCost = conversionRatio > 0 && packageCost > 0 ? packageCost / conversionRatio : 0;
                                 <tr>
                                     <td>
                                         <div style="font-weight: bold; font-size: 10px; color: #1976d2;">@conversion.Value.Name</div>
-                                        @if (conversion.Mapping.IsRequired)
-                                        {
-                                            <div style="font-size: 7px; color: #d32f2f;">*Required</div>
-                                        }
                                     </td>
                                     <td style="text-align: center;">
                                         <div style="font-size: 9px; font-weight: bold;">@(conversionRatio.ToString("F0")) units</div>
@@ -441,14 +435,6 @@
                                 <tr>
                                     <td>
                                         <div style="font-weight: bold; font-size: 9px;">@cell.Value.Name</div>
-                                        @* @if (cell.Mapping.IsRequired)
-                                        {
-                                            <div style="font-size: 7px; color: #d32f2f;">*Required</div>
-                                        }
-                                        @if (cell.Value.AllowSample)
-                                        {
-                                            <div style="font-size: 7px; color: #2e7d32;">Sample Available</div>
-                                        } *@
                                     </td>
                                     <td>
                                         @if (cell.Value.PriceAdjustment != 0)

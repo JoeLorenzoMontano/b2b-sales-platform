@@ -492,36 +492,17 @@
         var orderItemId = $selector.data('item-id');
         var productId = $selector.data('product-id');
         var weightName = selectedOption.text();
-        var newConversionRatio = parseFloat(selectedOption.data('conversion-ratio')) || 1;
 
-        // Get the previously selected option's conversion ratio
-        var previousOption = $selector.data('previous-option');
-        var oldConversionRatio = previousOption ? parseFloat(previousOption) : newConversionRatio;
-
-        // Update the info text to show selected weight
+        // Get current quantity without conversion
         var $wrapper = $selector.closest('.weight-attribute-wrapper');
         var $quantityInput = $wrapper.find('.weight-quantity-input');
         var currentDisplayQty = parseFloat($quantityInput.val()) || 1;
 
-        // Convert quantity to new unit (similar to Unit/Case conversion pattern)
-        // Calculate base quantity in smallest units
-        var baseQuantity = currentDisplayQty * oldConversionRatio;
-        // Convert to new display quantity
-        var newDisplayQty = baseQuantity / newConversionRatio;
-        // Round to 2 decimal places
-        newDisplayQty = Math.round(newDisplayQty * 100) / 100;
-
-        // Update quantity input with converted value
-        $quantityInput.val(newDisplayQty);
-
-        // Store current conversion ratio for next change
-        $selector.data('previous-option', newConversionRatio);
-
-        // Update info text with defensive check
+        // Update info text to show current quantity with new unit name
         var $infoSpan = $wrapper.find('.weight-quantity-info');
         if ($infoSpan.length > 0) {
-            var pluralSuffix = (newDisplayQty !== 1) ? 's' : '';
-            $infoSpan.text(newDisplayQty + ' ' + weightName + pluralSuffix);
+            var pluralSuffix = (currentDisplayQty !== 1) ? 's' : '';
+            $infoSpan.text(currentDisplayQty + ' ' + weightName + pluralSuffix);
         }
 
         if (!combinationId || !orderItemId) {
@@ -622,24 +603,7 @@
                 $field.data('original-value', $field.val());
             }
         });
-
-        // Initialize weight selectors on page load
-        initializeWeightSelectors();
     });
-
-    // Initialize weight attribute selectors with current conversion ratio
-    // This function is called on page load and after AJAX refreshes
-    function initializeWeightSelectors() {
-        $('.weight-attribute-selector').each(function() {
-            var $selector = $(this);
-            var selectedOption = $selector.find('option:selected');
-            var conversionRatio = parseFloat(selectedOption.data('conversion-ratio')) || 1;
-            $selector.data('previous-option', conversionRatio);
-        });
-    }
-
-    // Expose initialization function globally so it can be called after refreshes
-    window.initializeWeightSelectors = initializeWeightSelectors;
 })();
 
 // Delete order item function

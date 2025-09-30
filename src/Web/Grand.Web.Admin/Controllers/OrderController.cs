@@ -3179,6 +3179,7 @@ public class OrderController(
     [HttpPost]
     public async Task<IActionResult> GetProductSavings(string productId, double currentPrice,
         string warehouseId = null,
+        string attributeValueId = null,
         [FromServices] IProductService productService = null,
         [FromServices] IWarehouseService warehouseService = null)
     {
@@ -3188,7 +3189,26 @@ public class OrderController(
             if (product == null)
                 return Json(new { hasSavings = false });
 
+            // Get standard price - use attribute value's overridden price if specified
             var standardPrice = product.Price;
+
+            if (!string.IsNullOrEmpty(attributeValueId) && product.ProductAttributeMappings != null)
+            {
+                // Find the attribute value in the product's mappings
+                foreach (var mapping in product.ProductAttributeMappings)
+                {
+                    var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == attributeValueId);
+                    if (attributeValue != null)
+                    {
+                        // Use overridden price if it exists, otherwise fall back to product price
+                        if (attributeValue.OverriddenPrice.HasValue && attributeValue.OverriddenPrice.Value > 0)
+                        {
+                            standardPrice = attributeValue.OverriddenPrice.Value;
+                        }
+                        break;
+                    }
+                }
+            }
 
             // Get inventory and warehouse information
             var stockQuantity = product.StockQuantity;

@@ -1143,7 +1143,7 @@ function loadProductSavings() {
 // Check individual product for savings
 function checkProductSavings(productId, currentPrice, orderItemId) {
     var orderId = '@Model.Id';
-    var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId })));
+    var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId, SelectedWeightCombinationId = item.SelectedWeightCombinationId })));
     var orderItem = orderItems.find(item => item.Index == orderItemId);
 
     $.ajax({
@@ -1153,6 +1153,7 @@ function checkProductSavings(productId, currentPrice, orderItemId) {
             productId: productId,
             currentPrice: currentPrice,
             warehouseId: orderItem ? orderItem.WarehouseId : null,
+            attributeValueId: orderItem ? orderItem.SelectedWeightCombinationId : null,
             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
         },
         success: function(result) {

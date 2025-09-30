@@ -57,27 +57,29 @@
                                             @if (item.HasWeightBasedAttributes && item.WeightOptions?.Count > 0)
                                             {
                                                 <div class="weight-attribute-wrapper" data-item-id="@item.Id">
-                                                    <select class="form-control weight-attribute-selector inline-edit-field"
-                                                            data-item-id="@item.Id"
-                                                            data-product-id="@item.ProductId"
-                                                            style="width:100%; max-width:150px; margin: 0 auto 5px;">
-                                                        @foreach (var weightOption in item.WeightOptions)
-                                                        {
-                                                            <option value="@weightOption.CombinationId"
-                                                                    data-price="@weightOption.Price"
-                                                                    data-sku="@weightOption.Sku"
-                                                                    selected="@(weightOption.CombinationId == item.SelectedWeightCombinationId)">
-                                                                @weightOption.Name
-                                                            </option>
-                                                        }
-                                                    </select>
-                                                    <input type="number"
-                                                           class="form-control inline-edit-field weight-quantity-input"
-                                                           data-item-id="@item.Id"
-                                                           value="@item.Quantity"
-                                                           style="width:100%; max-width:100px; margin: 0 auto;"
-                                                           min="0.01"
-                                                           step="0.01"/>
+                                                    <div class="d-flex align-items-center justify-content-center">
+                                                        <input type="number"
+                                                               class="form-control inline-edit-field weight-quantity-input"
+                                                               data-item-id="@item.Id"
+                                                               value="@item.Quantity"
+                                                               style="width:60px; margin-right: 5px;"
+                                                               min="0.01"
+                                                               step="0.01"/>
+                                                        <select class="form-control weight-attribute-selector inline-edit-field"
+                                                                data-item-id="@item.Id"
+                                                                data-product-id="@item.ProductId"
+                                                                style="width:90px;">
+                                                            @foreach (var weightOption in item.WeightOptions)
+                                                            {
+                                                                <option value="@weightOption.CombinationId"
+                                                                        data-price="@weightOption.Price"
+                                                                        data-sku="@weightOption.Sku"
+                                                                        selected="@(weightOption.CombinationId == item.SelectedWeightCombinationId)">
+                                                                    @weightOption.Name
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </div>
                                                     <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input"/>
                                                     <small class="text-muted d-block mt-1">
                                                         @{

@@ -27,6 +27,7 @@
                                     <th class="text-center">Quantity</th>
                                     <th class="text-right">Price</th>
                                     <th class="text-right">Total</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -147,6 +148,11 @@
                                                 </small>
                                             </div>
                                         </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteOrderItem('@item.Id', '@Model.OrderId')" title="Delete">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -154,6 +160,7 @@
                                 <tr class="table-info">
                                     <th colspan="4" class="text-right">Total:</th>
                                     <th class="text-right"><span id="total-amount">@Model.OrderTotal</span></th>
+                                    <th></th>
                                 </tr>
                             </tfoot>
                         </table>
@@ -597,4 +604,36 @@
         });
     });
 })();
+
+// Delete order item function
+function deleteOrderItem(orderItemId, orderId) {
+    if (!confirm('Are you sure you want to delete this order item?')) {
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("DeleteOrderItemInline", "Order", new { area = Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            orderItemId: orderItemId,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                // Reload page to refresh the product list and totals
+                if (typeof window.refreshCurrentProductsGrid === 'function') {
+                    window.refreshCurrentProductsGrid();
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                alert('Error deleting order item: ' + (response.message || 'Unknown error'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while deleting order item.');
+        }
+    });
+}
 </script>

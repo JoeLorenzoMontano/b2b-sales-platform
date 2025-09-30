@@ -2257,18 +2257,28 @@ public class OrderController(
                 });
             }
 
-            if (product.ProductAttributeCombinations?.Any() == true)
+            if (product.ProductAttributeCombinations?.Any() == true && product.ProductAttributeMappings?.Any() == true)
             {
-                // Add each attribute combination as a separate searchable item
+                // Detect attribute type: weight-based conversion or regular combinations
+                bool hasWeightBasedAttributes = product.ProductAttributeMappings
+                    .SelectMany(m => m.ProductAttributeValues ?? new List<ProductAttributeValue>())
+                    .Any(v => v.AttributeValueTypeId == AttributeValueType.WeightBasedConversion);
+
+                bool hasCombinationAttributes = product.ProductAttributeMappings.Any(m => m.Combination);
+
+                // Build attribute options array for UI selection
+                var attributeOptions = new List<object>();
                 foreach (var combination in product.ProductAttributeCombinations)
                 {
                     var attributeNames = new List<string>();
+                    double? conversionRatio = null;
+                    double? caseSize = null;
+
                     foreach (var attr in combination.Attributes)
                     {
                         var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
                         if (mapping != null)
                         {
-                            // Split the Value string if it contains multiple values (comma-separated)
                             var valueIds = attr.Value?.Split(',') ?? new string[0];
                             foreach (var valueId in valueIds)
                             {
@@ -2279,44 +2289,51 @@ public class OrderController(
                                     if (attributeValue != null)
                                     {
                                         attributeNames.Add(attributeValue.Name);
+
+                                        // Get conversion ratio or case size from Quantity field
+                                        if (attributeValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                                        {
+                                            conversionRatio = attributeValue.Quantity;
+                                        }
+                                        else if (mapping.Combination && attributeValue.Quantity > 0)
+                                        {
+                                            caseSize = attributeValue.Quantity;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    
-                    var combinationName = attributeNames.Any() 
-                        ? $"{product.Name} - {string.Join(", ", attributeNames)}"
-                        : product.Name;
-                    
-                    // Only include this combination if it matches the search criteria
-                    bool shouldInclude = true;
-                    if (!string.IsNullOrWhiteSpace(model.SearchProductName))
-                    {
-                        var keywords = model.SearchProductName.Trim();
-                        shouldInclude = product.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase) ||
-                                       combinationName.Contains(keywords, StringComparison.OrdinalIgnoreCase) ||
-                                       attributeNames.Any(name => name.Contains(keywords, StringComparison.OrdinalIgnoreCase));
-                    }
-                    
-                    if (shouldInclude)
-                    {
-                        var combinationPrice = combination.OverriddenPrice > 0 ? combination.OverriddenPrice : product.Price;
 
-                        searchResultItems.Add(new {
-                            id = product.Id,
-                            name = combinationName,
-                            sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku,
-                            price = combinationPrice,
-                            combinationId = combination.Id,
-                            hasAttributes = true,
-                            published = product.Published,
-                            brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
-                            warehouses = warehouseInventory,
-                            attributeInfo = string.Join(", ", attributeNames)
-                        });
-                    }
+                    var combinationPrice = combination.OverriddenPrice > 0 ? combination.OverriddenPrice : product.Price;
+                    var optionName = attributeNames.Any() ? string.Join(", ", attributeNames) : "Default";
+
+                    attributeOptions.Add(new {
+                        combinationId = combination.Id,
+                        name = optionName,
+                        conversionRatio = conversionRatio,
+                        caseSize = caseSize,
+                        price = combinationPrice,
+                        sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku
+                    });
                 }
+
+                // Add base product with attribute metadata
+                searchResultItems.Add(new {
+                    id = product.Id,
+                    name = product.Name,
+                    sku = product.Sku,
+                    price = product.Price,
+                    combinationId = (string)null,
+                    hasAttributes = true,
+                    hasWeightBasedAttributes = hasWeightBasedAttributes,
+                    hasCombinationAttributes = hasCombinationAttributes,
+                    attributeOptions = attributeOptions,
+                    published = product.Published,
+                    brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                    warehouses = warehouseInventory,
+                    attributeInfo = (string)null
+                });
             }
             else
             {
@@ -2328,6 +2345,9 @@ public class OrderController(
                     price = product.Price,
                     combinationId = (string)null,
                     hasAttributes = false,
+                    hasWeightBasedAttributes = false,
+                    hasCombinationAttributes = false,
+                    attributeOptions = new List<object>(),
                     published = product.Published,
                     brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
                     warehouses = warehouseInventory,

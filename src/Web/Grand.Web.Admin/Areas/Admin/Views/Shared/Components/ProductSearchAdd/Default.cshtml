@@ -32,8 +32,44 @@
             <div class="panel panel-default">
                 <div class="panel-body">
                     <h5 id="selected-product-title-@componentId"></h5>
+
+                    <!-- Attribute Selection Section -->
+                    <div id="attribute-selection-@componentId" style="display: none;">
+                        <!-- Weight-based attributes: Dropdown -->
+                        <div class="col-12" id="weight-attributes-@componentId" style="display: none;">
+                            <div class="form-group">
+                                <label>Select Size/Option</label>
+                                <select id="attribute-dropdown-@componentId" class="form-control">
+                                    <option value="">Select...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Combination attributes: Unit/Case selector -->
+                        <div class="col-12" id="combo-attributes-@componentId" style="display: none;">
+                            <div class="form-group">
+                                <label>Quantity</label>
+                                <div class="quantity-unit-case-wrapper">
+                                    <div class="d-flex align-items-center">
+                                        <input type="number"
+                                               id="combo-quantity-display-@componentId"
+                                               class="form-control"
+                                               value="1"
+                                               min="1"
+                                               style="width: 100px; margin-right: 5px;"/>
+                                        <select id="combo-unit-selector-@componentId" class="form-control" style="width: 100px;">
+                                            <option value="unit">Unit</option>
+                                            <option value="case">Case</option>
+                                        </select>
+                                    </div>
+                                    <small class="text-muted d-block mt-1" id="combo-case-info-@componentId"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row">
-                        <div class="col-12">
+                        <div class="col-12" id="standard-quantity-@componentId">
                             <div class="form-group">
                                 <label>Quantity</label>
                                 <input type="number" id="selected-quantity-@componentId" class="form-control" value="1" min="1" />
@@ -425,17 +461,32 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
 
 function selectProduct@(componentId.Replace("-", "_"))(product) {
     selectedProduct@(componentId.Replace("-", "_")) = product;
-    
+
     // Show the selected product form
     $('#selected-product-form-@componentId').show();
-    
-    // Set product title - product.name already includes attribute information
+
+    // Set product title
     var brandDisplay = product.brandName ? ` <span class="brand-badge">${product.brandName}</span>` : '';
     $('#selected-product-title-@componentId').html(`Selected: <span class="selected-product-name">${product.name}${brandDisplay}</span>`);
-    
-    // Set default values
-    $('#selected-quantity-@componentId').val(1);
-    $('#selected-price-@componentId').val(product.price || 0);
+
+    // Reset attribute UI
+    $('#attribute-selection-@componentId').hide();
+    $('#weight-attributes-@componentId').hide();
+    $('#combo-attributes-@componentId').hide();
+    $('#standard-quantity-@componentId').show();
+
+    // Handle attribute selection based on product type
+    if (product.hasWeightBasedAttributes && product.attributeOptions && product.attributeOptions.length > 0) {
+        // Show weight-based attribute dropdown
+        handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product);
+    } else if (product.hasCombinationAttributes && product.attributeOptions && product.attributeOptions.length > 0) {
+        // Show unit/case selector for combination attributes
+        handleCombinationAttributes@(componentId.Replace("-", "_"))(product);
+    } else {
+        // Standard product - use regular quantity input
+        $('#selected-quantity-@componentId').val(1);
+        $('#selected-price-@componentId').val(product.price || 0);
+    }
     
     // Handle warehouses with inventory information
     var warehouseSelect = $('#selected-warehouse-@componentId');
@@ -518,6 +569,90 @@ function selectProduct@(componentId.Replace("-", "_"))(product) {
     $('#product-autocomplete-@componentId').val('');
 }
 
+function handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product) {
+    // Show attribute selection section and weight dropdown
+    $('#attribute-selection-@componentId').show();
+    $('#weight-attributes-@componentId').show();
+    $('#standard-quantity-@componentId').hide(); // Hide standard quantity input
+
+    // Populate dropdown with attribute options
+    var dropdown = $('#attribute-dropdown-@componentId');
+    dropdown.empty();
+    dropdown.append('<option value="">Select Size/Option...</option>');
+
+    product.attributeOptions.forEach(function(option) {
+        dropdown.append(`<option value="${option.combinationId}" data-price="${option.price}" data-sku="${option.sku}">${option.name}</option>`);
+    });
+
+    // Set default price
+    $('#selected-price-@componentId').val(product.price || 0);
+
+    // Handle attribute selection change
+    dropdown.off('change.attribute').on('change.attribute', function() {
+        var selectedOption = $(this).find('option:selected');
+        var combinationId = selectedOption.val();
+
+        if (combinationId) {
+            var price = selectedOption.data('price');
+            $('#selected-price-@componentId').val(price || 0);
+
+            // Update selected product with combination ID
+            selectedProduct@(componentId.Replace("-", "_")).combinationId = combinationId;
+        } else {
+            $('#selected-price-@componentId').val(product.price || 0);
+            selectedProduct@(componentId.Replace("-", "_")).combinationId = null;
+        }
+    });
+
+    // Auto-select first option if available
+    if (product.attributeOptions.length > 0) {
+        dropdown.val(product.attributeOptions[0].combinationId).trigger('change.attribute');
+    }
+}
+
+function handleCombinationAttributes@(componentId.Replace("-", "_"))(product) {
+    // Show attribute selection section and unit/case selector
+    $('#attribute-selection-@componentId').show();
+    $('#combo-attributes-@componentId').show();
+    $('#standard-quantity-@componentId').hide(); // Hide standard quantity input
+
+    // Get first combination with caseSize
+    var caseSizeOption = product.attributeOptions.find(opt => opt.caseSize && opt.caseSize > 0);
+
+    if (!caseSizeOption) {
+        // Fallback to standard if no case size found
+        $('#combo-attributes-@componentId').hide();
+        $('#standard-quantity-@componentId').show();
+        $('#selected-quantity-@componentId').val(1);
+        $('#selected-price-@componentId').val(product.price || 0);
+        return;
+    }
+
+    var caseSize = caseSizeOption.caseSize;
+    var combinationId = caseSizeOption.combinationId;
+
+    // Store combination data
+    selectedProduct@(componentId.Replace("-", "_")).combinationId = combinationId;
+    selectedProduct@(componentId.Replace("-", "_")).caseSize = caseSize;
+
+    // Set up unit/case switching
+    $('#combo-quantity-display-@componentId').val(1);
+    $('#combo-unit-selector-@componentId').val('unit');
+    $('#combo-case-info-@componentId').text(`${caseSize} units per case`);
+
+    // Set price
+    $('#selected-price-@componentId').val(caseSizeOption.price || product.price || 0);
+
+    // Handle unit/case switching
+    $('#combo-unit-selector-@componentId').off('change.unitcase').on('change.unitcase', function() {
+        var displayQty = parseFloat($('#combo-quantity-display-@componentId').val()) || 1;
+        var isCase = $(this).val() === 'case';
+
+        // Update displayed quantity based on selection
+        // No need to convert - just update label
+    });
+}
+
 function clearProductSelection@(componentId.Replace("-", "_"))() {
     selectedProduct@(componentId.Replace("-", "_")) = null;
     currentInventory@(componentId.Replace("-", "_")) = 0;
@@ -534,16 +669,43 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
         alert('No product selected');
         return;
     }
-    
-    var quantity = parseInt($('#selected-quantity-@componentId').val());
+
+    var quantity = 1;
+    var product = selectedProduct@(componentId.Replace("-", "_"));
+
+    // Calculate quantity based on attribute type
+    if (product.hasWeightBasedAttributes) {
+        // For weight-based, quantity is always 1 (user selects the size via dropdown)
+        quantity = 1;
+
+        // Ensure a combination is selected
+        if (!product.combinationId) {
+            alert('Please select a size/option.');
+            return;
+        }
+    } else if (product.hasCombinationAttributes && product.caseSize) {
+        // For combination attributes with case size, calculate actual quantity
+        var displayQty = parseFloat($('#combo-quantity-display-@componentId').val()) || 1;
+        var unitType = $('#combo-unit-selector-@componentId').val();
+
+        if (unitType === 'case') {
+            quantity = Math.round(displayQty * product.caseSize);
+        } else {
+            quantity = Math.round(displayQty);
+        }
+    } else {
+        // Standard quantity input
+        quantity = parseInt($('#selected-quantity-@componentId').val());
+    }
+
     var unitPrice = parseFloat($('#selected-price-@componentId').val());
     var warehouseId = $('#selected-warehouse-@componentId').val() || '';
-    
+
     if (!quantity || quantity < 1) {
         alert('Please enter a valid quantity.');
         return;
     }
-    
+
     if (unitPrice < 0) {
         alert('Please enter a valid price.');
         return;

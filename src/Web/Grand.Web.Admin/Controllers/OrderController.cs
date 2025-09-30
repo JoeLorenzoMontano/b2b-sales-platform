@@ -3178,8 +3178,9 @@ public class OrderController(
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
     [HttpPost]
     public async Task<IActionResult> GetProductSavings(string productId, double currentPrice,
-        [FromServices] IProductService productService,
-        [FromServices] IWarehouseService warehouseService)
+        string warehouseId = null,
+        [FromServices] IProductService productService = null,
+        [FromServices] IWarehouseService warehouseService = null)
     {
         try
         {
@@ -3192,16 +3193,28 @@ public class OrderController(
             // Get inventory and warehouse information
             var stockQuantity = product.StockQuantity;
 
-            // Get primary warehouse information
+            // Get warehouse-specific information
             string warehouseName = null;
             if (product.ProductWarehouseInventory?.Any() == true)
             {
-                var primaryInventory = product.ProductWarehouseInventory.OrderByDescending(x => x.StockQuantity).First();
-                var warehouse = await warehouseService.GetWarehouseById(primaryInventory.WarehouseId);
+                // If specific warehouse ID provided, use that warehouse's inventory
+                ProductWarehouseInventory targetInventory = null;
+                if (!string.IsNullOrEmpty(warehouseId))
+                {
+                    targetInventory = product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouseId);
+                }
+
+                // Fall back to warehouse with highest stock if no specific warehouse or not found
+                if (targetInventory == null)
+                {
+                    targetInventory = product.ProductWarehouseInventory.OrderByDescending(x => x.StockQuantity).First();
+                }
+
+                var warehouse = await warehouseService.GetWarehouseById(targetInventory.WarehouseId);
                 if (warehouse != null)
                 {
                     warehouseName = warehouse.Name;
-                    stockQuantity = primaryInventory.StockQuantity; // Use warehouse-specific stock
+                    stockQuantity = targetInventory.StockQuantity; // Use warehouse-specific stock
                 }
             }
 

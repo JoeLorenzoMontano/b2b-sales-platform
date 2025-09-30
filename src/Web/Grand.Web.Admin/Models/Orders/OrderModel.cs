@@ -291,7 +291,8 @@ public class OrderModel : BaseEntityModel
         public string ProductName { get; set; }
         public string VendorName { get; set; }
         public string Sku { get; set; }
-        
+
+        public string WarehouseId { get; set; }
         public string WarehouseName { get; set; }
 
         public string PictureThumbnailUrl { get; set; }

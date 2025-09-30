@@ -952,6 +952,7 @@ public class OrderViewModelService : IOrderViewModelService
             if (!string.IsNullOrEmpty(orderItem.WarehouseId))
             {
                 var warehouse = await _warehouseService.GetWarehouseById(orderItem.WarehouseId);
+                orderItemModel.WarehouseId = orderItem.WarehouseId;
                 orderItemModel.WarehouseName = warehouse?.Name ?? "";
             }
             else

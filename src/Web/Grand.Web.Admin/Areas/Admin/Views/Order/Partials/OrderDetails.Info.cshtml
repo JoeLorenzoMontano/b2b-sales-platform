@@ -1142,19 +1142,20 @@ function loadProductSavings() {
 
 // Check individual product for savings
 function checkProductSavings(productId, currentPrice, orderItemId) {
+    var orderId = '@Model.Id';
+    var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId })));
+    var orderItem = orderItems.find(item => item.Index == orderItemId);
+
     $.ajax({
         url: '@Url.Action("GetProductSavings", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
         type: 'POST',
         data: {
             productId: productId,
             currentPrice: currentPrice,
+            warehouseId: orderItem ? orderItem.WarehouseId : null,
             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
         },
         success: function(result) {
-            var orderId = '@Model.Id';
-            var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize })));
-            var orderItem = orderItems.find(item => item.Index == orderItemId);
-
             if (orderItem) {
                 // Display savings if available
                 if (result.hasSavings) {
@@ -1215,7 +1216,7 @@ $(document).on('input change', '.inline-edit-field[data-product-id]', function()
     if (productId && currentPrice > 0 && orderItemId !== undefined) {
         // Hide existing indicators first
         var orderId = '@Model.Id';
-        var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize })));
+        var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId })));
         var orderItem = orderItems.find(item => item.Index == orderItemId);
 
         if (orderItem) {
@@ -1229,7 +1230,7 @@ $(document).on('input change', '.inline-edit-field[data-product-id]', function()
         // If price is 0 or invalid, hide indicators
         if (orderItemId !== undefined) {
             var orderId = '@Model.Id';
-            var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize })));
+            var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId })));
             var orderItem = orderItems.find(item => item.Index == orderItemId);
 
             if (orderItem) {

@@ -60,7 +60,7 @@
                                                     <select class="form-control weight-attribute-selector inline-edit-field"
                                                             data-item-id="@item.Id"
                                                             data-product-id="@item.ProductId"
-                                                            style="width:100%; max-width:150px; margin: 0 auto;">
+                                                            style="width:100%; max-width:150px; margin: 0 auto 5px;">
                                                         @foreach (var weightOption in item.WeightOptions)
                                                         {
                                                             <option value="@weightOption.CombinationId"
@@ -71,8 +71,21 @@
                                                             </option>
                                                         }
                                                     </select>
-                                                    <input name="Items[@i].Quantity" value="1" type="hidden" class="actual-quantity-input"/>
+                                                    <input type="number"
+                                                           class="form-control inline-edit-field weight-quantity-input"
+                                                           data-item-id="@item.Id"
+                                                           value="@item.Quantity"
+                                                           style="width:100%; max-width:100px; margin: 0 auto;"
+                                                           min="0.01"
+                                                           step="0.01"/>
+                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input"/>
                                                     <small class="text-muted d-block mt-1">
+                                                        @{
+                                                            var selectedOption = item.WeightOptions.FirstOrDefault(w => w.CombinationId == item.SelectedWeightCombinationId);
+                                                            var weightName = selectedOption?.Name ?? "unit";
+                                                            var plural = item.Quantity != 1 ? "s" : "";
+                                                        }
+                                                        <span class="weight-quantity-info">@item.Quantity @weightName@(plural)</span>
                                                         <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>
                                                     </small>
                                                 </div>
@@ -468,6 +481,13 @@
         var newPrice = selectedOption.data('price');
         var orderItemId = $selector.data('item-id');
         var productId = $selector.data('product-id');
+        var weightName = selectedOption.text();
+
+        // Update the info text to show selected weight
+        var $wrapper = $selector.closest('.weight-attribute-wrapper');
+        var $quantityInput = $wrapper.find('.weight-quantity-input');
+        var quantity = parseFloat($quantityInput.val()) || 1;
+        $wrapper.find('.weight-quantity-info').text(quantity + ' ' + weightName + (quantity !== 1 ? 's' : ''));
 
         if (!combinationId || !orderItemId) {
             console.log('Missing combination ID or order item ID');
@@ -534,6 +554,24 @@
                 }, 5000);
             }
         });
+    });
+
+    // Weight quantity input handler
+    $(document).on('blur change', '.weight-quantity-input', function() {
+        var $quantityInput = $(this);
+        var currentValue = parseFloat($quantityInput.val());
+        var originalValue = parseFloat($quantityInput.data('original-value')) || 0;
+
+        // Update the info text
+        var $wrapper = $quantityInput.closest('.weight-attribute-wrapper');
+        var $selector = $wrapper.find('.weight-attribute-selector');
+        var weightName = $selector.find('option:selected').text();
+        $wrapper.find('.weight-quantity-info').text(currentValue + ' ' + weightName + (currentValue !== 1 ? 's' : ''));
+
+        // Only save if value has changed
+        if (currentValue !== originalValue && currentValue > 0) {
+            saveOrderItemQuantity($quantityInput, currentValue);
+        }
     });
 
     // Initialize original values on page load

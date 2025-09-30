@@ -489,7 +489,13 @@
         var $wrapper = $selector.closest('.weight-attribute-wrapper');
         var $quantityInput = $wrapper.find('.weight-quantity-input');
         var quantity = parseFloat($quantityInput.val()) || 1;
-        $wrapper.find('.weight-quantity-info').text(quantity + ' ' + weightName + (quantity !== 1 ? 's' : ''));
+
+        // Update info text with defensive check
+        var $infoSpan = $wrapper.find('.weight-quantity-info');
+        if ($infoSpan.length > 0) {
+            var pluralSuffix = (quantity !== 1) ? 's' : '';
+            $infoSpan.text(quantity + ' ' + weightName + pluralSuffix);
+        }
 
         if (!combinationId || !orderItemId) {
             console.log('Missing combination ID or order item ID');
@@ -568,7 +574,13 @@
         var $wrapper = $quantityInput.closest('.weight-attribute-wrapper');
         var $selector = $wrapper.find('.weight-attribute-selector');
         var weightName = $selector.find('option:selected').text();
-        $wrapper.find('.weight-quantity-info').text(currentValue + ' ' + weightName + (currentValue !== 1 ? 's' : ''));
+
+        // Update info text with defensive check
+        var $infoSpan = $wrapper.find('.weight-quantity-info');
+        if ($infoSpan.length > 0) {
+            var pluralSuffix = (currentValue !== 1) ? 's' : '';
+            $infoSpan.text(currentValue + ' ' + weightName + pluralSuffix);
+        }
 
         // Only save if value has changed
         if (currentValue !== originalValue && currentValue > 0) {

@@ -271,8 +271,6 @@ public class OrderController(
     [HttpPost]
     public async Task<IActionResult> UnpaidOrdersList(DataSourceRequest command, OrderListModel model)
     {
-        System.Console.WriteLine("[DEBUG] UnpaidOrdersList action called");
-        
         if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
             model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
 
@@ -1529,10 +1527,10 @@ public class OrderController(
             }
             else if (fieldType == "weightAttribute")
             {
-                // value contains the combinationId
-                var combinationId = value;
-                if (string.IsNullOrEmpty(combinationId))
-                    return Json(new { success = false, message = "Invalid combination ID" });
+                // value contains either combinationId (for combination-based) or attributeValueId (for non-combination)
+                var selectedId = value;
+                if (string.IsNullOrEmpty(selectedId))
+                    return Json(new { success = false, message = "Invalid selection ID" });
 
                 // Parse additional data to get the price
                 double newPrice = 0;
@@ -1554,59 +1552,115 @@ public class OrderController(
                     }
                 }
 
-                // Get the product to find the combination
+                // Get the product to find the combination or attribute value
                 var product = await productService.GetProductById(productId);
                 if (product == null)
                     return Json(new { success = false, message = "Product not found" });
 
-                var combination = product.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == combinationId);
-                if (combination == null)
-                    return Json(new { success = false, message = "Combination not found" });
+                // Try to find as combination first (for products WITH combinations)
+                var combination = product.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == selectedId);
 
-                // Update the order item's attributes to the selected combination
-                orderItem.Attributes = combination.Attributes;
-
-                // Update price based on combination
-                var combinationPrice = (combination.OverriddenPrice.HasValue && combination.OverriddenPrice.Value > 0) ? combination.OverriddenPrice.Value : product.Price;
-                orderItem.UnitPriceExclTax = combinationPrice;
-                orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
-                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
-                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
-
-                // Update SKU if combination has one
-                if (!string.IsNullOrEmpty(combination.Sku))
+                if (combination != null)
                 {
-                    orderItem.Sku = combination.Sku;
-                }
+                    // COMBINATION-BASED weight product
+                    // Update the order item's attributes to the selected combination
+                    orderItem.Attributes = combination.Attributes;
 
-                // Update attribute description for display
-                var attributeNames = new List<string>();
-                foreach (var attr in combination.Attributes)
-                {
-                    var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
-                    if (mapping != null)
+                    // Update price based on combination
+                    var combinationPrice = (combination.OverriddenPrice.HasValue && combination.OverriddenPrice.Value > 0) ? combination.OverriddenPrice.Value : product.Price;
+                    orderItem.UnitPriceExclTax = combinationPrice;
+                    orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
+                    orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                    orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+
+                    // Update SKU if combination has one
+                    if (!string.IsNullOrEmpty(combination.Sku))
                     {
-                        var productAttribute = await productAttributeService.GetProductAttributeById(mapping.ProductAttributeId);
-                        var attrValue = attr.Value;
-                        var valueIds = attrValue?.Split(',') ?? new string[0];
-                        foreach (var valueId in valueIds)
+                        orderItem.Sku = combination.Sku;
+                    }
+
+                    // Update attribute description for display
+                    var attributeNames = new List<string>();
+                    foreach (var attr in combination.Attributes)
+                    {
+                        var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                        if (mapping != null)
                         {
-                            var trimmedValueId = valueId.Trim();
-                            if (!string.IsNullOrEmpty(trimmedValueId))
+                            var productAttribute = await productAttributeService.GetProductAttributeById(mapping.ProductAttributeId);
+                            var attrValue = attr.Value;
+                            var valueIds = attrValue?.Split(',') ?? new string[0];
+                            foreach (var valueId in valueIds)
                             {
-                                var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
-                                if (attributeValue != null && productAttribute != null)
+                                var trimmedValueId = valueId.Trim();
+                                if (!string.IsNullOrEmpty(trimmedValueId))
                                 {
-                                    attributeNames.Add($"{productAttribute.Name}: {attributeValue.Name}");
+                                    var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                    if (attributeValue != null && productAttribute != null)
+                                    {
+                                        attributeNames.Add($"{productAttribute.Name}: {attributeValue.Name}");
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if (attributeNames.Any())
+                    if (attributeNames.Any())
+                    {
+                        orderItem.AttributeDescription = string.Join("<br/>", attributeNames);
+                    }
+                }
+                else
                 {
-                    orderItem.AttributeDescription = string.Join("<br/>", attributeNames);
+                    // NON-COMBINATION weight product (like Flower products)
+                    // selectedId is an attributeValueId, find it in the product's attribute values
+                    ProductAttributeValue selectedAttributeValue = null;
+                    ProductAttributeMapping selectedMapping = null;
+
+                    if (product.ProductAttributeMappings != null)
+                    {
+                        foreach (var mapping in product.ProductAttributeMappings)
+                        {
+                            if (mapping.ProductAttributeValues != null)
+                            {
+                                selectedAttributeValue = mapping.ProductAttributeValues.FirstOrDefault(v => v.Id == selectedId);
+                                if (selectedAttributeValue != null)
+                                {
+                                    selectedMapping = mapping;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (selectedAttributeValue == null || selectedMapping == null)
+                        return Json(new { success = false, message = "Selected attribute value not found" });
+
+                    // Build the attributes dictionary for this selection
+                    orderItem.Attributes = new List<Domain.Common.CustomAttribute>
+                    {
+                        new Domain.Common.CustomAttribute
+                        {
+                            Key = selectedMapping.Id,
+                            Value = selectedAttributeValue.Id
+                        }
+                    };
+
+                    // Update price based on attribute value's overridden price
+                    var attributePrice = (selectedAttributeValue.OverriddenPrice.HasValue && selectedAttributeValue.OverriddenPrice.Value > 0)
+                        ? selectedAttributeValue.OverriddenPrice.Value
+                        : product.Price;
+
+                    orderItem.UnitPriceExclTax = attributePrice;
+                    orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
+                    orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                    orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+
+                    // Update attribute description for display
+                    var productAttribute = await productAttributeService.GetProductAttributeById(selectedMapping.ProductAttributeId);
+                    if (productAttribute != null)
+                    {
+                        orderItem.AttributeDescription = $"{productAttribute.Name}: {selectedAttributeValue.Name}";
+                    }
                 }
             }
             else
@@ -2351,7 +2405,6 @@ public class OrderController(
                     {
                         foreach (var attrValue in mapping.ProductAttributeValues)
                         {
-                            Console.WriteLine($"  Checking value: {attrValue.Name}, TypeId: {attrValue.AttributeValueTypeId}, IsWeightBased: {attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion}");
                             if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
                             {
                                 hasWeightBasedAttributes = true;
@@ -2361,9 +2414,6 @@ public class OrderController(
                     }
                     if (hasWeightBasedAttributes) break;
                 }
-
-                // Debug logging
-                Console.WriteLine($"Product: {product.Name}, HasWeightBased: {hasWeightBasedAttributes}, Mappings: {product.ProductAttributeMappings?.Count ?? 0}, Values: {product.ProductAttributeMappings?.Sum(m => m.ProductAttributeValues?.Count ?? 0) ?? 0}");
 
                 if (hasWeightBasedAttributes)
                 {
@@ -2495,7 +2545,6 @@ public class OrderController(
                     {
                         foreach (var attrValue in mapping.ProductAttributeValues)
                         {
-                            Console.WriteLine($"  [No Combo] Checking value: {attrValue.Name}, TypeId: {attrValue.AttributeValueTypeId}, IsWeightBased: {attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion}");
                             if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
                             {
                                 hasWeightBasedAttributes = true;
@@ -2505,8 +2554,6 @@ public class OrderController(
                     }
                     if (hasWeightBasedAttributes) break;
                 }
-
-                Console.WriteLine($"[No Combo] Product: {product.Name}, HasWeightBased: {hasWeightBasedAttributes}, Mappings: {product.ProductAttributeMappings?.Count ?? 0}");
 
                 if (hasWeightBasedAttributes)
                 {

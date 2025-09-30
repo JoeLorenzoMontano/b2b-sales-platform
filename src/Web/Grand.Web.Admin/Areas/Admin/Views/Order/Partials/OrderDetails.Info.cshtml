@@ -1127,8 +1127,8 @@ function saveOrderRequestedShipmentDate($field) {
 
 // Load and display product savings indicators
 function loadProductSavings() {
-    // Find all price input fields with product IDs
-    $('.inline-edit-field[data-product-id]').each(function() {
+    // Find all price input fields with product IDs (not weight dropdowns)
+    $('input.inline-edit-field[data-product-id]').each(function() {
         var $priceInput = $(this);
         var productId = $priceInput.data('product-id');
         var currentPrice = parseFloat($priceInput.val()) || 0;

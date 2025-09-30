@@ -3180,8 +3180,7 @@ public class OrderController(
     public async Task<IActionResult> GetProductSavings(string productId, double currentPrice,
         string warehouseId = null,
         [FromServices] IProductService productService = null,
-        [FromServices] IWarehouseService warehouseService = null,
-        [FromServices] IStockQuantityService stockQuantityService = null)
+        [FromServices] IWarehouseService warehouseService = null)
     {
         try
         {
@@ -3192,28 +3191,31 @@ public class OrderController(
             var standardPrice = product.Price;
 
             // Get inventory and warehouse information
-            double stockQuantity;
-            string warehouseName = null;
+            var stockQuantity = product.StockQuantity;
 
-            // If specific warehouse ID provided, use that warehouse's inventory
-            if (!string.IsNullOrEmpty(warehouseId))
+            // Get warehouse-specific information
+            string warehouseName = null;
+            if (product.ProductWarehouseInventory?.Any() == true)
             {
-                stockQuantity = stockQuantityService.GetTotalStockQuantity(product, warehouseId: warehouseId);
-                var warehouse = await warehouseService.GetWarehouseById(warehouseId);
-                warehouseName = warehouse?.Name;
-            }
-            // Otherwise, find warehouse with highest stock
-            else if (product.ProductWarehouseInventory?.Any() == true)
-            {
-                var targetInventory = product.ProductWarehouseInventory.OrderByDescending(x => x.StockQuantity).First();
-                stockQuantity = stockQuantityService.GetTotalStockQuantity(product, warehouseId: targetInventory.WarehouseId);
+                // If specific warehouse ID provided, use that warehouse's inventory
+                ProductWarehouseInventory targetInventory = null;
+                if (!string.IsNullOrEmpty(warehouseId))
+                {
+                    targetInventory = product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouseId);
+                }
+
+                // Fall back to warehouse with highest stock if no specific warehouse or not found
+                if (targetInventory == null)
+                {
+                    targetInventory = product.ProductWarehouseInventory.OrderByDescending(x => x.StockQuantity).First();
+                }
+
                 var warehouse = await warehouseService.GetWarehouseById(targetInventory.WarehouseId);
-                warehouseName = warehouse?.Name;
-            }
-            // Fall back to total stock if no warehouse inventory
-            else
-            {
-                stockQuantity = stockQuantityService.GetTotalStockQuantity(product);
+                if (warehouse != null)
+                {
+                    warehouseName = warehouse.Name;
+                    stockQuantity = targetInventory.StockQuantity; // Use warehouse-specific stock
+                }
             }
 
             // If no warehouse inventory, try to get default warehouse for the product

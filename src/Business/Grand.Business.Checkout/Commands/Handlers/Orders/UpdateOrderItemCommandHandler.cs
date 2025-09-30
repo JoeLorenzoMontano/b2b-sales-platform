@@ -41,14 +41,19 @@ public class UpdateOrderItemCommandHandler : IRequestHandler<UpdateOrderItemComm
         var originalOrderItem = originalOrder.OrderItems.FirstOrDefault(x => x.Id == request.OrderItem.Id);
         if (originalOrderItem != null)
         {
-            request.Order.OrderSubtotalExclTax += request.OrderItem.PriceExclTax - originalOrderItem.PriceExclTax;
-            request.Order.OrderSubtotalInclTax += request.OrderItem.PriceInclTax - originalOrderItem.PriceInclTax;
-            request.Order.OrderTax +=
-                request.OrderItem.PriceInclTax - request.OrderItem.PriceExclTax
-                                               - (originalOrderItem.PriceInclTax - originalOrderItem.PriceExclTax);
-            request.Order.OrderTotal += request.OrderItem.PriceInclTax - originalOrderItem.PriceInclTax;
+            // Recalculate order totals from scratch by summing all order items
+            // This prevents compounding errors from incremental updates
+            request.Order.OrderSubtotalExclTax = request.Order.OrderItems.Sum(item => item.PriceExclTax);
+            request.Order.OrderSubtotalInclTax = request.Order.OrderItems.Sum(item => item.PriceInclTax);
+            request.Order.OrderTax = request.Order.OrderItems.Sum(item => item.PriceInclTax - item.PriceExclTax);
 
-            //TODO 
+            // Calculate order total: subtotal + shipping + any additional fees - discounts
+            request.Order.OrderTotal = request.Order.OrderSubtotalInclTax
+                                     + request.Order.OrderShippingInclTax
+                                     + request.Order.PaymentMethodAdditionalFeeInclTax
+                                     - request.Order.OrderDiscount;
+
+            //TODO
             //request.Order.OrderTaxes
 
             //adjust inventory

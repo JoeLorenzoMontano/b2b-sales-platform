@@ -219,7 +219,7 @@
                             <tr>
                                 <th style="width: 40%;">Product Variant</th>
                                 <th style="width: 20%;">SKU</th>
-                                <th style="width: 40%;">Price / Case Info</th>
+                                <th style="width: 40%;">Pricing Information</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -238,17 +238,33 @@
                                     </td>
                                     <td style="text-align: right;">
                                         @{
-                                            var casePrice = combination.OverriddenPrice ?? product.Price;
+                                            var basePrice = combination.OverriddenPrice ?? product.Price;
                                             var caseSize = combination.CaseSize;
                                         }
-                                        @if (caseSize > 0 && casePrice > 0)
+                                        @if (caseSize > 0 && basePrice > 0)
                                         {
-                                            <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Case</div>
-                                            <div style="font-size: 8px; color: #666;">(@(caseSize.ToString("F0"))x Unit per Case)</div>
+                                            @{
+                                                var unitPrice = basePrice / caseSize;
+                                                var totalCasePrice = basePrice;
+                                                var unitCost = product.ProductCost > 0 ? product.ProductCost / caseSize : 0;
+                                                var totalCaseCost = product.ProductCost;
+                                            }
+                                            <div style="font-weight: bold; color: #2e7d32;">$@(totalCasePrice.ToString("F2")) /Case</div>
+                                            <div style="font-size: 8px; color: #666; margin-bottom: 2px;">@(caseSize.ToString("F0")) units per case</div>
+                                            <div style="font-size: 8px; color: #666;">Unit Price: $@(unitPrice.ToString("F2"))</div>
+                                            @if (product.ProductCost > 0)
+                                            {
+                                                <div style="font-size: 8px; color: #b8860b; margin-top: 2px;">Cost: $@(totalCaseCost.ToString("F2")) /Case</div>
+                                                <div style="font-size: 7px; color: #b8860b;">($@(unitCost.ToString("F2")) /Unit)</div>
+                                            }
                                         }
-                                        else if (casePrice > 0)
+                                        else if (basePrice > 0)
                                         {
-                                            <div style="font-weight: bold;">$@(casePrice.ToString("F2")) /Unit</div>
+                                            <div style="font-weight: bold;">$@(basePrice.ToString("F2")) /Unit</div>
+                                            @if (product.ProductCost > 0)
+                                            {
+                                                <div style="font-size: 8px; color: #b8860b; margin-top: 2px;">Cost: $@(product.ProductCost.ToString("F2")) /Unit</div>
+                                            }
                                         }
                                     </td>
                                 </tr>
@@ -382,15 +398,47 @@
             @* Fallback for products with no combinations and no attributes *@
             @if (!combinations.Any() && !attributeMappings.Any() && product.Price > 0)
             {
+                @{
+                    // Check if product has any combinations with case sizes to determine pricing structure
+                    var allCombinations = product.ProductAttributeCombinations?.ToList() ?? new List<ProductAttributeCombination>();
+                    var hasCaseSizing = allCombinations.Any(c => c.CaseSize > 0);
+                    var avgCaseSize = hasCaseSizing ? allCombinations.Where(c => c.CaseSize > 0).Average(c => c.CaseSize) : 0;
+                }
                 <table class="simple-attributes-table">
                     <tbody>
                         <tr>
                             <td style="width: 60%;">
                                 <div style="font-weight: bold;">Standard Product</div>
-                                <div style="font-size: 8px; color: #666;">No variations available</div>
+                                @if (hasCaseSizing)
+                                {
+                                    <div style="font-size: 8px; color: #666;">Available in case quantities</div>
+                                    <div style="font-size: 8px; color: #666;">Avg case size: @(avgCaseSize.ToString("F0")) units</div>
+                                }
+                                else
+                                {
+                                    <div style="font-size: 8px; color: #666;">Unit pricing only</div>
+                                }
                             </td>
                             <td style="width: 40%; text-align: right;">
                                 <div style="font-weight: bold;">$@(product.Price.ToString("F2")) /Unit</div>
+                                @if (hasCaseSizing && avgCaseSize > 0)
+                                {
+                                    <div style="font-size: 8px; color: #666; margin-top: 2px;">
+                                        Est. case price: $@((product.Price * avgCaseSize).ToString("F2"))
+                                    </div>
+                                }
+                                @if (product.ProductCost > 0)
+                                {
+                                    <div style="font-size: 8px; color: #b8860b; margin-top: 2px;">
+                                        Cost: $@(product.ProductCost.ToString("F2")) /Unit
+                                    </div>
+                                    @if (hasCaseSizing && avgCaseSize > 0)
+                                    {
+                                        <div style="font-size: 7px; color: #b8860b;">
+                                            Est. case cost: $@((product.ProductCost * avgCaseSize).ToString("F2"))
+                                        </div>
+                                    }
+                                }
                             </td>
                         </tr>
                     </tbody>
@@ -400,7 +448,8 @@
     }
 
     <div class="footer">
-        Product details and quantities listed are valid as of the date above and may change.<br/>
+        Product details, pricing, and case information listed are valid as of the date above and may change.<br/>
+        Prices shown are per unit or per case as indicated. Cost information is provided for reference only.<br/>
         This catalog is strictly intended for clients possessing the proper license to purchase these products.
     </div>
 </body>

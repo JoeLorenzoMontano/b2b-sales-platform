@@ -80,7 +80,7 @@
                                                             }
                                                         </select>
                                                     </div>
-                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input"/>
+                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input inline-edit-field"/>
                                                     <small class="text-muted d-block mt-1">
                                                         @{
                                                             var selectedOption = item.WeightOptions.FirstOrDefault(w => w.CombinationId == item.SelectedWeightCombinationId);
@@ -109,7 +109,7 @@
                                                             <option value="case">Case</option>
                                                         </select>
                                                     </div>
-                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input"/>
+                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input inline-edit-field"/>
                                                     <small class="text-muted d-block mt-1">
                                                         @item.CaseSize per case
                                                         <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>

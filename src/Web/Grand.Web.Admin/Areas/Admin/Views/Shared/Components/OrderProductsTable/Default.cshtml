@@ -4,7 +4,7 @@
 @model OrderProductsTableModel
 
 <!-- Products Section -->
-<div class="row mt-4">
+<div class="row mt-4" data-order-id="@Model.OrderId">
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -212,3 +212,239 @@
     margin-bottom: 0;
 }
 </style>
+
+<script>
+// Inline editing functionality for OrderProductsTable component
+(function() {
+    'use strict';
+
+    // Save order item quantity changes
+    function saveOrderItemQuantity($field, newQuantity) {
+        // Get order item ID from the field's name attribute (e.g., Items[0].Quantity)
+        var fieldName = $field.attr('name') || '';
+        var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
+
+        if (!orderItemIndexMatch) {
+            console.log('Could not determine order item from field name: ' + fieldName);
+            return;
+        }
+
+        var orderItemIndex = parseInt(orderItemIndexMatch[1]);
+
+        // Find the order ID from the closest parent container with data-order-id
+        var $container = $field.closest('[data-order-id]');
+        if ($container.length === 0) {
+            console.log('Could not find order ID container');
+            return;
+        }
+        var orderId = $container.data('order-id');
+
+        // Get the order item ID from hidden input or data attribute
+        var $hiddenIdInput = $field.closest('tr').find('input[name*=".Id"]');
+        var orderItemId = $hiddenIdInput.val();
+
+        if (!orderItemId) {
+            console.log('Could not find order item ID');
+            return;
+        }
+
+        // Show saving indicator
+        var $saveStatus = $('#save-status-' + orderItemId);
+        if ($saveStatus.length === 0) {
+            // Create save status indicator if it doesn't exist
+            $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItemId + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+            $field.closest('td').append($saveStatus);
+        }
+        $saveStatus.show();
+        $field.prop('disabled', true);
+
+        $.ajax({
+            url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                orderItemId: orderItemId,
+                fieldType: 'quantity',
+                value: newQuantity,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                $field.prop('disabled', false);
+
+                if (result.success) {
+                    // Update original value to prevent re-saving
+                    $field.data('original-value', newQuantity);
+                    $field.attr('value', newQuantity);
+
+                    // Show success indicator briefly
+                    $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 2000);
+
+                    // Reload the component to reflect updated totals
+                    if (typeof window.refreshCurrentProductsGrid === 'function') {
+                        setTimeout(function() {
+                            window.refreshCurrentProductsGrid();
+                        }, 500);
+                    }
+                } else {
+                    // Show error and revert value
+                    var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                    $field.val(originalValue);
+
+                    $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 5000);
+                }
+            },
+            error: function() {
+                $field.prop('disabled', false);
+
+                // Show error and revert value
+                var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                $field.val(originalValue);
+
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        });
+    }
+
+    // Save order item price changes
+    function saveOrderItemPrice($field, newPrice) {
+        // Get order item ID from the field's name attribute
+        var fieldName = $field.attr('name') || '';
+        var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
+
+        if (!orderItemIndexMatch) {
+            console.log('Could not determine order item from field name: ' + fieldName);
+            return;
+        }
+
+        var orderItemIndex = parseInt(orderItemIndexMatch[1]);
+
+        // Find the order ID from the closest parent container with data-order-id
+        var $container = $field.closest('[data-order-id]');
+        if ($container.length === 0) {
+            console.log('Could not find order ID container');
+            return;
+        }
+        var orderId = $container.data('order-id');
+
+        // Get the order item ID from hidden input
+        var $hiddenIdInput = $field.closest('tr').find('input[name*=".Id"]');
+        var orderItemId = $hiddenIdInput.val();
+
+        if (!orderItemId) {
+            console.log('Could not find order item ID');
+            return;
+        }
+
+        // Show saving indicator
+        var $saveStatus = $('#save-status-' + orderItemId);
+        if ($saveStatus.length === 0) {
+            $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItemId + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+            $field.closest('td').append($saveStatus);
+        }
+        $saveStatus.show();
+        $field.prop('disabled', true);
+
+        $.ajax({
+            url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                orderItemId: orderItemId,
+                fieldType: 'price',
+                value: newPrice,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                $field.prop('disabled', false);
+
+                if (result.success) {
+                    // Update original value
+                    $field.data('original-value', newPrice);
+                    $field.attr('value', newPrice);
+
+                    // Show success indicator
+                    $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 2000);
+
+                    // Reload the component to reflect updated totals
+                    if (typeof window.refreshCurrentProductsGrid === 'function') {
+                        setTimeout(function() {
+                            window.refreshCurrentProductsGrid();
+                        }, 500);
+                    }
+                } else {
+                    // Show error and revert
+                    var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                    $field.val(originalValue);
+
+                    $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 5000);
+                }
+            },
+            error: function() {
+                $field.prop('disabled', false);
+
+                var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                $field.val(originalValue);
+
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        });
+    }
+
+    // General auto-save handler for inline-edit-field elements
+    $(document).on('blur change', '.inline-edit-field:not([data-product-id])', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || $field.attr('value') || '';
+
+        // Only save if value has changed
+        if (currentValue !== originalValue && currentValue !== '') {
+            // Determine field type and handle accordingly
+            if ($field.hasClass('actual-quantity-input') || $field.attr('name')?.includes('Quantity')) {
+                saveOrderItemQuantity($field, currentValue);
+            }
+        }
+    });
+
+    // Price field handler (fields with data-product-id attribute)
+    $(document).on('blur change', '.inline-edit-field[data-product-id]', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || $field.attr('value') || '';
+
+        // Only save if value has changed
+        if (currentValue !== originalValue && currentValue !== '') {
+            if ($field.attr('name')?.includes('UnitPriceExclTaxValue')) {
+                saveOrderItemPrice($field, currentValue);
+            }
+        }
+    });
+
+    // Initialize original values on page load
+    $(document).ready(function() {
+        $('.inline-edit-field').each(function() {
+            var $field = $(this);
+            if (!$field.data('original-value')) {
+                $field.data('original-value', $field.val());
+            }
+        });
+    });
+})();
+</script>

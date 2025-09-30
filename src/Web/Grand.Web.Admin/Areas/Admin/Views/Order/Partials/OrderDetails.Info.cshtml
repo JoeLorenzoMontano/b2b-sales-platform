@@ -1207,7 +1207,7 @@ function displayInventoryInfo(orderItemId, stockQuantity, caseSize, warehouseNam
 }
 
 // Add real-time price change detection
-$(document).on('input change', '.inline-edit-field[data-product-id]', function() {
+$(document).on('input change', 'input.inline-edit-field[data-product-id]', function() {
     var $priceInput = $(this);
     var productId = $priceInput.data('product-id');
     var currentPrice = parseFloat($priceInput.val()) || 0;

@@ -2867,7 +2867,7 @@ public class OrderController(
             var stockQuantity = product.StockQuantity;
 
             // Get primary warehouse information
-            string warehouseName = "Default";
+            string warehouseName = null;
             if (product.ProductWarehouseInventory?.Any() == true)
             {
                 var primaryInventory = product.ProductWarehouseInventory.OrderByDescending(x => x.StockQuantity).First();
@@ -2876,6 +2876,17 @@ public class OrderController(
                 {
                     warehouseName = warehouse.Name;
                     stockQuantity = primaryInventory.StockQuantity; // Use warehouse-specific stock
+                }
+            }
+
+            // If no warehouse inventory, try to get default warehouse for the product
+            if (string.IsNullOrEmpty(warehouseName))
+            {
+                var allWarehouses = await warehouseService.GetAllWarehouses();
+                var defaultWarehouse = allWarehouses.FirstOrDefault();
+                if (defaultWarehouse != null)
+                {
+                    warehouseName = defaultWarehouse.Name;
                 }
             }
 

@@ -748,6 +748,9 @@ $(document).ready(function() {
     // Initialize unit/case quantity handlers
     initializeUnitCaseQuantityHandlers();
 
+    // Initialize auto-save original values
+    initializeAutoSaveValues();
+
     // Load product savings indicators
     loadProductSavings();
 });
@@ -964,6 +967,15 @@ function initializeUnitCaseQuantityHandlers() {
         // Default to units view
         $selector.val('unit');
         $displayInput.val(actualQty);
+    });
+}
+
+// Initialize auto-save original values for inline edit fields
+function initializeAutoSaveValues() {
+    $('.inline-edit-field').each(function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        $field.data('original-value', currentValue);
     });
 }
 
@@ -1358,8 +1370,16 @@ function displayInventoryInfo(orderItemId, stockQuantity, caseSize, warehouseNam
 
     if (stockQuantity > 0 && caseSize > 0) {
         var casesAvailable = Math.floor(stockQuantity / caseSize);
-        var inventoryText = ' • ' + stockQuantity + ' Available (' + casesAvailable + ' cases) - ' + warehouseName;
-        $indicator.text(inventoryText);
+        var inventoryText = ' • ' + stockQuantity + ' Available (' + casesAvailable + ' cases)';
+
+        // Add warehouse information on separate line if available
+        if (warehouseName && warehouseName.trim()) {
+            // Escape HTML to prevent XSS
+            var escapedWarehouseName = $('<div>').text(warehouseName).html();
+            inventoryText += '<br>Warehouse: ' + escapedWarehouseName;
+        }
+
+        $indicator.html(inventoryText);
         $indicator.show();
     }
 }
@@ -1396,6 +1416,102 @@ $(document).on('input change', '.inline-edit-field[data-product-id]', function()
                 $('#inventory-' + orderItem.Id).hide();
             }
         }
+    }
+});
+
+// Save order item quantity changes
+function saveOrderItemQuantity($field, newQuantity) {
+    // Get order item ID from the field's name attribute (e.g., Items[0].Quantity)
+    var fieldName = $field.attr('name') || '';
+    var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
+
+    if (!orderItemIndexMatch) {
+        console.log('Could not determine order item from field name: ' + fieldName);
+        return;
+    }
+
+    var orderItemIndex = parseInt(orderItemIndexMatch[1]);
+    var orderId = '@Model.Id';
+    var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id })));
+    var orderItem = orderItems.find(item => item.Index === orderItemIndex);
+
+    if (!orderItem) {
+        console.log('Could not find order item for index: ' + orderItemIndex);
+        return;
+    }
+
+    // Show saving indicator
+    var $saveStatus = $('#save-status-' + orderItem.Id);
+    if ($saveStatus.length === 0) {
+        // Create save status indicator if it doesn't exist
+        $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItem.Id + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+        $field.closest('td').append($saveStatus);
+    }
+    $saveStatus.show();
+    $field.prop('disabled', true);
+
+    $.ajax({
+        url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            orderItemId: orderItem.Id,
+            fieldType: 'quantity',
+            value: newQuantity,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            $field.prop('disabled', false);
+
+            if (result.success) {
+                // Update original value to prevent re-saving
+                $field.data('original-value', newQuantity);
+                $field.attr('value', newQuantity);
+
+                // Show success indicator briefly
+                $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 2000);
+            } else {
+                // Show error and revert value
+                var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                $field.val(originalValue);
+
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        },
+        error: function() {
+            $field.prop('disabled', false);
+
+            // Show error and revert value
+            var originalValue = $field.data('original-value') || $field.attr('value') || '';
+            $field.val(originalValue);
+
+            $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+            setTimeout(function() {
+                $saveStatus.fadeOut();
+            }, 5000);
+        }
+    });
+}
+
+// General auto-save handler for inline-edit-field elements (excluding price fields which are handled separately)
+$(document).on('blur change', '.inline-edit-field:not([data-product-id])', function() {
+    var $field = $(this);
+    var currentValue = $field.val();
+    var originalValue = $field.data('original-value') || $field.attr('value') || '';
+
+    // Only save if value has changed
+    if (currentValue !== originalValue && currentValue !== '') {
+        // Determine field type and handle accordingly
+        if ($field.hasClass('actual-quantity-input') || $field.attr('name')?.includes('Quantity')) {
+            saveOrderItemQuantity($field, currentValue);
+        }
+        // Add other field types here as needed
     }
 });
 </script>

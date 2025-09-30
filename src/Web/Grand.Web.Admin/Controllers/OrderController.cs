@@ -2689,9 +2689,10 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> AddProductToOrderInline(string orderId, string productId, 
-        int quantity, decimal unitPrice, string warehouseId, string attributeCombinationId,
-        [FromServices] IProductService productService, [FromServices] IShipmentService shipmentService)
+    public async Task<IActionResult> AddProductToOrderInline(string orderId, string productId,
+        int quantity, decimal unitPrice, string warehouseId, string attributeCombinationId = null,
+        string attributeValueId = null, string mappingId = null,
+        [FromServices] IProductService productService = null, [FromServices] IShipmentService shipmentService = null)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -2755,6 +2756,24 @@ public class OrderController(
                         }
                     }
                     
+                    model.SelectedAttributes = selectedAttributes;
+                }
+            }
+            // Handle non-combination weight attributes (Flower products)
+            else if (!string.IsNullOrEmpty(attributeValueId) && !string.IsNullOrEmpty(mappingId))
+            {
+                var product = await productService.GetProductById(productId);
+                if (product != null)
+                {
+                    var selectedAttributes = new List<CustomAttributeModel>
+                    {
+                        new CustomAttributeModel
+                        {
+                            Key = mappingId,
+                            Value = attributeValueId
+                        }
+                    };
+
                     model.SelectedAttributes = selectedAttributes;
                 }
             }

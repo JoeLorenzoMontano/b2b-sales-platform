@@ -345,6 +345,7 @@ public class OrderModel : BaseEntityModel
         public string Name { get; set; }
         public double Price { get; set; }
         public string Sku { get; set; }
+        public double ConversionRatio { get; set; }
     }
 
     public class TaxRate : BaseModel

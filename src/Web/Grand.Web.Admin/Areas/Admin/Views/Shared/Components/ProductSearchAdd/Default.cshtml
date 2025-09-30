@@ -717,7 +717,10 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
             alert('Please enter a valid quantity.');
             return;
         }
-        quantity = weightQty;
+
+        // Apply conversion ratio to get base quantity (similar to Case/Unit pattern)
+        var conversionRatio = product.conversionRatio || 1;
+        quantity = Math.round(weightQty * conversionRatio);
 
         // Ensure a weight option is selected
         if (!product.combinationId && !product.attributeValueId) {

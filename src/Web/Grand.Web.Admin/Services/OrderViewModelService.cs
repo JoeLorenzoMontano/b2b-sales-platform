@@ -1086,7 +1086,8 @@ public class OrderViewModelService : IOrderViewModelService
                                         CombinationId = attrValue.Id, // Use attributeValueId as the identifier
                                         Name = attrValue.Name,
                                         Price = optionPrice,
-                                        Sku = product.Sku
+                                        Sku = product.Sku,
+                                        ConversionRatio = attrValue.Quantity
                                     });
                                 }
                             }

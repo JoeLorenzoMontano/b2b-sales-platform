@@ -1063,6 +1063,66 @@ public class OrderViewModelService : IOrderViewModelService
                         orderItemModel.SelectedWeightCombinationId = combination.Id;
                     }
                 }
+                else if (hasWeightBasedAttributes && product.ProductAttributeCombinations?.Any() != true)
+                {
+                    // Weight-based attributes WITHOUT combinations (like Flower products)
+                    orderItemModel.HasWeightBasedAttributes = true;
+
+                    // Build options from attribute values directly (no combinations)
+                    foreach (var mapping in product.ProductAttributeMappings)
+                    {
+                        if (mapping.ProductAttributeValues != null)
+                        {
+                            foreach (var attrValue in mapping.ProductAttributeValues)
+                            {
+                                if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                                {
+                                    var optionPrice = (attrValue.OverriddenPrice.HasValue && attrValue.OverriddenPrice.Value > 0)
+                                        ? attrValue.OverriddenPrice.Value
+                                        : product.Price;
+
+                                    orderItemModel.WeightOptions.Add(new OrderModel.WeightAttributeOption
+                                    {
+                                        CombinationId = attrValue.Id, // Use attributeValueId as the identifier
+                                        Name = attrValue.Name,
+                                        Price = optionPrice,
+                                        Sku = product.Sku
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    // Try to find the selected weight option from order item's attributes
+                    // For non-combination products, we need to match against the attribute values
+                    if (orderItem.Attributes != null && orderItem.Attributes.Any())
+                    {
+                        foreach (var attr in orderItem.Attributes)
+                        {
+                            var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                            if (mapping != null && mapping.ProductAttributeValues != null)
+                            {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                foreach (var valueId in valueIds)
+                                {
+                                    var trimmedValueId = valueId.Trim();
+                                    var attributeValue = mapping.ProductAttributeValues.FirstOrDefault(v => v.Id == trimmedValueId);
+                                    if (attributeValue != null && attributeValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                                    {
+                                        orderItemModel.SelectedWeightCombinationId = attributeValue.Id;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // If no selection found, default to first option
+                    if (string.IsNullOrEmpty(orderItemModel.SelectedWeightCombinationId) && orderItemModel.WeightOptions.Any())
+                    {
+                        orderItemModel.SelectedWeightCombinationId = orderItemModel.WeightOptions[0].CombinationId;
+                    }
+                }
             }
 
             orderItemModel.AttributeInfo = orderItem.AttributeDescription;

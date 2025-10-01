@@ -926,6 +926,9 @@ function displayShipmentDetails(shipments) {
     });
 }
 
+// Track pending save timeouts to prevent multiple simultaneous saves
+var saveOrderDateTimeout = null;
+
 // Initialize auto-save functionality for shipment fields
 function initializeShipmentFieldAutoSave() {
     console.log('Initializing shipment field auto-save handlers');
@@ -957,6 +960,8 @@ function initializeShipmentFieldAutoSave() {
         if (currentValue !== originalValue) {
             console.log('Value changed, saving:', fieldType);
             if (fieldType === 'requestedshipmentdate') {
+                // Update original value immediately to prevent duplicate event triggers
+                $field.data('original-value', currentValue);
                 saveOrderRequestedShipmentDate($field);
             }
         } else {
@@ -1067,53 +1072,77 @@ function loadOrderRequestedShipmentDate() {
 
 // Save order-level requested shipment date
 function saveOrderRequestedShipmentDate($field) {
-    var value = $field.val();
-    var orderId = '@Model.Id';
+    // Clear any pending save to prevent duplicate calls
+    if (saveOrderDateTimeout) {
+        clearTimeout(saveOrderDateTimeout);
+        saveOrderDateTimeout = null;
+    }
 
-    console.log('saveOrderRequestedShipmentDate called - Value:', value, 'OrderId:', orderId);
+    // Debounce the save by 300ms to consolidate multiple events (blur, change, input)
+    saveOrderDateTimeout = setTimeout(function() {
+        var value = $field.val();
+        var orderId = '@Model.Id';
 
-    // Show saving indicator
-    var $indicator = $('<small class="text-muted ml-2"><i class="fa fa-spinner fa-spin"></i> Saving...</small>');
-    $field.after($indicator);
-    $field.prop('disabled', true);
+        console.log('saveOrderRequestedShipmentDate executing - Value:', value, 'OrderId:', orderId);
 
-    // Convert datetime-local to date format for the API (YYYY-MM-DD)
-    var dateValue = value ? value.split('T')[0] : '';
-    console.log('Sending date value to API:', dateValue);
+        // Show saving indicator
+        var $indicator = $('<small class="text-muted ml-2"><i class="fa fa-spinner fa-spin"></i> Saving...</small>');
+        $field.after($indicator);
+        $field.prop('disabled', true);
 
-    $.ajax({
-        url: '@Url.Action("SaveRequestedShipmentDate", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
-        type: 'POST',
-        data: {
-            orderId: orderId,
-            date: dateValue,
-            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-        },
-        success: function(result) {
-            console.log('Save response:', result);
-            $indicator.remove();
-            $field.prop('disabled', false);
+        // Convert datetime-local to date format for the API (YYYY-MM-DD)
+        var dateValue = value ? value.split('T')[0] : '';
+        console.log('Sending date value to API:', dateValue);
 
-            if (result.success) {
-                // Update original value to prevent re-saving
-                $field.data('original-value', value);
-                console.log('Updated original-value to:', value);
+        $.ajax({
+            url: '@Url.Action("SaveRequestedShipmentDate", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                date: dateValue,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                console.log('Save response:', result);
+                $indicator.remove();
+                $field.prop('disabled', false);
 
-                // Show success indicator briefly
-                var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
-                $field.after($success);
-                setTimeout(function() {
-                    $success.fadeOut(function() {
-                        $success.remove();
-                    });
-                }, 2000);
-            } else {
-                console.log('Save failed, result.success was false');
-                // Show error and revert value
+                if (result.success) {
+                    console.log('Save succeeded, original-value already updated in event handler');
+
+                    // Show success indicator briefly
+                    var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
+                    $field.after($success);
+                    setTimeout(function() {
+                        $success.fadeOut(function() {
+                            $success.remove();
+                        });
+                    }, 2000);
+                } else {
+                    console.log('Save failed, result.success was false');
+                    // Show error and revert value
+                    var originalValue = $field.data('original-value') || '';
+                    $field.val(originalValue);
+
+                    var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Save failed</small>');
+                    $field.after($error);
+                    setTimeout(function() {
+                        $error.fadeOut(function() {
+                            $error.remove();
+                        });
+                    }, 3000);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('RequestedShipmentDate save AJAX error:', status, error, 'Response:', xhr.responseText);
+                $indicator.remove();
+                $field.prop('disabled', false);
+
+                // Revert value on error
                 var originalValue = $field.data('original-value') || '';
                 $field.val(originalValue);
 
-                var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Save failed</small>');
+                var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Network error</small>');
                 $field.after($error);
                 setTimeout(function() {
                     $error.fadeOut(function() {
@@ -1121,25 +1150,8 @@ function saveOrderRequestedShipmentDate($field) {
                     });
                 }, 3000);
             }
-        },
-        error: function(xhr, status, error) {
-            console.log('RequestedShipmentDate save AJAX error:', status, error, 'Response:', xhr.responseText);
-            $indicator.remove();
-            $field.prop('disabled', false);
-
-            // Revert value on error
-            var originalValue = $field.data('original-value') || '';
-            $field.val(originalValue);
-
-            var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Network error</small>');
-            $field.after($error);
-            setTimeout(function() {
-                $error.fadeOut(function() {
-                    $error.remove();
-                });
-            }, 3000);
-        }
-    });
+        });
+    }, 300); // Debounce delay
 }
 
 // Load and display product savings indicators

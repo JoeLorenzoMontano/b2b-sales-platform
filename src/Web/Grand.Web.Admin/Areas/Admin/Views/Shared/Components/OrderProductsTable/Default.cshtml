@@ -273,12 +273,14 @@
 
     // Save order item quantity changes
     function saveOrderItemQuantity($field, newQuantity) {
+        console.log('OrderProductsTable: saveOrderItemQuantity called with value:', newQuantity);
+
         // Get order item ID from the field's name attribute (e.g., Items[0].Quantity)
         var fieldName = $field.attr('name') || '';
         var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
 
         if (!orderItemIndexMatch) {
-            console.log('Could not determine order item from field name: ' + fieldName);
+            console.log('OrderProductsTable: Could not determine order item from field name:', fieldName);
             return;
         }
 
@@ -287,7 +289,7 @@
         // Find the order ID from the closest parent container with data-order-id
         var $container = $field.closest('[data-order-id]');
         if ($container.length === 0) {
-            console.log('Could not find order ID container');
+            console.log('OrderProductsTable: Could not find order ID container');
             return;
         }
         var orderId = $container.data('order-id');
@@ -297,9 +299,11 @@
         var orderItemId = $hiddenIdInput.val();
 
         if (!orderItemId) {
-            console.log('Could not find order item ID');
+            console.log('OrderProductsTable: Could not find order item ID');
             return;
         }
+
+        console.log('OrderProductsTable: Saving quantity - OrderId:', orderId, 'OrderItemId:', orderItemId, 'NewQuantity:', newQuantity);
 
         // Show saving indicator
         var $saveStatus = $('#save-status-' + orderItemId);
@@ -322,6 +326,7 @@
                 __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
             },
             success: function(result) {
+                console.log('OrderProductsTable: Quantity save response:', result);
                 $field.prop('disabled', false);
 
                 if (result.success) {
@@ -337,11 +342,15 @@
 
                     // Reload the component to reflect updated totals
                     if (typeof window.refreshCurrentProductsGrid === 'function') {
+                        console.log('OrderProductsTable: Calling refreshCurrentProductsGrid after quantity save');
                         setTimeout(function() {
                             window.refreshCurrentProductsGrid();
                         }, 500);
+                    } else {
+                        console.log('OrderProductsTable: refreshCurrentProductsGrid function not found');
                     }
                 } else {
+                    console.log('OrderProductsTable: Quantity save failed:', result.message);
                     // Show error and revert value
                     var originalValue = $field.data('original-value') || $field.attr('value') || '';
                     $field.val(originalValue);
@@ -352,7 +361,8 @@
                     }, 5000);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.log('OrderProductsTable: Quantity save network error:', status, error, xhr.responseText);
                 $field.prop('disabled', false);
 
                 // Show error and revert value
@@ -369,12 +379,14 @@
 
     // Save order item price changes
     function saveOrderItemPrice($field, newPrice) {
+        console.log('OrderProductsTable: saveOrderItemPrice called with value:', newPrice);
+
         // Get order item ID from the field's name attribute
         var fieldName = $field.attr('name') || '';
         var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
 
         if (!orderItemIndexMatch) {
-            console.log('Could not determine order item from field name: ' + fieldName);
+            console.log('OrderProductsTable: Could not determine order item from field name:', fieldName);
             return;
         }
 
@@ -383,7 +395,7 @@
         // Find the order ID from the closest parent container with data-order-id
         var $container = $field.closest('[data-order-id]');
         if ($container.length === 0) {
-            console.log('Could not find order ID container');
+            console.log('OrderProductsTable: Could not find order ID container');
             return;
         }
         var orderId = $container.data('order-id');
@@ -393,9 +405,11 @@
         var orderItemId = $hiddenIdInput.val();
 
         if (!orderItemId) {
-            console.log('Could not find order item ID');
+            console.log('OrderProductsTable: Could not find order item ID');
             return;
         }
+
+        console.log('OrderProductsTable: Saving price - OrderId:', orderId, 'OrderItemId:', orderItemId, 'NewPrice:', newPrice);
 
         // Show saving indicator
         var $saveStatus = $('#save-status-' + orderItemId);
@@ -417,6 +431,7 @@
                 __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
             },
             success: function(result) {
+                console.log('OrderProductsTable: Price save response:', result);
                 $field.prop('disabled', false);
 
                 if (result.success) {
@@ -432,11 +447,15 @@
 
                     // Reload the component to reflect updated totals
                     if (typeof window.refreshCurrentProductsGrid === 'function') {
+                        console.log('OrderProductsTable: Calling refreshCurrentProductsGrid after price save');
                         setTimeout(function() {
                             window.refreshCurrentProductsGrid();
                         }, 500);
+                    } else {
+                        console.log('OrderProductsTable: refreshCurrentProductsGrid function not found');
                     }
                 } else {
+                    console.log('OrderProductsTable: Price save failed:', result.message);
                     // Show error and revert
                     var originalValue = $field.data('original-value') || $field.attr('value') || '';
                     $field.val(originalValue);
@@ -447,7 +466,8 @@
                     }, 5000);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.log('OrderProductsTable: Price save network error:', status, error, xhr.responseText);
                 $field.prop('disabled', false);
 
                 var originalValue = $field.data('original-value') || $field.attr('value') || '';
@@ -461,32 +481,69 @@
         });
     }
 
-    // General auto-save handler for inline-edit-field elements
-    $(document).on('blur change', '.inline-edit-field:not([data-product-id])', function() {
+    // Real-time calculation function to update totals immediately
+    function updateLineTotal($row) {
+        var $quantityInput = $row.find('[name*="Quantity"]:not([type="hidden"])').first();
+        var $priceInput = $row.find('[name*="UnitPriceExclTaxValue"]');
+        var $subtotalDisplay = $row.find('.subtotal-display');
+
+        if ($quantityInput.length && $priceInput.length && $subtotalDisplay.length) {
+            var quantity = parseFloat($quantityInput.val()) || 0;
+            var unitPrice = parseFloat($priceInput.val()) || 0;
+            var newTotal = quantity * unitPrice;
+
+            // Format the total (you may want to add currency formatting here)
+            $subtotalDisplay.text(newTotal.toFixed(2));
+
+            // Optional: Add visual indication of change
+            $subtotalDisplay.addClass('text-primary font-weight-bold');
+            setTimeout(function() {
+                $subtotalDisplay.removeClass('text-primary font-weight-bold');
+            }, 1000);
+        }
+    }
+
+    // Unified auto-save handler for all inline-edit-field elements
+    $(document).on('blur change', '.inline-edit-field', function() {
         var $field = $(this);
         var currentValue = $field.val();
         var originalValue = $field.data('original-value') || $field.attr('value') || '';
+        var fieldName = $field.attr('name') || '';
+
+        console.log('OrderProductsTable: Field changed - Name:', fieldName, 'Current:', currentValue, 'Original:', originalValue);
 
         // Only save if value has changed
         if (currentValue !== originalValue && currentValue !== '') {
+            var $row = $field.closest('tr');
+
+            // Update real-time calculation immediately
+            updateLineTotal($row);
+
             // Determine field type and handle accordingly
-            if ($field.hasClass('actual-quantity-input') || $field.attr('name')?.includes('Quantity')) {
+            if ($field.hasClass('actual-quantity-input') || fieldName.includes('Quantity')) {
+                console.log('OrderProductsTable: Saving quantity change:', currentValue);
                 saveOrderItemQuantity($field, currentValue);
+            } else if (fieldName.includes('UnitPriceExclTaxValue')) {
+                console.log('OrderProductsTable: Saving price change:', currentValue);
+                saveOrderItemPrice($field, currentValue);
+            } else {
+                console.log('OrderProductsTable: No handler found for field:', fieldName, 'Classes:', $field.attr('class'));
             }
+        } else if (currentValue === originalValue) {
+            console.log('OrderProductsTable: No change detected for field:', fieldName);
+        } else if (currentValue === '') {
+            console.log('OrderProductsTable: Empty value for field:', fieldName, '- not saving');
         }
     });
 
-    // Price field handler (fields with data-product-id attribute)
-    $(document).on('blur change', '.inline-edit-field[data-product-id]', function() {
+    // Real-time calculation on input (immediate feedback while typing)
+    $(document).on('input', '.inline-edit-field', function() {
         var $field = $(this);
-        var currentValue = $field.val();
-        var originalValue = $field.data('original-value') || $field.attr('value') || '';
+        var $row = $field.closest('tr');
 
-        // Only save if value has changed
-        if (currentValue !== originalValue && currentValue !== '') {
-            if ($field.attr('name')?.includes('UnitPriceExclTaxValue')) {
-                saveOrderItemPrice($field, currentValue);
-            }
+        // Only update calculations for quantity and price fields
+        if ($field.attr('name')?.includes('Quantity') || $field.attr('name')?.includes('UnitPriceExclTaxValue')) {
+            updateLineTotal($row);
         }
     });
 
@@ -499,6 +556,7 @@
         var orderItemId = $selector.data('item-id');
         var productId = $selector.data('product-id');
         var weightName = selectedOption.text();
+        var $row = $selector.closest('tr');
 
         // Get current quantity without conversion
         var $wrapper = $selector.closest('.weight-attribute-wrapper');
@@ -510,6 +568,16 @@
         if ($infoSpan.length > 0) {
             var pluralSuffix = (currentDisplayQty !== 1) ? 's' : '';
             $infoSpan.text(currentDisplayQty + ' ' + weightName + pluralSuffix);
+        }
+
+        // Update price field immediately for real-time feedback
+        if (newPrice && newPrice > 0) {
+            var $priceInput = $row.find('[name*="UnitPriceExclTaxValue"]');
+            if ($priceInput.length) {
+                $priceInput.val(newPrice);
+                // Update real-time calculation with new price
+                updateLineTotal($row);
+            }
         }
 
         if (!combinationId || !orderItemId) {
@@ -580,11 +648,12 @@
     });
 
     // Weight quantity input handler
-    $(document).on('blur', '.weight-quantity-input', function() {
+    $(document).on('blur input', '.weight-quantity-input', function() {
         var $displayInput = $(this);
         var $wrapper = $displayInput.closest('.weight-attribute-wrapper');
         var $hiddenInput = $wrapper.find('.actual-quantity-input');
         var $selector = $wrapper.find('.weight-attribute-selector');
+        var $row = $displayInput.closest('tr');
         var currentValue = parseFloat($displayInput.val());
         var weightName = $selector.find('option:selected').text();
 
@@ -598,8 +667,35 @@
         // Update hidden input value
         $hiddenInput.val(currentValue);
 
-        // Trigger blur on hidden input to fire the existing auto-save logic
-        $hiddenInput.trigger('blur');
+        // Update real-time calculation immediately
+        updateLineTotal($row);
+
+        // Only trigger save on blur, not on input
+        if (event.type === 'blur') {
+            // Trigger blur on hidden input to fire the existing auto-save logic
+            $hiddenInput.trigger('blur');
+        }
+    });
+
+    // Unit/case quantity input handler for combination attributes
+    $(document).on('blur input', '.quantity-display-input', function() {
+        var $displayInput = $(this);
+        var $wrapper = $displayInput.closest('.quantity-unit-case-wrapper');
+        var $hiddenInput = $wrapper.find('.actual-quantity-input');
+        var $row = $displayInput.closest('tr');
+        var currentValue = parseFloat($displayInput.val());
+
+        // Update hidden input value (this might need more complex logic for case conversions)
+        $hiddenInput.val(currentValue);
+
+        // Update real-time calculation immediately
+        updateLineTotal($row);
+
+        // Only trigger save on blur, not on input
+        if (event.type === 'blur') {
+            // Trigger blur on hidden input to fire the existing auto-save logic
+            $hiddenInput.trigger('blur');
+        }
     });
 
     // Initialize original values on page load

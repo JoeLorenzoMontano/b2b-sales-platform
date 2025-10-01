@@ -1,9 +1,9 @@
 @using Grand.Web.Admin.Models.Components
 @model ProductSearchAddModel
 @{
-    var baseId = ViewData.TemplateInfo.HtmlFieldPrefix?.Replace(".", "_") ?? "default";
-    var contextSuffix = !string.IsNullOrEmpty(Model.ContextId) ? Model.ContextId.Replace("-", "_") : "ctx";
-    var componentId = $"product_search_{baseId}_{contextSuffix}_{DateTime.Now.Ticks % 1000000}";
+    // Use predictable componentId pattern for refresh callback compatibility
+    var contextId = Model.ContextId ?? "default";
+    var componentId = "product-search-" + contextId.Replace("-", "_").Replace(" ", "_");
 }
 
 <!-- Search/Filter Section -->
@@ -373,10 +373,17 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         }
     });
     
-    // Simplified click handler - let Kendo handle natural dropdown behavior
+    // Enhanced click handler - reliably show results on first click
     $('#product-autocomplete-@componentId').click(function() {
-        // Focus the input to trigger natural Kendo AutoComplete behavior
-        $(this).focus();
+        var autocomplete = $(this).data('kendoAutoComplete');
+        if (autocomplete) {
+            // Focus first to initialize
+            $(this).focus();
+            // Then explicitly search to show results with slight delay
+            setTimeout(function() {
+                autocomplete.search("");
+            }, 50);
+        }
     });
     
     // Brand filter change should refresh autocomplete data source

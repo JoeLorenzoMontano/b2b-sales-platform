@@ -792,12 +792,8 @@
                         $saveStatus.fadeOut();
                     }, 2000);
 
-                    // Reload the component to reflect updated price and totals
-                    if (typeof window.refreshCurrentProductsGrid === 'function') {
-                        setTimeout(function() {
-                            window.refreshCurrentProductsGrid();
-                        }, 500);
-                    }
+                    // Real-time calculations and local updates already provide immediate visual feedback
+                    console.log('OrderProductsTable: Weight attribute save completed - relying on local updates for UI feedback');
                 } else {
                     // Show error
                     $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');

@@ -806,11 +806,11 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
                     console.warn('ProductSearchAdd: Could not set component reload flag:', e);
                 }
                 
-                // Trigger refresh event instead of calling global function to prevent multi-instance conflicts
-                $(document).trigger('productSearchAdd:refresh', {
-                    contextId: '@Model.ContextId',
-                    componentId: '@componentId'
-                });
+                // Call instance-specific refresh callback instead of global events
+                var callbackName = 'refreshCallback_@(componentId.Replace("-", "_"))';
+                if (typeof window[callbackName] === 'function') {
+                    window[callbackName]();
+                }
                 // Clear the selection and show success
                 clearProductSelection@(componentId.Replace("-", "_"))();
                 

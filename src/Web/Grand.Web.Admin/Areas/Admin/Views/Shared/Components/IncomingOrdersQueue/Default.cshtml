@@ -518,22 +518,15 @@
                     });
                 };
 
-                // Set up event listener for ProductSearchAdd refresh events (eliminates global function conflicts)
-                $(document).on('productSearchAdd:refresh', function(event, data) {
-                    // Only respond to refresh events for this specific order context
-                    if (data.contextId && data.contextId === orderId) {
-                        console.log('IncomingOrdersQueue: Refreshing products for order', orderId);
-                        window['refreshCurrentProductsGrid_incoming_' + orderId]();
-                    }
-                });
-
-                // Also respond to broader context matches (for compatibility)
-                $(document).on('productSearchAdd:refresh', function(event, data) {
-                    if (data.contextId && data.contextId.toString().includes(orderId.toString())) {
-                        console.log('IncomingOrdersQueue: Refreshing products for order (broad match)', orderId);
-                        window['refreshCurrentProductsGrid_incoming_' + orderId]();
-                    }
-                });
+                // Set up instance-specific refresh callback for ProductSearchAdd component
+                // Match the componentId pattern used in ProductSearchAdd: 'product-search-' + contextId with special chars replaced
+                var contextId = 'incoming-' + orderId;
+                var componentId = 'product-search-' + contextId.replace(/[^a-zA-Z0-9]/g, '_');
+                var callbackName = 'refreshCallback_' + componentId.replace(/-/g, '_');
+                window[callbackName] = function() {
+                    console.log('IncomingOrdersQueue: Refreshing products for order', orderId);
+                    window['refreshCurrentProductsGrid_incoming_' + orderId]();
+                };
 
                 // Load existing requested shipment date
                 $.ajax({

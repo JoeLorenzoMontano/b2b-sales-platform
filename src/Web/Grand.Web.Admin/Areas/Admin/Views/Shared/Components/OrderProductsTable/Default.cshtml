@@ -727,7 +727,7 @@
 
         // Update price field immediately for real-time feedback
         if (newPrice && newPrice > 0) {
-            var $priceInput = $row.find('[name*="UnitPriceExclTaxValue"]');
+            var $priceInput = $row.find('[name*="UnitPriceExclTaxValue"]').first();
             if ($priceInput.length) {
                 var oldPrice = $priceInput.val();
                 $priceInput.val(newPrice);
@@ -741,10 +741,24 @@
 
                 // Auto-save the price change
                 if (String(newPrice) !== String(oldPrice)) {
-                    console.log('OrderProductsTable: Triggering price auto-save due to weight attribute change - Old:', oldPrice, 'New:', newPrice);
+                    console.log('OrderProductsTable: Triggering price auto-save due to weight attribute change - Field:', $priceInput.attr('name'), 'Old:', oldPrice, 'New:', newPrice);
                     setTimeout(function() {
-                        console.log('OrderProductsTable: Executing delayed price auto-save for weight attribute change');
-                        $priceInput.trigger('blur');
+                        // Defensive checks before triggering auto-save
+                        if ($priceInput.length && $priceInput.is(':visible') && !$priceInput.prop('disabled')) {
+                            var currentPrice = $priceInput.val();
+                            var originalPrice = $priceInput.data('original-value') || $priceInput.attr('value') || '';
+
+                            console.log('OrderProductsTable: Executing delayed price auto-save for weight attribute change - Field:', $priceInput.attr('name'), 'Current:', currentPrice, 'Original:', originalPrice);
+
+                            // Only trigger if there's actually a change to save
+                            if (String(currentPrice) !== String(originalPrice)) {
+                                $priceInput.trigger('blur');
+                            } else {
+                                console.log('OrderProductsTable: Skipping price auto-save - no change detected in defensive check');
+                            }
+                        } else {
+                            console.log('OrderProductsTable: Skipping price auto-save - field not available or disabled');
+                        }
                     }, 200); // Increased delay to prevent race conditions with weight attribute save
                 }
             }

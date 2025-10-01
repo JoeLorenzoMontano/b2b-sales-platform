@@ -415,7 +415,7 @@
             data: {
                 orderId: orderId,
                 showAddProducts: false, // Comment out ProductSearchAdd component for testing
-                showSummary: false,
+                showSummary: true, // Show order summary (subtotal, shipping, tax, total)
                 collapsible: false,
                 __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
             },
@@ -449,8 +449,8 @@
                         type: 'POST',
                         data: {
                             orderId: orderId,
-                            showAddProducts: true,
-                            showSummary: false,
+                            showAddProducts: false,
+                            showSummary: true, // Show order summary in refresh function too
                             collapsible: false,
                             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                         },

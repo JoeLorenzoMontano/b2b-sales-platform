@@ -732,35 +732,16 @@
                 var oldPrice = $priceInput.val();
                 $priceInput.val(newPrice);
 
-                // Update the price field's original-value so it can be saved properly
-                $priceInput.data('original-value', oldPrice);
+                // Update the price field's original-value to the NEW price (weight attribute change is complete)
+                $priceInput.data('original-value', newPrice);
+                $priceInput.attr('value', newPrice);
                 console.log('OrderProductsTable: Updated weight-based price from', oldPrice, 'to', newPrice);
 
                 // Update real-time calculation with new price
                 updateLineTotal($row);
 
-                // Auto-save the price change
-                if (String(newPrice) !== String(oldPrice)) {
-                    console.log('OrderProductsTable: Triggering price auto-save due to weight attribute change - Field:', $priceInput.attr('name'), 'Old:', oldPrice, 'New:', newPrice);
-                    setTimeout(function() {
-                        // Defensive checks before triggering auto-save
-                        if ($priceInput.length && $priceInput.is(':visible') && !$priceInput.prop('disabled')) {
-                            var currentPrice = $priceInput.val();
-                            var originalPrice = $priceInput.data('original-value') || $priceInput.attr('value') || '';
-
-                            console.log('OrderProductsTable: Executing delayed price auto-save for weight attribute change - Field:', $priceInput.attr('name'), 'Current:', currentPrice, 'Original:', originalPrice);
-
-                            // Only trigger if there's actually a change to save
-                            if (String(currentPrice) !== String(originalPrice)) {
-                                $priceInput.trigger('blur');
-                            } else {
-                                console.log('OrderProductsTable: Skipping price auto-save - no change detected in defensive check');
-                            }
-                        } else {
-                            console.log('OrderProductsTable: Skipping price auto-save - field not available or disabled');
-                        }
-                    }, 200); // Increased delay to prevent race conditions with weight attribute save
-                }
+                // Note: Price auto-save is not needed here since weight attribute save handles both variant and price update
+                console.log('OrderProductsTable: Weight attribute price update completed - no additional auto-save needed (Field:', $priceInput.attr('name'), 'Old:', oldPrice, 'New:', newPrice, ')');
             }
         }
 

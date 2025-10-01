@@ -1,7 +1,9 @@
 @using Grand.Web.Admin.Models.Components
 @model ProductSearchAddModel
 @{
-    var componentId = "product-search-" + ViewData.TemplateInfo.HtmlFieldPrefix.Replace(".", "_");
+    var baseId = ViewData.TemplateInfo.HtmlFieldPrefix?.Replace(".", "_") ?? "default";
+    var contextSuffix = !string.IsNullOrEmpty(Model.ContextId) ? Model.ContextId.Replace("-", "_") : "ctx";
+    var componentId = $"product_search_{baseId}_{contextSuffix}_{DateTime.Now.Ticks % 1000000}";
 }
 
 <!-- Search/Filter Section -->
@@ -122,13 +124,13 @@
 </div>
 
 <style>
-    /* Autocomplete dropdown styling */
-    .k-autocomplete .k-dropdown-wrap {
+    /* Autocomplete dropdown styling - scoped to this component instance */
+    #product-autocomplete-@(componentId).k-autocomplete .k-dropdown-wrap {
         border: 1px solid #ddd;
         border-radius: 4px;
     }
-    
-    .k-autocomplete .k-input {
+
+    #product-autocomplete-@(componentId).k-autocomplete .k-input {
         padding: 8px 12px;
     }
     
@@ -158,8 +160,9 @@
         font-weight: 500; /* Medium weight, not bold */
     }
     
-    /* Brand badge styling for autocomplete dropdown */
-    .brand-badge {
+    /* Brand badge styling for autocomplete dropdown - scoped to this component */
+    #product-autocomplete-@(componentId) + .k-animation-container .brand-badge,
+    #selected-product-form-@componentId .brand-badge {
         display: inline-block;
         background-color: #17a2b8;
         color: white;
@@ -170,30 +173,30 @@
         margin-left: 5px;
     }
     
-    /* Autocomplete item template styling - slim design */
-    .k-list-container .k-item {
+    /* Autocomplete item template styling - scoped to this component's dropdown */
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item {
         padding: 6px 12px;
         border-bottom: 1px solid #f0f0f0;
         font-size: 0.9em;
         line-height: 1.3;
     }
-    
-    .k-list-container .k-item:hover {
+
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item:hover {
         background-color: #e9ecef;
     }
-    
-    .k-list-container .k-item .product-name {
+
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item .product-name {
         color: #333;
         font-weight: normal; /* Regular weight, not bold */
     }
-    
-    .k-list-container .k-item .text-muted {
+
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item .text-muted {
         color: #6c757d;
         font-size: 0.8em;
     }
     
-    /* Success feedback styling */
-    .autocomplete-success {
+    /* Success feedback styling - scoped to this component */
+    #product-autocomplete-@(componentId).autocomplete-success {
         border-color: #28a745 !important;
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
     }

@@ -529,7 +529,7 @@
             </div>
         </div>
         <div class="x_content form">
-            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, contextType = "order" })
+            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, orderId = Model.Id, contextType = "order" })
         </div>
     </div>
 </div>

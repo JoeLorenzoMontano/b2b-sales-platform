@@ -57,7 +57,7 @@
                     </div>
 
                     <!-- Product Search and Add Component -->
-                    @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.OrderId, contextType = "order" })
+                    @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.OrderId, orderId = Model.OrderId, contextType = "order" })
                 </form>
             </div>
         </div>

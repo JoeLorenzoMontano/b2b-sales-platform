@@ -637,9 +637,11 @@ function refreshCurrentProductsGrid() {
 }
 
 // Register instance-specific callback for ProductSearchAdd component
-// The contextId defaults to the order ID, with hyphens replaced by underscores
+// ProductSearchAdd uses componentId pattern: "product-search-" + contextId
+// Then replaces hyphens with underscores for the callback name
 var contextId = '@Model.Id'.replace(/-/g, '_');
-window['refreshCallback_' + contextId] = refreshCurrentProductsGrid;
+var componentId = 'product_search_' + contextId;
+window['refreshCallback_' + componentId] = refreshCurrentProductsGrid;
 
 // Check for existing shipments and hide ProductSearchAdd if shipments exist or order is in fulfillment
 var isCheckingShipmentsForInfoTab = false; // Flag to prevent multiple simultaneous calls

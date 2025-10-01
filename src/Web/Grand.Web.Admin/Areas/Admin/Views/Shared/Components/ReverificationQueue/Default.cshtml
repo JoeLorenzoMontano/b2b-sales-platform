@@ -334,6 +334,7 @@
             type: 'POST',
             data: {
                 orderId: orderId,
+                contextId: 'reverification-' + orderId,
                 showAddProducts: true, // Show ProductSearchAdd component to match order edit page
                 showSummary: true, // Show order summary (subtotal, shipping, tax, total)
                 collapsible: false,
@@ -369,6 +370,7 @@
                         type: 'POST',
                         data: {
                             orderId: orderId,
+                            contextId: 'reverification-' + orderId,
                             showAddProducts: true, // Show ProductSearchAdd component in refresh function too
                             showSummary: true, // Show order summary in refresh function too
                             collapsible: false,

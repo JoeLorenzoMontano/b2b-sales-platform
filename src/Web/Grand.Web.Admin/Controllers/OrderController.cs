@@ -3602,7 +3602,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
     [HttpPost]
-    public async Task<IActionResult> GetOrderProductsTableComponent(string orderId, bool showAddProducts = false, bool showSummary = false, bool collapsible = false)
+    public async Task<IActionResult> GetOrderProductsTableComponent(string orderId, string contextId = null, bool showAddProducts = false, bool showSummary = false, bool collapsible = false)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -3623,7 +3623,8 @@ public class OrderController(
                 model = model,
                 showAddProducts = showAddProducts,
                 showSummary = showSummary,
-                collapsible = collapsible
+                collapsible = collapsible,
+                contextId = contextId
             });
         }
         catch (Exception ex)

@@ -305,9 +305,9 @@ function clearOtherContextFilters@(componentId.Replace("-", "_"))() {
 }
 
 function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
-    // Clear any existing filter state for different contexts
-    clearOtherContextFilters@(componentId.Replace("-", "_"))();
-    
+    // Skip aggressive filter clearing - unique contextIds provide isolation
+    // clearOtherContextFilters@(componentId.Replace("-", "_"))();
+
     // Restore saved filter values for this context
     restoreFilterState@(componentId.Replace("-", "_"))();
     

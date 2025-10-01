@@ -18,14 +18,29 @@ public class ProductSearchAddViewComponent : BaseAdminViewComponent
         _categoryService = categoryService;
     }
 
-    public async Task<IViewComponentResult> InvokeAsync(string contextId = "", 
-        string searchEndpoint = "SearchProductsInline", 
+    public async Task<IViewComponentResult> InvokeAsync(string contextId = "",
+        string orderId = null,
+        string searchEndpoint = "SearchProductsInline",
         string addEndpoint = "AddProductToOrderInline",
         string contextType = "order")
     {
+        // Extract actual order ID from contextId if orderId not provided
+        var actualOrderId = orderId;
+        if (string.IsNullOrEmpty(actualOrderId) && !string.IsNullOrEmpty(contextId))
+        {
+            // Remove prefixes like 'incoming-' or 'reverification-' to get actual order ID
+            if (contextId.StartsWith("incoming-"))
+                actualOrderId = contextId.Substring("incoming-".Length);
+            else if (contextId.StartsWith("reverification-"))
+                actualOrderId = contextId.Substring("reverification-".Length);
+            else
+                actualOrderId = contextId; // Use as-is if no known prefix
+        }
+
         var model = new ProductSearchAddModel
         {
             ContextId = contextId,
+            OrderId = actualOrderId ?? contextId, // Fallback to contextId if extraction failed
             SearchEndpoint = searchEndpoint,
             AddEndpoint = addEndpoint,
             ContextType = contextType

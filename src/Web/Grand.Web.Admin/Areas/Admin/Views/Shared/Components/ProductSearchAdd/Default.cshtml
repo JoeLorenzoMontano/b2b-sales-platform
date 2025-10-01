@@ -780,7 +780,7 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
     }
     
     var data = {
-        orderId: '@Model.ContextId',
+        orderId: '@Model.OrderId',
         productId: selectedProduct@(componentId.Replace("-", "_")).id,
         quantity: quantity,
         unitPrice: unitPrice,

@@ -183,7 +183,7 @@
                                 <div class="add-products-section">
                                     <div class="x_panel light form-fit">
                                         <div class="x_content form">
-                                            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.ContextId, contextType = "order" })
+                                            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.ContextId, orderId = Model.OrderId, contextType = "order" })
                                         </div>
                                     </div>
                                 </div>

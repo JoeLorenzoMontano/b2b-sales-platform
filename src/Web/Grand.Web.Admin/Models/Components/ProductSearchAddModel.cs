@@ -14,9 +14,14 @@ public class ProductSearchAddModel : BaseModel
     }
 
     /// <summary>
-    /// Context identifier (e.g., OrderId)
+    /// Context identifier for UI isolation (e.g., 'incoming-ORDER123')
     /// </summary>
     public string ContextId { get; set; }
+
+    /// <summary>
+    /// Actual order ID for API calls (e.g., 'ORDER123')
+    /// </summary>
+    public string OrderId { get; set; }
 
     /// <summary>
     /// Context type (e.g., "order", "dashboard")

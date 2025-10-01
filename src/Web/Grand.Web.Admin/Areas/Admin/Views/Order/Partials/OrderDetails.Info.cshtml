@@ -624,16 +624,40 @@ function toggleOrderTotals(editmode) {
 
 // Function expected by the ProductSearchAdd component in Info tab
 function refreshCurrentProductsGrid() {
-    // Info tab is index 0 in the order edit tabstrip
-    var infoTabIndex = 0;
+    var orderId = '@Model.Id';
 
-    // Set URL hash to preserve Info tab state after reload
-    if (window.location.hash !== '#tab-' + infoTabIndex) {
-        window.location.hash = '#tab-' + infoTabIndex;
-    }
+    // Reload just the OrderProductsTable component via AJAX instead of full page refresh
+    $.ajax({
+        url: '@Html.Raw(Url.Action("GetOrderProductsTableComponent", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            contextId: orderId,
+            showAddProducts: true,
+            showSummary: true,
+            collapsible: true,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(html) {
+            // Find and replace the OrderProductsTable component
+            var $container = $('.row[data-order-id="' + orderId + '"]');
+            if ($container.length > 0) {
+                $container.replaceWith(html);
 
-    // Reload page with hash preserved - admin-tabstrip will restore the active tab
-    window.location.reload();
+                // Re-register the callback after component reload
+                var contextId = orderId.replace(/-/g, '_');
+                var componentId = 'product_search_' + contextId;
+                window['refreshCallback_' + componentId] = refreshCurrentProductsGrid;
+            } else {
+                console.error('OrderProductsTable container not found, falling back to page reload');
+                window.location.reload();
+            }
+        },
+        error: function() {
+            console.error('Error reloading OrderProductsTable component, falling back to page reload');
+            window.location.reload();
+        }
+    });
 }
 
 // Register instance-specific callback for ProductSearchAdd component

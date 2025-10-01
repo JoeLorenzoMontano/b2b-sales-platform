@@ -806,10 +806,11 @@ function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
                     console.warn('ProductSearchAdd: Could not set component reload flag:', e);
                 }
                 
-                // Refresh current products grid if it exists
-                if (typeof refreshCurrentProductsGrid !== 'undefined') {
-                    refreshCurrentProductsGrid();
-                }
+                // Trigger refresh event instead of calling global function to prevent multi-instance conflicts
+                $(document).trigger('productSearchAdd:refresh', {
+                    contextId: '@Model.ContextId',
+                    componentId: '@componentId'
+                });
                 // Clear the selection and show success
                 clearProductSelection@(componentId.Replace("-", "_"))();
                 

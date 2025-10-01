@@ -516,17 +516,22 @@
                     });
                 };
 
-                // Set the global refresh function to this instance only when component is in focus/active
-                // This prevents conflicts by ensuring each component manages its own refresh
-                setTimeout(function() {
-                    // Temporarily set as global function when this component is loaded
-                    window.refreshCurrentProductsGrid = window['refreshCurrentProductsGrid_incoming_' + orderId];
+                // Set up event listener for ProductSearchAdd refresh events (eliminates global function conflicts)
+                $(document).on('productSearchAdd:refresh', function(event, data) {
+                    // Only respond to refresh events for this specific order context
+                    if (data.contextId && data.contextId === orderId) {
+                        console.log('IncomingOrdersQueue: Refreshing products for order', orderId);
+                        window['refreshCurrentProductsGrid_incoming_' + orderId]();
+                    }
+                });
 
-                    // Set up a listener to restore this function if another component overwrites it
-                    componentContainer.on('focus click', function() {
-                        window.refreshCurrentProductsGrid = window['refreshCurrentProductsGrid_incoming_' + orderId];
-                    });
-                }, 100);
+                // Also respond to broader context matches (for compatibility)
+                $(document).on('productSearchAdd:refresh', function(event, data) {
+                    if (data.contextId && data.contextId.toString().includes(orderId.toString())) {
+                        console.log('IncomingOrdersQueue: Refreshing products for order (broad match)', orderId);
+                        window['refreshCurrentProductsGrid_incoming_' + orderId]();
+                    }
+                });
 
                 // Load existing requested shipment date
                 $.ajax({

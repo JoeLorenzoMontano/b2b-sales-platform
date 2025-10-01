@@ -80,6 +80,60 @@
         background-color: #dc3545;
         border-color: #dc3545;
     }
+    /* ProductSearchAdd component styling - copied from OrderDetails.Info.cshtml for consistency */
+    .reverification-order-products-container .add-products-section {
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .reverification-order-products-container .add-products-section .x_panel {
+        margin-bottom: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+    .reverification-order-products-container .add-products-section .x_title {
+        background: transparent;
+        padding: 10px 15px;
+        margin-bottom: 0;
+    }
+    .reverification-order-products-container .add-products-section .x_title .caption {
+        color: white;
+        font-weight: 600;
+        font-size: 1em;
+    }
+    .reverification-order-products-container .add-products-section .x_content {
+        padding: 10px;
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    /* Ensure Bootstrap grid stays within bounds */
+    .reverification-order-products-container .add-products-section .row {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+    }
+    .reverification-order-products-container .add-products-section [class*="col-"] {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    /* Ensure form controls don't overflow */
+    .reverification-order-products-container .add-products-section .form-control,
+    .reverification-order-products-container .add-products-section .form-group {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    /* Unit/Case quantity selector styling */
+    .reverification-order-products-container .quantity-unit-case-wrapper {
+        display: inline-block;
+    }
+    .reverification-order-products-container .quantity-unit-case-wrapper .d-flex {
+        gap: 4px;
+    }
+    .reverification-order-products-container .quantity-unit-case-wrapper .quantity-display-input {
+        text-align: center;
+    }
 </style>
 
 <script>

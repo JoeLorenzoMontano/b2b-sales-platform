@@ -214,6 +214,60 @@
             max-width: none;
         }
     }
+    /* ProductSearchAdd component styling - copied from OrderDetails.Info.cshtml for consistency */
+    .incoming-order-products-container .add-products-section {
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .incoming-order-products-container .add-products-section .x_panel {
+        margin-bottom: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+    .incoming-order-products-container .add-products-section .x_title {
+        background: transparent;
+        padding: 10px 15px;
+        margin-bottom: 0;
+    }
+    .incoming-order-products-container .add-products-section .x_title .caption {
+        color: white;
+        font-weight: 600;
+        font-size: 1em;
+    }
+    .incoming-order-products-container .add-products-section .x_content {
+        padding: 10px;
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    /* Ensure Bootstrap grid stays within bounds */
+    .incoming-order-products-container .add-products-section .row {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+    }
+    .incoming-order-products-container .add-products-section [class*="col-"] {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    /* Ensure form controls don't overflow */
+    .incoming-order-products-container .add-products-section .form-control,
+    .incoming-order-products-container .add-products-section .form-group {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    /* Unit/Case quantity selector styling */
+    .incoming-order-products-container .quantity-unit-case-wrapper {
+        display: inline-block;
+    }
+    .incoming-order-products-container .quantity-unit-case-wrapper .d-flex {
+        gap: 4px;
+    }
+    .incoming-order-products-container .quantity-unit-case-wrapper .quantity-display-input {
+        text-align: center;
+    }
 </style>
 
 <script>

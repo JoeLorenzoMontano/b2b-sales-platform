@@ -218,7 +218,7 @@
                 @if (!string.IsNullOrEmpty(product.ShortDescription))
                 {
                     <div style="font-size: 10px; color: #666; margin-top: 5px;">
-                        @Html.Raw(product.ShortDescription.Length > 200 ? product.ShortDescription.Substring(0, 200) + "..." : product.ShortDescription)
+                        @(product.ShortDescription.Length > 200 ? product.ShortDescription.Substring(0, 200) + "..." : product.ShortDescription)
                     </div>
                 }
             </div>

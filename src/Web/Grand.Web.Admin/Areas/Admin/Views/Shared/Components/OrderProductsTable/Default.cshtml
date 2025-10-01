@@ -438,15 +438,8 @@
                         console.log('OrderProductsTable: Updated unit/case display input original-value and cleared saving flag:', $unitCaseInput.val());
                     }
 
-                    // Reload the component to reflect updated totals
-                    if (typeof window.refreshCurrentProductsGrid === 'function') {
-                        console.log('OrderProductsTable: Calling refreshCurrentProductsGrid after quantity save');
-                        setTimeout(function() {
-                            window.refreshCurrentProductsGrid();
-                        }, 500);
-                    } else {
-                        console.log('OrderProductsTable: refreshCurrentProductsGrid function not found');
-                    }
+                    // Real-time calculations already provide immediate visual feedback
+                    console.log('OrderProductsTable: Quantity save completed - relying on real-time calculations for UI updates');
                 } else {
                     console.log('OrderProductsTable: Quantity save failed:', result.message);
                     // Show error and revert value
@@ -543,15 +536,8 @@
                         $saveStatus.fadeOut();
                     }, 2000);
 
-                    // Reload the component to reflect updated totals
-                    if (typeof window.refreshCurrentProductsGrid === 'function') {
-                        console.log('OrderProductsTable: Calling refreshCurrentProductsGrid after price save');
-                        setTimeout(function() {
-                            window.refreshCurrentProductsGrid();
-                        }, 500);
-                    } else {
-                        console.log('OrderProductsTable: refreshCurrentProductsGrid function not found');
-                    }
+                    // Real-time calculations already provide immediate visual feedback
+                    console.log('OrderProductsTable: Price save completed - relying on real-time calculations for UI updates');
                 } else {
                     console.log('OrderProductsTable: Price save failed:', result.message);
                     // Show error and revert

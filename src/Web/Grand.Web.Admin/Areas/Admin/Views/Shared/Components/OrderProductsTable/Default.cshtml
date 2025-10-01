@@ -328,7 +328,20 @@
 
     // Save order item quantity changes
     function saveOrderItemQuantity($field, newQuantity) {
-        console.log('OrderProductsTable: saveOrderItemQuantity called with value:', newQuantity);
+        console.log('OrderProductsTable: saveOrderItemQuantity called with value:', newQuantity, 'field type:', $field.attr('class'));
+
+        // Ensure quantity is a valid number
+        var quantity = parseFloat(newQuantity);
+        if (isNaN(quantity) || quantity <= 0) {
+            console.log('OrderProductsTable: Invalid quantity value:', newQuantity, '- aborting save');
+            return;
+        }
+
+        // For decimal quantities, check if we should round to integer
+        if (quantity !== Math.floor(quantity)) {
+            console.log('OrderProductsTable: Decimal quantity detected:', quantity, '- rounding to:', Math.round(quantity));
+            quantity = Math.round(quantity);
+        }
 
         // Get order item ID from the field's name attribute (e.g., Items[0].Quantity)
         var fieldName = $field.attr('name') || '';
@@ -354,11 +367,23 @@
         var orderItemId = $hiddenIdInput.val();
 
         if (!orderItemId) {
-            console.log('OrderProductsTable: Could not find order item ID');
-            return;
+            console.log('OrderProductsTable: Could not find order item ID - searching for alternatives');
+
+            // Try alternative methods to find order item ID
+            var $row = $field.closest('tr');
+            var $wrapper = $row.find('.weight-attribute-wrapper, .quantity-unit-case-wrapper');
+            if ($wrapper.length) {
+                orderItemId = $wrapper.data('item-id');
+                console.log('OrderProductsTable: Found order item ID from wrapper:', orderItemId);
+            }
+
+            if (!orderItemId) {
+                console.log('OrderProductsTable: Still could not find order item ID - aborting save');
+                return;
+            }
         }
 
-        console.log('OrderProductsTable: Saving quantity - OrderId:', orderId, 'OrderItemId:', orderItemId, 'NewQuantity:', newQuantity);
+        console.log('OrderProductsTable: Saving quantity - OrderId:', orderId, 'OrderItemId:', orderItemId, 'NewQuantity:', quantity, 'FieldName:', fieldName);
 
         // Show saving indicator
         var $saveStatus = $('#save-status-' + orderItemId);
@@ -385,15 +410,31 @@
                 $field.prop('disabled', false);
 
                 if (result.success) {
-                    // Update original value to prevent re-saving
-                    $field.data('original-value', newQuantity);
-                    $field.attr('value', newQuantity);
+                    console.log('OrderProductsTable: Quantity save successful for value:', quantity);
+
+                    // Update original value to prevent re-saving - use the rounded quantity value
+                    $field.data('original-value', quantity.toString());
+                    $field.attr('value', quantity.toString());
 
                     // Show success indicator briefly
                     $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
                     setTimeout(function() {
                         $saveStatus.fadeOut();
                     }, 2000);
+
+                    // For weight/unit-case products, also update the display input original values
+                    var $row = $field.closest('tr');
+                    var $weightInput = $row.find('.weight-quantity-input');
+                    var $unitCaseInput = $row.find('.quantity-display-input');
+
+                    if ($weightInput.length) {
+                        $weightInput.data('original-value', $weightInput.val());
+                        console.log('OrderProductsTable: Updated weight display input original-value:', $weightInput.val());
+                    }
+                    if ($unitCaseInput.length) {
+                        $unitCaseInput.data('original-value', $unitCaseInput.val());
+                        console.log('OrderProductsTable: Updated unit/case display input original-value:', $unitCaseInput.val());
+                    }
 
                     // Reload the component to reflect updated totals
                     if (typeof window.refreshCurrentProductsGrid === 'function') {
@@ -585,14 +626,45 @@
         }
     }
 
-    // Unified auto-save handler for all inline-edit-field elements
-    $(document).on('blur change', '.inline-edit-field', function() {
+    // Specific handler for hidden actual-quantity-input fields (weight-based and unit/case products)
+    $(document).on('blur change', '.actual-quantity-input', function() {
         var $field = $(this);
         var currentValue = $field.val();
         var originalValue = $field.data('original-value') || $field.attr('value') || '';
         var fieldName = $field.attr('name') || '';
 
-        console.log('OrderProductsTable: Field changed - Name:', fieldName, 'Current:', currentValue, 'Original:', originalValue);
+        console.log('OrderProductsTable: Hidden quantity input changed - Name:', fieldName, 'Current:', currentValue, 'Original:', originalValue, 'Type:', typeof currentValue, 'OrigType:', typeof originalValue);
+
+        // Normalize values for comparison (handle string vs number issues)
+        var currentNum = parseFloat(currentValue) || 0;
+        var originalNum = parseFloat(originalValue) || 0;
+
+        // Only save if value has actually changed (use numeric comparison)
+        if (Math.abs(currentNum - originalNum) > 0.001 && currentNum > 0) {
+            console.log('OrderProductsTable: Hidden quantity input has changed, saving:', currentNum, '(was:', originalNum, ')');
+
+            var $row = $field.closest('tr');
+
+            // Update real-time calculation immediately
+            updateLineTotal($row);
+
+            // Save the quantity change
+            saveOrderItemQuantity($field, currentNum);
+        } else if (Math.abs(currentNum - originalNum) <= 0.001) {
+            console.log('OrderProductsTable: No significant change detected for hidden quantity - Original:', originalNum, 'Current:', currentNum);
+        } else if (currentNum <= 0) {
+            console.log('OrderProductsTable: Invalid quantity value for hidden input:', currentNum, '- not saving');
+        }
+    });
+
+    // Unified auto-save handler for all other inline-edit-field elements
+    $(document).on('blur change', '.inline-edit-field:not(.actual-quantity-input)', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || $field.attr('value') || '';
+        var fieldName = $field.attr('name') || '';
+
+        console.log('OrderProductsTable: Standard field changed - Name:', fieldName, 'Current:', currentValue, 'Original:', originalValue);
 
         // Only save if value has changed
         if (currentValue !== originalValue && currentValue !== '') {
@@ -602,8 +674,8 @@
             updateLineTotal($row);
 
             // Determine field type and handle accordingly
-            if ($field.hasClass('actual-quantity-input') || fieldName.includes('Quantity')) {
-                console.log('OrderProductsTable: Saving quantity change:', currentValue);
+            if (fieldName.includes('Quantity')) {
+                console.log('OrderProductsTable: Saving standard quantity change:', currentValue);
                 saveOrderItemQuantity($field, currentValue);
             } else if (fieldName.includes('UnitPriceExclTaxValue')) {
                 console.log('OrderProductsTable: Saving price change:', currentValue);
@@ -775,13 +847,28 @@
             if (event.type === 'blur') {
                 console.log('OrderProductsTable: Triggering weight-based auto-save via hidden input blur');
 
-                // Ensure the hidden input is marked as changed by updating its original-value reference
-                var originalValue = $hiddenInput.data('original-value') || $hiddenInput.attr('value') || '';
-                if (String(currentValue) !== String(originalValue)) {
-                    // Trigger blur on hidden input to fire the existing auto-save logic
+                // Normalize values for comparison
+                var originalValue = parseFloat($hiddenInput.data('original-value') || $hiddenInput.attr('value') || '0');
+                var currentNum = parseFloat(currentValue);
+
+                if (Math.abs(currentNum - originalValue) > 0.001) {
+                    console.log('OrderProductsTable: Weight-based quantity changed from', originalValue, 'to', currentNum, '- triggering save');
+
+                    // Try hidden input blur first
                     $hiddenInput.trigger('blur');
+
+                    // Add direct save fallback after a short delay
+                    setTimeout(function() {
+                        console.log('OrderProductsTable: Weight-based direct save fallback');
+                        // Double-check if the hidden input save worked, if not save directly
+                        var currentHiddenOriginal = parseFloat($hiddenInput.data('original-value') || '0');
+                        if (Math.abs(currentNum - currentHiddenOriginal) > 0.001) {
+                            console.log('OrderProductsTable: Hidden input save may have failed, trying direct save');
+                            saveOrderItemQuantity($hiddenInput, currentNum);
+                        }
+                    }, 200);
                 } else {
-                    console.log('OrderProductsTable: No change detected for weight-based quantity - Original:', originalValue, 'Current:', currentValue);
+                    console.log('OrderProductsTable: No significant change detected for weight-based quantity - Original:', originalValue, 'Current:', currentNum);
                 }
             }
         } else {
@@ -825,13 +912,28 @@
             if (event.type === 'blur') {
                 console.log('OrderProductsTable: Triggering unit/case auto-save via hidden input blur');
 
-                // Ensure the hidden input is marked as changed
-                var originalValue = $hiddenInput.data('original-value') || $hiddenInput.attr('value') || '';
-                if (String(actualQuantity) !== String(originalValue)) {
-                    // Trigger blur on hidden input to fire the existing auto-save logic
+                // Normalize values for comparison
+                var originalValue = parseFloat($hiddenInput.data('original-value') || $hiddenInput.attr('value') || '0');
+                var actualNum = parseFloat(actualQuantity);
+
+                if (Math.abs(actualNum - originalValue) > 0.001) {
+                    console.log('OrderProductsTable: Unit/case quantity changed from', originalValue, 'to', actualNum, '- triggering save');
+
+                    // Try hidden input blur first
                     $hiddenInput.trigger('blur');
+
+                    // Add direct save fallback after a short delay
+                    setTimeout(function() {
+                        console.log('OrderProductsTable: Unit/case direct save fallback');
+                        // Double-check if the hidden input save worked, if not save directly
+                        var currentHiddenOriginal = parseFloat($hiddenInput.data('original-value') || '0');
+                        if (Math.abs(actualNum - currentHiddenOriginal) > 0.001) {
+                            console.log('OrderProductsTable: Hidden input save may have failed, trying direct save');
+                            saveOrderItemQuantity($hiddenInput, actualNum);
+                        }
+                    }, 200);
                 } else {
-                    console.log('OrderProductsTable: No change detected for unit/case quantity - Original:', originalValue, 'Current:', actualQuantity);
+                    console.log('OrderProductsTable: No significant change detected for unit/case quantity - Original:', originalValue, 'Current:', actualNum);
                 }
             }
         } else {

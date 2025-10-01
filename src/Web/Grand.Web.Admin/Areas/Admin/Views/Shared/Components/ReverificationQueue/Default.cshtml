@@ -280,7 +280,7 @@
             type: 'POST',
             data: {
                 orderId: orderId,
-                showAddProducts: false, // Comment out ProductSearchAdd component for testing
+                showAddProducts: true, // Show ProductSearchAdd component to match order edit page
                 showSummary: true, // Show order summary (subtotal, shipping, tax, total)
                 collapsible: false,
                 __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
@@ -315,7 +315,7 @@
                         type: 'POST',
                         data: {
                             orderId: orderId,
-                            showAddProducts: false,
+                            showAddProducts: true, // Show ProductSearchAdd component in refresh function too
                             showSummary: true, // Show order summary in refresh function too
                             collapsible: false,
                             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()

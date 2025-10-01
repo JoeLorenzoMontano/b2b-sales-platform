@@ -944,11 +944,16 @@ function initializeShipmentFieldAutoSave() {
         var originalValue = $field.data('original-value') || '';
         var fieldType = $field.data('field-type');
 
+        console.log('Order field changed:', fieldType, 'Current:', currentValue, 'Original:', originalValue);
+
         // Only save if value has changed
         if (currentValue !== originalValue) {
+            console.log('Value changed, saving:', fieldType);
             if (fieldType === 'requestedshipmentdate') {
                 saveOrderRequestedShipmentDate($field);
             }
+        } else {
+            console.log('No change detected for:', fieldType);
         }
     });
 }
@@ -1058,6 +1063,8 @@ function saveOrderRequestedShipmentDate($field) {
     var value = $field.val();
     var orderId = '@Model.Id';
 
+    console.log('saveOrderRequestedShipmentDate called - Value:', value, 'OrderId:', orderId);
+
     // Show saving indicator
     var $indicator = $('<small class="text-muted ml-2"><i class="fa fa-spinner fa-spin"></i> Saving...</small>');
     $field.after($indicator);
@@ -1065,6 +1072,7 @@ function saveOrderRequestedShipmentDate($field) {
 
     // Convert datetime-local to date format for the API (YYYY-MM-DD)
     var dateValue = value ? value.split('T')[0] : '';
+    console.log('Sending date value to API:', dateValue);
 
     $.ajax({
         url: '@Url.Action("SaveRequestedShipmentDate", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
@@ -1075,14 +1083,14 @@ function saveOrderRequestedShipmentDate($field) {
             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
         },
         success: function(result) {
+            console.log('Save response:', result);
             $indicator.remove();
             $field.prop('disabled', false);
 
             if (result.success) {
                 // Update original value to prevent re-saving
                 $field.data('original-value', value);
-                // Also update the field's stored value attribute to ensure consistency
-                $field.attr('data-original-value', value);
+                console.log('Updated original-value to:', value);
 
                 // Show success indicator briefly
                 var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
@@ -1093,6 +1101,7 @@ function saveOrderRequestedShipmentDate($field) {
                     });
                 }, 2000);
             } else {
+                console.log('Save failed, result.success was false');
                 // Show error and revert value
                 var originalValue = $field.data('original-value') || '';
                 $field.val(originalValue);
@@ -1106,7 +1115,8 @@ function saveOrderRequestedShipmentDate($field) {
                 }, 3000);
             }
         },
-        error: function() {
+        error: function(xhr, status, error) {
+            console.log('RequestedShipmentDate save AJAX error:', status, error, 'Response:', xhr.responseText);
             $indicator.remove();
             $field.prop('disabled', false);
 

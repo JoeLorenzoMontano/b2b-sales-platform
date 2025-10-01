@@ -210,11 +210,13 @@
                             <br/>
                         }
 
+                        @* Commented out - Customer Requested Shipment Date
                         @if (order.RequestedShipmentDate.HasValue)
                         {
                             <b>@(string.Format(_translationService.GetResource("pdfinvoice.requestedshipmentdate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
                             <br/>
                         }
+                        *@
 
                         @if (!string.IsNullOrEmpty(order.SeId))
                         {
@@ -381,11 +383,13 @@
                             <b>@(string.Format(_translationService.GetResource("PDFInvoice.ShippingMethod", order.CustomerLanguageId), order.ShippingMethod))</b>
                             <br/>
 
+                            @* Commented out - Customer Requested Shipment Date
                             @if (order.RequestedShipmentDate.HasValue)
                             {
                                 <b>@(string.Format(_translationService.GetResource("pdfinvoice.requestedshipmentdate", order.CustomerLanguageId), order.RequestedShipmentDate.Value.ToString("MMMM dd, yyyy")))</b>
                                 <br/>
                             }
+                            *@
                         }
                     </td>
                 </tr>

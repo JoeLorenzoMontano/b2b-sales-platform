@@ -414,7 +414,7 @@
             type: 'POST',
             data: {
                 orderId: orderId,
-                showAddProducts: true,
+                showAddProducts: false, // Comment out ProductSearchAdd component for testing
                 showSummary: false,
                 collapsible: false,
                 __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()

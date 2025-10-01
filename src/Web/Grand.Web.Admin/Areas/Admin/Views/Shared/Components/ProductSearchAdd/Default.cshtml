@@ -358,23 +358,15 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
             selectProduct@(componentId.Replace("-", "_"))(dataItem);
         },
         focus: function(e) {
-            // Let Kendo handle natural focus behavior - no aggressive programmatic search
+            // Trigger natural search on focus for minLength: 0 behavior
+            var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
+            if (autocomplete) {
+                // Use current input value (empty string for initial focus)
+                autocomplete.search(autocomplete.value() || "");
+            }
         },
         open: function(e) {
-            // Fallback: ensure data is loaded when dropdown opens
-            var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
-            if (autocomplete && autocomplete.dataSource) {
-                try {
-                    var data = autocomplete.dataSource.data();
-                    if (!data || data.length === 0) {
-                        autocomplete.dataSource.read();
-                    }
-                } catch (e) {
-                    console.warn('ProductSearchAdd: Error in open event handler:', e);
-                    // Fallback: try to read data anyway
-                    autocomplete.dataSource.read();
-                }
-            }
+            // Let Kendo handle data loading naturally - no manual interference
         }
     });
     

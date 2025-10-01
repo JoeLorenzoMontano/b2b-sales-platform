@@ -361,8 +361,8 @@
                 // Add the date panel after the component
                 componentContainer.after(datePanel);
 
-                // Set up global refresh function for this order's products
-                window['refreshCurrentProductsGrid_' + orderId] = function() {
+                // Set up context-specific refresh function for this order's products (no global collision)
+                window['refreshCurrentProductsGrid_reverification_' + orderId] = function() {
                     // Reload the entire component to refresh the products table
                     $.ajax({
                         url: '@Html.Raw(Url.Action("GetOrderProductsTableComponent", "Order", new { area = Constants.AreaAdmin }))',
@@ -376,14 +376,23 @@
                         },
                         success: function(html) {
                             componentContainer.html(html);
+                            // Re-assign the refresh function after component reload
+                            window['refreshCurrentProductsGrid_reverification_' + orderId] = arguments.callee;
                         }
                     });
                 };
 
-                // Set as the default refresh function if not already defined
-                if (typeof window.refreshCurrentProductsGrid === 'undefined') {
-                    window.refreshCurrentProductsGrid = window['refreshCurrentProductsGrid_' + orderId];
-                }
+                // Set the global refresh function to this instance only when component is in focus/active
+                // This prevents conflicts by ensuring each component manages its own refresh
+                setTimeout(function() {
+                    // Temporarily set as global function when this component is loaded
+                    window.refreshCurrentProductsGrid = window['refreshCurrentProductsGrid_reverification_' + orderId];
+
+                    // Set up a listener to restore this function if another component overwrites it
+                    componentContainer.on('focus click', function() {
+                        window.refreshCurrentProductsGrid = window['refreshCurrentProductsGrid_reverification_' + orderId];
+                    });
+                }, 200); // Slight delay difference to avoid race conditions
 
                 // Load existing requested shipment date
                 $.ajax({

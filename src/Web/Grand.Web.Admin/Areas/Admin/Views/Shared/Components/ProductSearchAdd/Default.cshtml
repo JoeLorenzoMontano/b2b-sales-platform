@@ -15,11 +15,11 @@
             </div>
             <div class="col-12">
                 <admin-label asp-for="SearchBrandId"/>
-                <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands"/>
+                <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands" id="SearchBrandId-@componentId"/>
             </div>
             <div class="col-12">
                 <admin-label asp-for="SearchCategoryId"/>
-                <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories"/>
+                <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories" id="SearchCategoryId-@componentId"/>
             </div>
         </div>
     </div>
@@ -246,8 +246,8 @@ var initialDataLoaded@(componentId.Replace("-", "_")) = false;
 function saveFilterState@(componentId.Replace("-", "_"))() {
     try {
         var filterState = {
-            brandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
-            categoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
+            brandId: $('#SearchBrandId-@componentId').val(),
+            categoryId: $('#SearchCategoryId-@componentId').val(),
             contextId: '@Model.ContextId',
             timestamp: Date.now()
         };
@@ -260,8 +260,8 @@ function saveFilterState@(componentId.Replace("-", "_"))() {
 function restoreFilterState@(componentId.Replace("-", "_"))() {
     try {
         // ALWAYS clear filters first to override server-rendered selected values
-        $('#@Html.IdFor(model => model.SearchBrandId)').val('').trigger('change');
-        $('#@Html.IdFor(model => model.SearchCategoryId)').val('').trigger('change');
+        $('#SearchBrandId-@componentId').val('').trigger('change');
+        $('#SearchCategoryId-@componentId').val('').trigger('change');
         
         // Check if this is a component reload (not a fresh page load)
         var isComponentReload = sessionStorage.getItem('ProductSearchAdd_ComponentReload_@Model.ContextId') === 'true';
@@ -273,10 +273,10 @@ function restoreFilterState@(componentId.Replace("-", "_"))() {
                 // Only restore if saved within last 4 hours (to avoid stale state)
                 if (filterState.timestamp && (Date.now() - filterState.timestamp) < (4 * 60 * 60 * 1000)) {
                     if (filterState.brandId) {
-                        $('#@Html.IdFor(model => model.SearchBrandId)').val(filterState.brandId);
+                        $('#SearchBrandId-@componentId').val(filterState.brandId);
                     }
                     if (filterState.categoryId) {
-                        $('#@Html.IdFor(model => model.SearchCategoryId)').val(filterState.categoryId);
+                        $('#SearchCategoryId-@componentId').val(filterState.categoryId);
                     }
                 }
             }
@@ -325,8 +325,8 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
                     data: function() {
                         var searchData = {
                             SearchProductName: $('#product-autocomplete-@componentId').val(),
-                            SearchBrandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
-                            SearchCategoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
+                            SearchBrandId: $('#SearchBrandId-@componentId').val(),
+                            SearchCategoryId: $('#SearchCategoryId-@componentId').val(),
                             page: 1,
                             pageSize: 50
                         };
@@ -433,7 +433,7 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     });
     
     // Brand filter change should refresh autocomplete data source
-    $('#@Html.IdFor(model => model.SearchBrandId)').change(function() {
+    $('#SearchBrandId-@componentId').change(function() {
         // Save filter state to localStorage
         saveFilterState@(componentId.Replace("-", "_"))();
         
@@ -448,7 +448,7 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
     });
     
     // Category filter change should refresh autocomplete data source
-    $('#@Html.IdFor(model => model.SearchCategoryId)').change(function() {
+    $('#SearchCategoryId-@componentId').change(function() {
         // Save filter state to localStorage
         saveFilterState@(componentId.Replace("-", "_"))();
         

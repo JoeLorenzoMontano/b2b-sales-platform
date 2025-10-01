@@ -814,10 +814,15 @@ function loadShipmentDetailsForInfoTab() {
         success: function(data) {
             if (data && data.Data && data.Data.length > 0) {
                 displayShipmentDetails(data.Data);
+            } else {
+                // Even if there are no shipments, we need to initialize handlers for order-level fields
+                initializeShipmentFieldAutoSave();
             }
         },
         error: function() {
             console.log('Error loading shipment details');
+            // Initialize handlers even on error so order-level fields work
+            initializeShipmentFieldAutoSave();
         }
     });
 }

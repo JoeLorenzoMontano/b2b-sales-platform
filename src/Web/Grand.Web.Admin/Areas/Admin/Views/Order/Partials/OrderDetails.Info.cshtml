@@ -923,7 +923,8 @@ function displayShipmentDetails(shipments) {
 
 // Initialize auto-save functionality for shipment fields
 function initializeShipmentFieldAutoSave() {
-    $(document).off('blur change', '.shipment-edit-field, .order-edit-field');
+    console.log('Initializing shipment field auto-save handlers');
+    $(document).off('blur change input', '.shipment-edit-field, .order-edit-field');
 
     // Handle shipment-level fields
     $(document).on('blur change', '.shipment-edit-field', function() {
@@ -938,7 +939,8 @@ function initializeShipmentFieldAutoSave() {
     });
 
     // Handle order-level fields (like requested shipment date)
-    $(document).on('blur change', '.order-edit-field', function() {
+    // Use 'input' event in addition to 'blur change' for datetime-local fields
+    $(document).on('blur change input', '.order-edit-field', function() {
         var $field = $(this);
         var currentValue = $field.val();
         var originalValue = $field.data('original-value') || '';

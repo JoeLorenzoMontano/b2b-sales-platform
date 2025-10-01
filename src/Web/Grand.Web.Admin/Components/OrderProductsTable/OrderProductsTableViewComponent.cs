@@ -6,11 +6,12 @@ namespace Grand.Web.Admin.Components.OrderProductsTable;
 
 public class OrderProductsTableViewComponent : BaseAdminViewComponent
 {
-    public IViewComponentResult Invoke(OrderModel model, bool showAddProducts = true, bool showSummary = true, bool collapsible = true)
+    public IViewComponentResult Invoke(OrderModel model, string contextId = null, bool showAddProducts = true, bool showSummary = true, bool collapsible = true)
     {
         var viewModel = new OrderProductsTableModel
         {
             OrderId = model.Id,
+            ContextId = contextId ?? model.Id,
             Items = model.Items,
             TaxDisplayType = model.TaxDisplayType,
             OrderTotal = model.OrderTotal,
@@ -31,6 +32,7 @@ public class OrderProductsTableViewComponent : BaseAdminViewComponent
 public class OrderProductsTableModel
 {
     public string OrderId { get; set; }
+    public string ContextId { get; set; }
     public IList<OrderModel.OrderItemModel> Items { get; set; }
     public Grand.Domain.Tax.TaxDisplayType TaxDisplayType { get; set; }
     public string OrderTotal { get; set; }

@@ -659,7 +659,7 @@
     });
 
     // Unified auto-save handler for standard inline-edit-field elements (excludes special input types)
-    $(document).on('blur change', '.inline-edit-field:not(.actual-quantity-input):not(.weight-quantity-input):not(.quantity-display-input)', function() {
+    $(document).on('blur change', '.inline-edit-field:not(.actual-quantity-input):not(.weight-quantity-input):not(.quantity-display-input):not(.weight-attribute-selector)', function() {
         var $field = $(this);
         var currentValue = $field.val();
         var originalValue = $field.data('original-value') || $field.attr('value') || '';
@@ -741,10 +741,11 @@
 
                 // Auto-save the price change
                 if (String(newPrice) !== String(oldPrice)) {
-                    console.log('OrderProductsTable: Triggering price auto-save due to weight attribute change');
+                    console.log('OrderProductsTable: Triggering price auto-save due to weight attribute change - Old:', oldPrice, 'New:', newPrice);
                     setTimeout(function() {
+                        console.log('OrderProductsTable: Executing delayed price auto-save for weight attribute change');
                         $priceInput.trigger('blur');
-                    }, 100); // Small delay to ensure weight attribute save completes first
+                    }, 200); // Increased delay to prevent race conditions with weight attribute save
                 }
             }
         }

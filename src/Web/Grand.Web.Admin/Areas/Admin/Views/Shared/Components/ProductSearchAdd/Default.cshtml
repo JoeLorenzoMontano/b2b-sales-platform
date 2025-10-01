@@ -240,7 +240,6 @@ $(document).ready(function() {
 
 var selectedProduct@(componentId.Replace("-", "_")) = null;
 var currentInventory@(componentId.Replace("-", "_")) = 0;
-var initialDataLoaded@(componentId.Replace("-", "_")) = false;
 
 // Filter state management functions
 function saveFilterState@(componentId.Replace("-", "_"))() {
@@ -359,26 +358,7 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
             selectProduct@(componentId.Replace("-", "_"))(dataItem);
         },
         focus: function(e) {
-            // Load data on first focus to ensure dropdown can open
-            if (!initialDataLoaded@(componentId.Replace("-", "_"))) {
-                var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
-                if (autocomplete && autocomplete.dataSource) {
-                    initialDataLoaded@(componentId.Replace("-", "_")) = true;
-                    autocomplete.search("");
-                    // Open dropdown after data loads
-                    setTimeout(function() {
-                        try {
-                            var data = autocomplete.dataSource.data();
-                            if (data && data.length > 0) {
-                                // For AutoComplete, use search() to show suggestions
-                                autocomplete.search("");
-                            }
-                        } catch (e) {
-                            console.warn('ProductSearchAdd: Error opening autocomplete after focus data load:', e);
-                        }
-                    }, 100);
-                }
-            }
+            // Let Kendo handle natural focus behavior - no aggressive programmatic search
         },
         open: function(e) {
             // Fallback: ensure data is loaded when dropdown opens
@@ -398,38 +378,10 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         }
     });
     
-    // Add click event handler to ensure dropdown opens on click
+    // Simplified click handler - let Kendo handle natural dropdown behavior
     $('#product-autocomplete-@componentId').click(function() {
-        var autocomplete = $(this).data('kendoAutoComplete');
-        if (autocomplete && autocomplete.dataSource) {
-            try {
-                // If data isn't loaded yet, load it and open
-                if (!initialDataLoaded@(componentId.Replace("-", "_"))) {
-                    initialDataLoaded@(componentId.Replace("-", "_")) = true;
-                    autocomplete.search("");
-                    setTimeout(function() {
-                        try {
-                            var data = autocomplete.dataSource.data();
-                            if (data && data.length > 0) {
-                                // For AutoComplete, use search() to show suggestions
-                                autocomplete.search("");
-                            }
-                        } catch (e) {
-                            console.warn('ProductSearchAdd: Error opening autocomplete after data load:', e);
-                        }
-                    }, 100);
-                } else {
-                    // Data is already loaded, just show suggestions
-                    var data = autocomplete.dataSource.data();
-                    if (data && data.length > 0) {
-                        // For AutoComplete, use search() to show suggestions
-                        autocomplete.search("");
-                    }
-                }
-            } catch (e) {
-                console.warn('ProductSearchAdd: Error in click handler:', e);
-            }
-        }
+        // Focus the input to trigger natural Kendo AutoComplete behavior
+        $(this).focus();
     });
     
     // Brand filter change should refresh autocomplete data source
@@ -439,7 +391,6 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
-            initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
             // Only reload data if the input has content or was previously focused
             if ($('#product-autocomplete-@componentId').val() || $('#product-autocomplete-@componentId').is(':focus')) {
                 autocomplete.dataSource.read();
@@ -454,7 +405,6 @@ function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
         
         var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
         if (autocomplete) {
-            initialDataLoaded@(componentId.Replace("-", "_")) = false; // Reset flag so data reloads with new filter
             // Only reload data if the input has content or was previously focused
             if ($('#product-autocomplete-@componentId').val() || $('#product-autocomplete-@componentId').is(':focus')) {
                 autocomplete.dataSource.read();

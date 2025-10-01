@@ -36,9 +36,9 @@
                                     var item = Model.Items[i];
                                     <input name="Items[@i].Id" value="@item.Id" type="hidden"/>
                                     <tr>
-                                        <td>@(i + 1)</td>
+                                        <td class="text-dark">@(i + 1)</td>
                                         <td>
-                                            <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })" class="text-primary">
+                                            <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })" class="text-dark">
                                                 @item.ProductName
                                             </a>
                                             @if (!string.IsNullOrEmpty(item.AttributeInfo))

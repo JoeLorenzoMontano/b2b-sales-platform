@@ -1359,7 +1359,7 @@ public class CustomerViewModelService : ICustomerViewModelService
                 ? customer.Email
                 : _translationService.GetResource("Admin.Customers.Guest"),
             Username = customer.Username,
-            FullName = customer.GetFullName(),
+            FullName = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.FirstName),
             Company = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.Company),
             Phone = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.Phone),
             ZipPostalCode = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.ZipPostalCode),

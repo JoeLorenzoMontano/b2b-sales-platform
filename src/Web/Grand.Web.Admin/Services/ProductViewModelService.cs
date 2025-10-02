@@ -803,7 +803,7 @@ public class ProductViewModelService(
                
         // Get current user ID for tracking
         var userId = contextAccessor.WorkContext.CurrentCustomer?.Email;
-        
+
         // Save the product first
         await productService.UpdateProduct(product);
 

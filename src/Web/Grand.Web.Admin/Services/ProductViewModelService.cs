@@ -774,13 +774,7 @@ public class ProductViewModelService(
         var prevSampleDownloadId = product.SampleDownloadId;
 
         //product
-        // DEBUG: Log values before AutoMapper
-        System.Diagnostics.Debug.WriteLine($"DEBUG UpdateProductModel - Before ToEntity - HideFromCatalog model: {model.HideFromCatalog}, Published model: {model.Published}, Product HideFromCatalog: {product.HideFromCatalog}, Product Published: {product.Published}");
-
         product = model.ToEntity(product, dateTimeService);
-
-        // DEBUG: Log values after AutoMapper
-        System.Diagnostics.Debug.WriteLine($"DEBUG UpdateProductModel - After ToEntity - Product HideFromCatalog: {product.HideFromCatalog}, Product Published: {product.Published}");
 
         product.AutoAddRequiredProducts = model.AutoAddRequiredProducts;
         product.Locales = await seNameService.TranslationSeNameProperties(model.Locales, product, x => x.Name);

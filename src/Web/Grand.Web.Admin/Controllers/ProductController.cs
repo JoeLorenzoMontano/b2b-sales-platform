@@ -198,20 +198,10 @@ public class ProductController : BaseAdminController
             }
         }
 
-        // DEBUG: Log values before ToModel
-        System.Diagnostics.Debug.WriteLine($"DEBUG GET Edit - Before ToModel - Product HideFromCatalog: {product.HideFromCatalog}, Product Published: {product.Published}");
-
         var model = product.ToModel(_dateTimeService);
-
-        // DEBUG: Log values after ToModel
-        System.Diagnostics.Debug.WriteLine($"DEBUG GET Edit - After ToModel - Model HideFromCatalog: {model.HideFromCatalog}, Model Published: {model.Published}");
-
         //model.Ticks = product.UpdatedOnUtc.Ticks;
 
         await _productViewModelService.PrepareProductModel(model, product, false, false);
-
-        // DEBUG: Log values after PrepareProductModel
-        System.Diagnostics.Debug.WriteLine($"DEBUG GET Edit - After PrepareProductModel - Model HideFromCatalog: {model.HideFromCatalog}, Model Published: {model.Published}");
         await AddLocales(_languageService, model.Locales, (locale, languageId) =>
         {
             locale.Name = product.GetTranslation(x => x.Name, languageId, false);
@@ -247,13 +237,7 @@ public class ProductController : BaseAdminController
 
         if (ModelState.IsValid)
         {
-            // DEBUG: Log HideFromCatalog values
-            System.Diagnostics.Debug.WriteLine($"DEBUG ProductController.Edit - HideFromCatalog model value: {model.HideFromCatalog}, Published model value: {model.Published}, Product HideFromCatalog before: {product.HideFromCatalog}, Product Published before: {product.Published}");
-
             product = await _productViewModelService.UpdateProductModel(product, model);
-
-            // DEBUG: Log HideFromCatalog values after update
-            System.Diagnostics.Debug.WriteLine($"DEBUG ProductController.Edit - Product HideFromCatalog after: {product.HideFromCatalog}, Product Published after: {product.Published}");
             Success(_translationService.GetResource("Admin.Catalog.Products.Updated"));
             if (continueEditing)
             {

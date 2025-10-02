@@ -198,10 +198,20 @@ public class ProductController : BaseAdminController
             }
         }
 
+        // DEBUG: Log values before ToModel
+        System.Diagnostics.Debug.WriteLine($"DEBUG GET Edit - Before ToModel - Product HideFromCatalog: {product.HideFromCatalog}, Product Published: {product.Published}");
+
         var model = product.ToModel(_dateTimeService);
+
+        // DEBUG: Log values after ToModel
+        System.Diagnostics.Debug.WriteLine($"DEBUG GET Edit - After ToModel - Model HideFromCatalog: {model.HideFromCatalog}, Model Published: {model.Published}");
+
         //model.Ticks = product.UpdatedOnUtc.Ticks;
 
         await _productViewModelService.PrepareProductModel(model, product, false, false);
+
+        // DEBUG: Log values after PrepareProductModel
+        System.Diagnostics.Debug.WriteLine($"DEBUG GET Edit - After PrepareProductModel - Model HideFromCatalog: {model.HideFromCatalog}, Model Published: {model.Published}");
         await AddLocales(_languageService, model.Locales, (locale, languageId) =>
         {
             locale.Name = product.GetTranslation(x => x.Name, languageId, false);

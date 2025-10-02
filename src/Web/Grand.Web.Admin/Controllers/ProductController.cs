@@ -238,12 +238,12 @@ public class ProductController : BaseAdminController
         if (ModelState.IsValid)
         {
             // DEBUG: Log HideFromCatalog values
-            _logger.LogInformation($"DEBUG ProductController.Edit - HideFromCatalog model value: {model.HideFromCatalog}, Published model value: {model.Published}, Product HideFromCatalog before: {product.HideFromCatalog}, Product Published before: {product.Published}");
+            System.Diagnostics.Debug.WriteLine($"DEBUG ProductController.Edit - HideFromCatalog model value: {model.HideFromCatalog}, Published model value: {model.Published}, Product HideFromCatalog before: {product.HideFromCatalog}, Product Published before: {product.Published}");
 
             product = await _productViewModelService.UpdateProductModel(product, model);
 
             // DEBUG: Log HideFromCatalog values after update
-            _logger.LogInformation($"DEBUG ProductController.Edit - Product HideFromCatalog after: {product.HideFromCatalog}, Product Published after: {product.Published}");
+            System.Diagnostics.Debug.WriteLine($"DEBUG ProductController.Edit - Product HideFromCatalog after: {product.HideFromCatalog}, Product Published after: {product.Published}");
             Success(_translationService.GetResource("Admin.Catalog.Products.Updated"));
             if (continueEditing)
             {

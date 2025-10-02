@@ -776,7 +776,6 @@ public class ProductViewModelService(
         //product
         product = model.ToEntity(product, dateTimeService);
         product.AutoAddRequiredProducts = model.AutoAddRequiredProducts;
-        product.HideFromCatalog = model.HideFromCatalog;
         product.Locales = await seNameService.TranslationSeNameProperties(model.Locales, product, x => x.Name);
         product.SeName = await seNameService.ValidateSeName(product, model.SeName, product.Name, true);
         //discounts

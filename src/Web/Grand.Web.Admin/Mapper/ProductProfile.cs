@@ -62,7 +62,6 @@ public class ProductProfile : Profile, IAutoMapperProfile
             .ForMember(dest => dest.ProductAttributeCombinations, mo => mo.Ignore())
             .ForMember(dest => dest.TierPrices, mo => mo.Ignore())
             .ForMember(dest => dest.AppliedDiscounts, mo => mo.Ignore())
-            .ForMember(dest => dest.HideFromCatalog, mo => mo.Ignore()) // Explicitly ignore to rely on manual assignment
             .ForMember(dest => dest.LimitedToStores, mo => mo.MapFrom(x => x.Stores != null && x.Stores.Any()))
             .ForMember(dest => dest.LimitedToGroups,
                 mo => mo.MapFrom(x => x.CustomerGroups != null && x.CustomerGroups.Any()))

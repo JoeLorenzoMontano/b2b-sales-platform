@@ -115,7 +115,7 @@
                         </div>
                     }
                     
-                    <!-- Moved from Order Information column -->
+                    <!-- Payment Status with Quick Actions -->
                     <div class="mb-3">
                         <label class="form-label"><strong>Payment Status:</strong></label>
                         <div>
@@ -143,9 +143,23 @@
                             }
                             else
                             {
-                                <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId })">
-                                    @Model.PaymentStatus
-                                </a>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId })">
+                                        @Model.PaymentStatus
+                                    </a>
+                                    @if (Model.PaymentStatus.ToLower() == "pending")
+                                    {
+                                        <button type="button" class="btn btn-success btn-sm" onclick="markPaymentAsPaid('@Model.Id')">
+                                            <i class="fa fa-check"></i> Mark as Paid
+                                        </button>
+                                    }
+                                </div>
+                                <div class="small text-muted">
+                                    <strong>Method:</strong> @Model.PaymentMethod
+                                    <a href="#" class="ms-2" onclick="changePaymentMethod('@Model.Id'); return false;">
+                                        <i class="fa fa-edit"></i> Change
+                                    </a>
+                                </div>
                             }
                         </div>
                     </div>
@@ -1593,3 +1607,61 @@ $(document).on('blur change', '.inline-edit-field:not([data-product-id])', funct
     color: #adb5bd !important;
 }
 </style>
+
+<script>
+function markPaymentAsPaid(orderId) {
+    if (!confirm('Are you sure you want to mark this payment as paid?')) {
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("MarkPaymentAsPaid", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: { id: orderId },
+        success: function(response) {
+            if (response.success) {
+                displayNotification(response.message, 'success', true);
+                // Reload the page to show updated status
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                displayNotification(response.message || 'Error marking payment as paid', 'error', true);
+            }
+        },
+        error: function() {
+            displayNotification('Error marking payment as paid', 'error', true);
+        }
+    });
+}
+
+function changePaymentMethod(orderId) {
+    var newMethod = prompt('Enter new payment method (e.g., Cash, Credit Card, Bank Transfer):');
+    if (!newMethod || newMethod.trim() === '') {
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("ChangePaymentMethod", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            id: orderId,
+            paymentMethod: newMethod.trim()
+        },
+        success: function(response) {
+            if (response.success) {
+                displayNotification(response.message, 'success', true);
+                // Reload the page to show updated method
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                displayNotification(response.message || 'Error changing payment method', 'error', true);
+            }
+        },
+        error: function() {
+            displayNotification('Error changing payment method', 'error', true);
+        }
+    });
+}
+</script>

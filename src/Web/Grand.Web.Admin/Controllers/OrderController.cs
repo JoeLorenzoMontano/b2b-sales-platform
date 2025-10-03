@@ -1301,6 +1301,72 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
+    public async Task<IActionResult> MarkPaymentAsPaid(string id)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        // Get payment transaction for this order
+        var paymentTransaction = await paymentTransactionService.GetOrderByGuid(order.OrderGuid);
+        if (paymentTransaction == null)
+            return Json(new { success = false, message = "Payment transaction not found" });
+
+        // Mark as paid
+        paymentTransaction.TransactionStatus = TransactionStatus.Paid;
+        paymentTransaction.PaidAmount = paymentTransaction.TransactionAmount;
+        await paymentTransactionService.UpdatePaymentTransaction(paymentTransaction);
+
+        // Add order note
+        await orderService.InsertOrderNote(new OrderNote {
+            Note = $"Payment marked as paid. Amount: {paymentTransaction.PaidAmount:C}",
+            DisplayToCustomer = false,
+            OrderId = order.Id
+        });
+
+        return Json(new { success = true, message = "Payment marked as paid successfully" });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> ChangePaymentMethod(string id, string paymentMethod)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        if (string.IsNullOrEmpty(paymentMethod))
+            return Json(new { success = false, message = "Payment method is required" });
+
+        // Get payment transaction for this order
+        var paymentTransaction = await paymentTransactionService.GetOrderByGuid(order.OrderGuid);
+        if (paymentTransaction == null)
+            return Json(new { success = false, message = "Payment transaction not found" });
+
+        var oldPaymentMethod = paymentTransaction.PaymentMethodSystemName;
+        paymentTransaction.PaymentMethodSystemName = paymentMethod;
+        await paymentTransactionService.UpdatePaymentTransaction(paymentTransaction);
+
+        // Add order note
+        await orderService.InsertOrderNote(new OrderNote {
+            Note = $"Payment method changed from '{oldPaymentMethod}' to '{paymentMethod}'",
+            DisplayToCustomer = false,
+            OrderId = order.Id
+        });
+
+        return Json(new { success = true, message = "Payment method updated successfully" });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveSalesEmployee(string id, string salesEmployeeId)
     {

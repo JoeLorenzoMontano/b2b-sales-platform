@@ -1,4 +1,5 @@
-﻿using Grand.Business.Core.Interfaces.Catalog.Products;
+﻿using Grand.Business.Core.Commands.Messages.Common;
+using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
@@ -8,6 +9,7 @@ using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Interfaces.Messages;
 using Grand.Domain.Permissions;
+using MediatR;
 using Grand.Business.Core.Utilities.Customers;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
@@ -847,7 +849,7 @@ public class CustomerController : BaseAdminController
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> StartOrder(string customerId, string billingAddressId, string shippingAddressId, [FromServices] IOrderService orderService)
+    public async Task<IActionResult> StartOrder(string customerId, string billingAddressId, string shippingAddressId, [FromServices] IOrderService orderService, [FromServices] IMediator mediator)
     {
         try
         {
@@ -939,6 +941,14 @@ public class CustomerController : BaseAdminController
             };
 
             await orderService.InsertOrder(order);
+
+            // Send order notification emails (to customer, store owner, and vendors)
+            await mediator.Send(new OrderNotificationCommand
+            {
+                Order = order,
+                WorkContext = _contextAccessor.WorkContext,
+                OrderNote = null
+            });
 
             return Json(new { success = true, orderId = order.Id });
         }

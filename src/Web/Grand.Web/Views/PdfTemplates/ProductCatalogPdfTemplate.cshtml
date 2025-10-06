@@ -148,25 +148,25 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
-            border: 2px solid #1976d2;
+            border: 1px solid #ddd;
             page-break-inside: auto;
         }
 
         .weight-conversion-table th {
-            background-color: #e3f2fd;
-            font-weight: bold;
-            font-size: 10px;
-            padding: 8px;
-            border: 1px solid #1976d2;
+            background-color: #f5f5f5;
+            font-weight: normal;
+            font-size: 8px;
+            padding: 4px 6px;
+            border: 1px solid #ddd;
             text-align: left;
-            color: #1976d2;
+            color: #666;
         }
 
         .weight-conversion-table td {
-            border: 1px solid #1976d2;
-            padding: 6px 8px;
+            border: 1px solid #ddd;
+            padding: 4px 6px;
             vertical-align: top;
-            font-size: 9px;
+            font-size: 8px;
         }
 
         .footer {
@@ -211,10 +211,6 @@
         <div class="product-section">
             <div class="product-header">
                 <div class="product-title">@product.Name</div>
-                @if (!string.IsNullOrEmpty(product.Sku))
-                {
-                    <div class="product-sku">SKU: @product.Sku</div>
-                }
                 @if (!string.IsNullOrEmpty(product.ShortDescription))
                 {
                     <div style="font-size: 10px; color: #666; margin-top: 5px;">
@@ -242,8 +238,7 @@
                     <table class="combination-table">
                         <thead>
                             <tr>
-                                <th style="width: 40%;">Product Variant</th>
-                                <th style="width: 20%;">SKU</th>
+                                <th style="width: 60%;">Product Variant</th>
                                 <th style="width: 40%;">Pricing Information</th>
                             </tr>
                         </thead>
@@ -252,14 +247,18 @@
                             {
                                 <tr>
                                     <td>
-                                        <div style="font-weight: bold;">@(!string.IsNullOrEmpty(combination.Text) ? combination.Text : "Standard Variant")</div>
-                                        @if (!string.IsNullOrEmpty(combination.Sku))
-                                        {
-                                            <div style="font-size: 8px; color: #666;">@combination.Sku</div>
+                                        @{
+                                            // Build a proper display name for the combination
+                                            var displayName = string.IsNullOrEmpty(combination.Text) ? "Standard Variant" : combination.Text;
+
+                                            // If Text is empty or doesn't look complete, try to build from attributes
+                                            if (string.IsNullOrEmpty(combination.Text) && combination.Attributes != null && combination.Attributes.Any())
+                                            {
+                                                // Use the product name as base
+                                                displayName = product.Name;
+                                            }
                                         }
-                                    </td>
-                                    <td style="text-align: center;">
-                                        @combination.Sku
+                                        <div style="font-weight: bold;">@displayName</div>
                                     </td>
                                     <td style="text-align: right;">
                                         @{
@@ -331,7 +330,7 @@
                 @* Display Weight-Based Conversion Attributes *@
                 @if (weightBasedConversions.Any())
                 {
-                    <div style="font-weight: bold; font-size: 11px; color: #1976d2; margin-bottom: 5px; margin-top: 10px;">
+                    <div style="font-size: 8px; color: #888; margin-bottom: 3px; margin-top: 8px;">
                         Available Package Sizes
                     </div>
                     <table class="weight-conversion-table">
@@ -353,35 +352,32 @@
                                 var perUnitCost = conversionRatio > 0 && packageCost > 0 ? packageCost / conversionRatio : 0;
                                 <tr>
                                     <td>
-                                        <div style="font-weight: bold; font-size: 10px; color: #1976d2;">@conversion.Value.Name</div>
+                                        <div style="font-size: 8px;">@conversion.Value.Name</div>
                                     </td>
                                     <td style="text-align: center;">
-                                        <div style="font-size: 9px; font-weight: bold;">@(conversionRatio.ToString("F0")) units</div>
-                                        <div style="font-size: 7px; color: #666;">per package</div>
+                                        <div style="font-size: 8px;">@(conversionRatio.ToString("F0")) units</div>
                                     </td>
                                     <td style="text-align: right;">
                                         @if (conversion.Value.AllowSample)
                                         {
-                                            <div style="font-weight: bold; color: #2e7d32;">Sample - Free</div>
+                                            <div style="font-size: 8px; color: #2e7d32;">Sample - Free</div>
                                         }
                                         else if (packagePrice > 0)
                                         {
-                                            <div style="font-weight: bold; color: #1976d2;">$@(packagePrice.ToString("F2"))</div>
-                                            <div style="font-size: 7px; color: #666;">per @conversion.Value.Name.ToLower()</div>
+                                            <div style="font-size: 8px;">$@(packagePrice.ToString("F2"))</div>
                                             @if (packageCost > 0)
                                             {
-                                                <div style="font-size: 7px; color: #f57c00;">Cost: $@(packageCost.ToString("F2"))</div>
+                                                <div style="font-size: 7px; color: #999;">Cost: $@(packageCost.ToString("F2"))</div>
                                             }
                                         }
                                     </td>
                                     <td style="text-align: right;">
                                         @if (!conversion.Value.AllowSample && perUnitPrice > 0)
                                         {
-                                            <div style="font-weight: bold; font-size: 8px;">$@(perUnitPrice.ToString("F4"))</div>
-                                            <div style="font-size: 7px; color: #666;">per unit</div>
+                                            <div style="font-size: 8px;">$@(perUnitPrice.ToString("F4"))</div>
                                             @if (perUnitCost > 0)
                                             {
-                                                <div style="font-size: 7px; color: #f57c00;">$@(perUnitCost.ToString("F4"))</div>
+                                                <div style="font-size: 7px; color: #999;">$@(perUnitCost.ToString("F4"))</div>
                                             }
                                         }
                                     </td>

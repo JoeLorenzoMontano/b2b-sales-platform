@@ -1577,8 +1577,10 @@ public class ProductController : BaseAdminController
         [FromServices] IPdfService pdfService)
     {
         var allProducts = await _productViewModelService.PrepareProducts(model);
-        // Filter out products hidden from catalog
-        var products = allProducts.Where(p => !p.HideFromCatalog).ToList();
+        // Filter out products hidden from catalog and only include simple products
+        var products = allProducts
+            .Where(p => !p.HideFromCatalog && p.ProductTypeId == ProductType.SimpleProduct)
+            .ToList();
         try
         {
             var fileName = $"products_catalog_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";

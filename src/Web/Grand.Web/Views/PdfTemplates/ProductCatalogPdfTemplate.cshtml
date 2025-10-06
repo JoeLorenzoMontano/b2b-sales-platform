@@ -5,6 +5,7 @@
 @using System.Globalization
 @model IList<Grand.Domain.Catalog.Product>
 @inject IProductAttributeService _productAttributeService
+@inject IProductAttributeFormatter _productAttributeFormatter
 @inject IContextAccessor _contextAccessor
 @inject ITranslationService _translationService
 
@@ -249,13 +250,37 @@
                                     <td>
                                         @{
                                             // Build a proper display name for the combination
-                                            var displayName = string.IsNullOrEmpty(combination.Text) ? "Standard Variant" : combination.Text;
+                                            string displayName;
 
-                                            // If Text is empty or doesn't look complete, try to build from attributes
-                                            if (string.IsNullOrEmpty(combination.Text) && combination.Attributes != null && combination.Attributes.Any())
+                                            if (!string.IsNullOrEmpty(combination.Text))
                                             {
-                                                // Use the product name as base
-                                                displayName = product.Name;
+                                                displayName = combination.Text;
+                                            }
+                                            else if (combination.Attributes != null && combination.Attributes.Any())
+                                            {
+                                                // Format the attributes to show variant details (e.g., "Color: Red - Size: Large")
+                                                displayName = await _productAttributeFormatter.FormatAttributes(
+                                                    product,
+                                                    combination.Attributes,
+                                                    null, // customer
+                                                    " - ", // separator
+                                                    false, // htmlEncode
+                                                    false, // renderPrices
+                                                    true, // renderProductAttributes
+                                                    false, // renderGiftVoucherAttributes
+                                                    false, // allowHyperlinks
+                                                    true // showInAdmin
+                                                );
+
+                                                // If formatter returns empty, use fallback
+                                                if (string.IsNullOrEmpty(displayName))
+                                                {
+                                                    displayName = "Standard Variant";
+                                                }
+                                            }
+                                            else
+                                            {
+                                                displayName = "Standard Variant";
                                             }
                                         }
                                         <div style="font-weight: bold;">@displayName</div>

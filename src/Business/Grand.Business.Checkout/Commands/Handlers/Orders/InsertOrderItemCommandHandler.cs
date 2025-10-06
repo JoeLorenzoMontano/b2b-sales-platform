@@ -2,6 +2,8 @@
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Checkout.GiftVouchers;
 using Grand.Business.Core.Interfaces.Checkout.Orders;
+using Grand.Domain.Catalog;
+using Grand.Domain.Common;
 using Grand.Domain.Orders;
 using Grand.Domain.Shipping;
 using MediatR;
@@ -51,16 +53,15 @@ public class InsertOrderItemCommandHandler : IRequestHandler<InsertOrderItemComm
 
         await _orderService.UpdateOrder(request.Order);
 
-        //adjust inventory
-        await _inventoryManageService.AdjustReserved(request.Product, -request.OrderItem.Quantity,
-            request.OrderItem.Attributes, request.OrderItem.WarehouseId);
+        //adjust inventory - reserve stock quantity when adding to existing orders  
+        await _inventoryManageService.AdjustReserved(request.Product, -request.OrderItem.Quantity, request.OrderItem.Attributes, request.OrderItem.WarehouseId);
 
         //check order status
         await _mediator.Send(new CheckOrderStatusCommand { Order = request.Order }, cancellationToken);
 
         //add a note
         await _orderService.InsertOrderNote(new OrderNote {
-            Note = "A new order item has been added",
+            Note = $"A new order item has been added - {request.Product.Name} - Qty: {request.OrderItem.Quantity}",
             DisplayToCustomer = false,
             OrderId = request.Order.Id
         });
@@ -90,4 +91,5 @@ public class InsertOrderItemCommandHandler : IRequestHandler<InsertOrderItemComm
 
         return true;
     }
+
 }

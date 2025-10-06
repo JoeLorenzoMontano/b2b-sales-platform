@@ -17,6 +17,8 @@ public class GetCustomerQuery : IRequest<IQueryable<Customer>>
     public string SalesEmployeeId { get; set; } = "";
     public string[] CustomerGroupIds { get; set; } = null;
     public string[] CustomerTagIds { get; set; } = null;
+    public string[] DefaultImpersonatedByEmployeeIds { get; set; } = null;
+    public string[] CityNames { get; set; } = null;
     public string Email { get; set; } = null;
     public string Username { get; set; } = null;
     public string FirstName { get; set; } = null;
@@ -24,6 +26,7 @@ public class GetCustomerQuery : IRequest<IQueryable<Customer>>
     public string Company { get; set; } = null;
     public string Phone { get; set; } = null;
     public string ZipPostalCode { get; set; } = null;
+    public string AddressKeyword { get; set; } = null;
     public bool LoadOnlyWithShoppingCart { get; set; } = false;
     public ShoppingCartType? Sct { get; set; } = null;
     public int PageIndex { get; set; } = 0;

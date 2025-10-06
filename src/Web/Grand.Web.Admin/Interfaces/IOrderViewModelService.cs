@@ -1,6 +1,7 @@
 ﻿using Grand.Domain.Common;
 using Grand.Domain.Orders;
 using Grand.Web.Admin.Models.Orders;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Interfaces;
 
@@ -12,6 +13,9 @@ public interface IOrderViewModelService
     Task<(IEnumerable<OrderModel> orderModels, int totalCount)> PrepareOrderModel(OrderListModel model, int pageIndex,
         int pageSize);
 
+    Task<(IEnumerable<OrderModel> orderModels, int totalCount)> PrepareUnpaidOrderModel(OrderListModel model, int pageIndex,
+        int pageSize);
+
     Task PrepareOrderDetailsModel(OrderModel model, Order order);
     Task<OrderModel.AddOrderProductModel> PrepareAddOrderProductModel(Order order);
 
@@ -20,8 +24,9 @@ public interface IOrderViewModelService
 
     Task<OrderAddressModel> PrepareOrderAddressModel(Order order, Address address);
     Task<IList<OrderModel.OrderNote>> PrepareOrderNotes(Order order);
-    Task InsertOrderNote(Order order, string downloadId, bool displayToCustomer, string message);
+    Task InsertOrderNote(Order order, string downloadId, bool displayToCustomer, bool includeOnInvoice, string message);
     Task DeleteOrderNote(Order order, string id);
+    Task UpdateOrderNote(Order order, string id, bool? displayToCustomer, bool? includeOnInvoice);
 
     Task<Address> UpdateOrderAddress(Order order, Address address, OrderAddressModel model,
         List<CustomAttribute> customAttributes);
@@ -29,4 +34,11 @@ public interface IOrderViewModelService
     Task<IList<string>> AddProductToOrderDetails(AddProductToOrderModel model);
     Task<IList<Order>> PrepareOrders(OrderListModel model);
     Task SaveOrderTags(Order order, string tags);
+    
+    // Bulk product addition methods
+    Task<BulkAddProductsToOrderModel> PrepareBulkAddProductsToOrderModel(Order order);
+    Task<string> GetProductConfigurationRowsHtml(string[] productIds, string orderId);
+    Task<IList<string>> ProcessBulkProductAddition(BulkAddProductsToOrderModel model);
+    Task<IList<SelectListItem>> GetCombinationWarehouseInventory(string combinationId, string productId);
+    Task<(decimal? OverriddenPrice, string Sku)> GetCombinationDetails(string combinationId, string productId);
 }

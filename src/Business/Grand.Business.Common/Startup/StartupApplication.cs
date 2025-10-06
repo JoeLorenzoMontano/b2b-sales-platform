@@ -103,7 +103,11 @@ public class StartupApplication : IStartupApplication
         serviceCollection.AddScoped<IExportProvider, ExcelExportProvider>();
         serviceCollection.AddScoped(typeof(IExportManager<>), typeof(ExportManager<>));
 
+        // Register CSV Export Provider
+        serviceCollection.AddScoped<CsvExportProvider>();
+
         serviceCollection.AddScoped<IImportDataProvider, ExcelImportProvider>();
+        serviceCollection.AddScoped<IImportDataProvider, CsvImportProvider>();
         serviceCollection.AddScoped(typeof(IImportManager<>), typeof(ImportManager<>));
 
         serviceCollection.AddScoped<IImportDataObject<CountryStatesDto>, CountryImportDataObject>();

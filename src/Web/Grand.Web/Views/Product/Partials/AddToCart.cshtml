@@ -1,4 +1,6 @@
 ﻿@model ProductDetailsModel.AddToCartModel
+
+<!-- Script moved to ImprovedSampleFix.cshtml for centralized management -->
 @{
     var shoppingCartType = Model.UpdateShoppingCartItemType ?? ShoppingCartType.ShoppingCart;
 }
@@ -20,67 +22,178 @@
 }
 @if (!Model.DisableBuyButton || Model.EnteredPrice)
 {
-    if (!string.IsNullOrEmpty(Model.MinimumQuantityNotification))
+    @if (!string.IsNullOrEmpty(Model.MinimumQuantityNotification))
     {
         <div class="min-qty-notification text-danger w-100 mb-2">@Model.MinimumQuantityNotification</div>
     }
 
-    <div role="group" class="input-group product-add-to-cart flex-nowrap">
-
+    <div class="product-add-to-cart-container">
         @if (!Model.DisableBuyButton)
         {
             @if (Model.AllowedQuantities.Any())
             {
-                <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control qty-dropdown mr-2"></select>
-                if (!string.IsNullOrEmpty(Model.MeasureUnit))
-                {
-                    <span class="qty-unit d-flex align-items-center mr-2">
-                        @Model.MeasureUnit
-                    </span>
-                }
+                <!-- Quantity Group Box -->
+                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-@Model.ProductId" style="background-color: #ffffff; border-color: #dee2e6;">
+                    <div class="d-flex align-items-end">
+                        <!-- Units -->
+                        <div class="mr-2">
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
+                            <div id="EnteredUnits_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
+                            <select name="EnteredQuantity" id=@($"EnteredQuantity_{Model.ProductId}") asp-items="Model.AllowedQuantities" class="custom-select form-control" style="width: 120px;"
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }"></select>
+                            <div style="color: black;"><span id="unit-price-@Model.ProductId"></span></div>
+                        </div>
+                        
+                        <!-- Cases -->
+                        <div class="case-info mr-2" id="case-info-@Model.ProductId" style="display: none;">
+                            <label for="EnteredCases_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
+                            <select name="EnteredCases" id="EnteredCases_@Model.ProductId" 
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { updateQuantityFromCases_@(Model.ProductId)(this.value); updateCasePricing_@(Model.ProductId)(); }" 
+                                    class="custom-select form-control" style="width: 120px;">
+                            </select>
+                            <div style="color: black;"><span id="case-price-@Model.ProductId"></span></div>
+                        </div>
+                        
+                        <!-- Total -->
+                        <div class="case-info mr-2" id="total-info-@Model.ProductId" style="display: none;">
+                            <label for="EnteredTotal_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Total</label>
+                            <select name="EnteredTotal" id="EnteredTotal_@Model.ProductId" 
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { updateQuantityFromTotal_@(Model.ProductId)(this.value); updateCasePricing_@(Model.ProductId)(); }"
+                                    class="custom-select form-control" style="width: 80px;">
+                            </select>
+                            <div style="color: black;"><span id="total-price-@Model.ProductId">-</span></div>
+                        </div>
+                        
+                        <!-- Unit Label -->
+                        @if (!string.IsNullOrEmpty(Model.MeasureUnit))
+                        {
+                            <div class="qty-unit d-flex align-items-center">
+                                <small class="text-muted">@Model.MeasureUnit</small>
+                            </div>
+                        }
+                    </div>
+                </div>
             }
             else
             {
-                <label for=@($"EnteredQuantity_{Model.ProductId}") class="sr-only">@Loc["ShoppingCart.AddToCart"]</label>
-                <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="qty-input form-control text-center">
-                if (!string.IsNullOrEmpty(Model.MeasureUnit))
-                {
-                    <span class="qty-unit d-flex align-items-center mr-2">
-                        @Model.MeasureUnit
-                    </span>
-                }
+                <!-- Quantity Group Box (Input Version) -->
+                <div class="quantity-group border rounded p-2 mr-2" id="quantity-group-input-@Model.ProductId" style="background-color: #ffffff; border-color: #dee2e6;">
+                    <div class="d-flex align-items-end">
+                        <!-- Units -->
+                        <div class="mr-2">
+                            <label for="EnteredQuantity_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Units</label>
+                            <div id="EnteredUnits_input_@Model.ProductId" class="form-control-plaintext text-center" style="width: 80px; height: 38px; line-height: 38px; border: 1px solid #dee2e6; background: #f8f9fa; display: none;">-</div>
+                            <input type="number" inputmode="numeric" id=@($"EnteredQuantity_{Model.ProductId}") name="EnteredQuantity" value="1" class="form-control text-center" style="width: 120px;"
+                                onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { standardProductAttributes_@(Model.ProductId).attrchange(); if(typeof updateCaseDropdowns_@(Model.ProductId) !== 'undefined') updateCaseDropdowns_@(Model.ProductId)(); }">
+                            <div style="color: black;"><span id="unit-price-input-@Model.ProductId">-</span></div>
+                        </div>
+                        
+                        <!-- Cases -->
+                        <div class="case-info mr-2" id="case-info-input-@Model.ProductId" style="display: none;">
+                            <label for="EnteredCases_input_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Cases</label>
+                            <select name="EnteredCases" id="EnteredCases_input_@Model.ProductId" 
+                                    onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { updateQuantityFromCases_@(Model.ProductId)(this.value); updateCasePricing_@(Model.ProductId)(); }" 
+                                    class="custom-select form-control" style="width: 120px;">
+                            </select>
+                            <div style="color: black;"><span id="case-price-input-@Model.ProductId">-</span></div>
+                        </div>
+                        
+                        <!-- Total -->
+                        <div class="case-info mr-2" id="total-info-input-@Model.ProductId" style="display: none;">
+                            <label for="EnteredTotal_input_@Model.ProductId" class="form-label small text-primary mb-1 d-block font-weight-bold">Total</label>
+                            <input type="number" id="EnteredTotal_input_@Model.ProductId" 
+                                   onchange="if(typeof standardProductAttributes_@(Model.ProductId) !== 'undefined') { updateQuantityFromTotal_@(Model.ProductId)(this.value); updateCasePricing_@(Model.ProductId)(); }"
+                                   class="form-control text-center" style="width: 80px;">
+                            <div style="color: black;"><span id="total-price-input-@Model.ProductId">-</span></div>
+                        </div>
+                        
+                        <!-- Unit Label -->
+                        @if (!string.IsNullOrEmpty(Model.MeasureUnit))
+                        {
+                            <div class="qty-unit d-flex align-items-center">
+                                <small class="text-muted">@Model.MeasureUnit</small>
+                            </div>
+                        }
+                    </div>
+                </div>
             }
 
             var addToCartText = "";
-            if (!string.IsNullOrEmpty(Model.UpdatedShoppingCartItemId) && Model.UpdateShoppingCartItemType.HasValue && (Model.UpdateShoppingCartItemType.Value == ShoppingCartType.ShoppingCart || Model.UpdateShoppingCartItemType.Value == ShoppingCartType.OnHoldCart))
-            {
-                addToCartText = Loc["ShoppingCart.AddToCart.Update"];
-            }
-            else
-            {
-                addToCartText = Loc["ShoppingCart.AddToCart"];
-            }
+                if (!string.IsNullOrEmpty(Model.UpdatedShoppingCartItemId) && Model.UpdateShoppingCartItemType.HasValue && (Model.UpdateShoppingCartItemType.Value == ShoppingCartType.ShoppingCart || Model.UpdateShoppingCartItemType.Value == ShoppingCartType.OnHoldCart))
+                {
+                    addToCartText = Loc["ShoppingCart.AddToCart.Update"];
+                }
+                else
+                {
+                    addToCartText = Loc["ShoppingCart.AddToCart"];
+                }
 
-            if (Model.IsReservation)
-            {
-                addToCartText = Loc["ShoppingCart.Reservation"];
-            }
+                if (Model.IsReservation)
+                {
+                    addToCartText = Loc["ShoppingCart.Reservation"];
+                }
 
-            if (Model.AvailableForPreOrder)
-            {
-                addToCartText = Loc["ShoppingCart.PreOrder"];
-            }
+                if (Model.AvailableForPreOrder)
+                {
+                    addToCartText = Loc["ShoppingCart.PreOrder"];
+                }
 
-            if (Model.IsAuction)
-            {
-                addToCartText = Loc["ShoppingCart.BuyNow"];
-            }
-
-            <div class="input-group-append">
+                if (Model.IsAuction)
+                {
+                    addToCartText = Loc["ShoppingCart.BuyNow"];
+                }
+        
+            <!-- Add to Cart Button - always positioned below quantity controls -->
+            <div class="mt-3">
                 <button type="button" id="add-to-cart-button-@Model.ProductId" class="btn btn-info w-100 add-to-cart-button d-inline-flex" data-productid="@Model.ProductId" onclick="AxiosCart.addproducttocart_details('@Url.RouteUrl("AddProductDetails", new { productId = Model.ProductId, shoppingCartTypeId = (int)shoppingCartType })', @($"'#product-details-form-{Model.ProductId}'"));return false;">
                     <span>@addToCartText</span>
                 </button>
             </div>
         }
     </div>
+}
+
+@if (Model.CaseSize > 0)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const caseSize = @Model.CaseSize;
+            const productId = '@Model.ProductId';
+            
+            function updateCaseDisplay() {
+                const qtyInput = document.getElementById('EnteredQuantity_' + productId);
+                const qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_' + productId + '"]');
+                
+                let quantity = 1;
+                if (qtyInput) {
+                    quantity = parseFloat(qtyInput.value) || 1;
+                } else if (qtyDropdown) {
+                    quantity = parseFloat(qtyDropdown.value) || 1;
+                }
+                
+                const cases = (quantity / caseSize).toFixed(2);
+                
+                const caseDisplays = document.querySelectorAll('#case-display-' + productId + ', #case-display-input-' + productId);
+                caseDisplays.forEach(function(display) {
+                    display.textContent = cases;
+                });
+            }
+            
+            // Initial calculation
+            updateCaseDisplay();
+            
+            // Listen for quantity changes
+            const qtyInput = document.getElementById('EnteredQuantity_' + productId);
+            const qtyDropdown = document.querySelector('select[name="EnteredQuantity"][id="EnteredQuantity_' + productId + '"]');
+            
+            if (qtyInput) {
+                qtyInput.addEventListener('input', updateCaseDisplay);
+                qtyInput.addEventListener('change', updateCaseDisplay);
+            }
+            
+            if (qtyDropdown) {
+                qtyDropdown.addEventListener('change', updateCaseDisplay);
+            }
+        });
+    </script>
 }

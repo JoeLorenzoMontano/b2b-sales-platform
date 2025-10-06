@@ -15,6 +15,7 @@ using Grand.Web.Features.Models.ShoppingCart;
 using Grand.Web.Models.Catalog;
 using Grand.Web.Models.Media;
 using MediatR;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Features.Handlers.Products;
 
@@ -89,16 +90,76 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             request.Product.ProductTypeId != ProductType.Auction)
         {
             //we do not calculate price of "customer enters price" option is enabled
-            var unitprice = await _pricingService.GetUnitPrice(request.Product,
-                request.Customer,
-                request.Store,
-                request.Currency,
-                ShoppingCartType.ShoppingCart,
-                1, customAttributes, default,
-                rentalStartDate, rentalEndDate,
-                true);
+            // Get quantity from the request, default to 1 if not specified
+            int quantity = 1;
+            if (request.Quantity > 0)
+            {
+                quantity = request.Quantity;
+            }
+            
+            double finalPrice;
+            
+            // Handle sample pricing logic based on user preference
+            var attributeCombination = request.Product.FindProductAttributeCombination(customAttributes);
+            bool isSampleQuantity = attributeCombination != null && attributeCombination.IsSampleQuantity(quantity);
+            
+            if (isSampleQuantity && !request.EnableSamplePricing)
+            {
+                // If it's a sample quantity but sample pricing is disabled, get regular price
+                // We need to get the price without the sample override
+                // Use GetFinalPrice which doesn't have the sample logic, then apply attribute pricing
+                var basePrice = await _pricingService.GetFinalPrice(request.Product, request.Customer, request.Store, request.Currency, 0, true, quantity, rentalStartDate, rentalEndDate);
+                finalPrice = basePrice.finalPrice;
+                
+                // Add any attribute value price adjustments
+                if (customAttributes != null && customAttributes.Any())
+                {
+                    var attributeValues = request.Product.ParseProductAttributeValues(customAttributes);
+                    foreach (var attributeValue in attributeValues)
+                    {
+                        var adjustment = await _pricingService.GetProductAttributeValuePriceAdjustment(attributeValue, request.Product);
+                        finalPrice += adjustment;
+                    }
+                }
+                
+                // Apply combination overridden price if available (but not the sample logic)
+                if (attributeCombination.OverriddenPrice.HasValue)
+                {
+                    finalPrice = attributeCombination.OverriddenPrice.Value;
+                }
+            }
+            else
+            {
+                // Use normal pricing logic (including free sample pricing if applicable)
+                var unitprice = await _pricingService.GetUnitPrice(request.Product,
+                    request.Customer,
+                    request.Store,
+                    request.Currency,
+                    ShoppingCartType.ShoppingCart,
+                    quantity, customAttributes, default,
+                    rentalStartDate, rentalEndDate,
+                    true);
+                    
+                finalPrice = unitprice.unitprice;
+            }
+            // COMMENTED OUT: Check if this is a sample selection (just for UI indication, not price)
+            /*
+            if (customAttributes != null && customAttributes.Any())
+            {
+                var attributeValues = request.Product.ParseProductAttributeValues(customAttributes);
+                if (attributeValues != null && attributeValues.Any(av => av.AllowSample))
+                {
+                    model.SampleEnabled = true;
+                }
 
-            var finalPrice = unitprice.unitprice;
+                var combination = request.Product.FindProductAttributeCombination(customAttributes);
+                if (combination != null && combination.AllowSample)
+                {
+                    model.SampleEnabled = true;
+                }
+            }
+            */
+            
             var productprice = await _taxService.GetProductPrice(request.Product, finalPrice);
             var finalPriceWithDiscount = productprice.productprice;
             model.Price = _priceFormatter.FormatPrice(finalPriceWithDiscount);
@@ -115,25 +176,34 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             request.Product.AllowOutOfStockSubscriptions)
         {
             var combination = request.Product.FindProductAttributeCombination(customAttributes);
-
+            
+            // Check stock quantity - only show subscription if actually out of stock
+            bool isOutOfStock = false;
+            
             if (combination != null)
-                if (_stockQuantityService.GetTotalStockQuantityForCombination(request.Product, combination,
-                        warehouseId: warehouseId) <= 0)
-                    model.DisplayOutOfStockSubscription = true;
-
+                isOutOfStock = _stockQuantityService.GetTotalStockQuantityForCombination(request.Product, combination,
+                        warehouseId: warehouseId) <= 0;
+                        
             if (request.Product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+                isOutOfStock = request.Product.StockQuantity <= 0;
+            
+            // Only display subscription option if actually out of stock
+            if (isOutOfStock)
             {
-                model.DisplayOutOfStockSubscription = request.Product.AllowOutOfStockSubscriptions;
-                customAttributes = new List<CustomAttribute>();
+                model.DisplayOutOfStockSubscription = true;
+                
+                var subscription = await _outOfStockSubscriptionService
+                    .FindSubscription(request.Customer.Id,
+                        request.Product.Id, customAttributes, request.Store.Id, warehouseId);
+    
+                model.ButtonTextOutOfStockSubscription = _translationService.GetResource(subscription != null
+                    ? "OutOfStockSubscriptions.DeleteNotifyWhenAvailable"
+                    : "OutOfStockSubscriptions.NotifyMeWhenAvailable");
             }
-
-            var subscription = await _outOfStockSubscriptionService
-                .FindSubscription(request.Customer.Id,
-                    request.Product.Id, customAttributes, request.Store.Id, warehouseId);
-
-            model.ButtonTextOutOfStockSubscription = _translationService.GetResource(subscription != null
-                ? "OutOfStockSubscriptions.DeleteNotifyWhenAvailable"
-                : "OutOfStockSubscriptions.NotifyMeWhenAvailable");
+            else
+            {
+                model.DisplayOutOfStockSubscription = false;
+            }
         }
 
         if (request.Product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
@@ -155,7 +225,12 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         }
 
         //picture. used when we want to override a default product picture when some attribute is selected
-        if (!request.Model.LoadPicture) return model;
+        if (!request.Model.LoadPicture) 
+        {
+            // Add allowed quantities to the model even if no picture is loaded
+            AddAllowedQuantitiesToModel(request.Product, model, customAttributes);
+            return model;
+        }
 
         //first, try to get product attribute combination picture
         var pictureId = request.Product.FindProductAttributeCombination(customAttributes)?.PictureId;
@@ -163,7 +238,12 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
             pictureId = request.Product.ParseProductAttributeValues(customAttributes)
                 .FirstOrDefault(attributeValue => !string.IsNullOrEmpty(attributeValue.PictureId))?.PictureId ?? "";
 
-        if (string.IsNullOrEmpty(pictureId)) return model;
+        if (string.IsNullOrEmpty(pictureId)) 
+        {
+            // Add allowed quantities to the model even if no picture ID is found
+            AddAllowedQuantitiesToModel(request.Product, model, customAttributes);
+            return model;
+        }
 
         var pictureModel = new PictureModel {
             Id = pictureId,
@@ -172,9 +252,82 @@ public class GetProductDetailsAttributeChangeHandler : IRequestHandler<GetProduc
         };
         model.PictureFullSizeUrl = pictureModel.FullSizeImageUrl;
         model.PictureDefaultSizeUrl = pictureModel.ImageUrl;
+        
+        // Add allowed quantities to the model
+        AddAllowedQuantitiesToModel(request.Product, model, customAttributes);
+        
         return model;
     }
 
+    private void AddAllowedQuantitiesToModel(Product product, ProductDetailsAttributeChangeModel model, IList<CustomAttribute> customAttributes)
+    {
+        // Clear any existing quantities in the model
+        model.AllowedQuantities.Clear();
+        
+        // Get the product's allowed quantities
+        var allowedQuantities = product.ParseAllowedQuantities();
+        var allowedQuantitiesList = new List<double>(allowedQuantities);
+        
+        // Check if the combination allows samples
+        var combination = product.FindProductAttributeCombination(customAttributes);
+        
+        if (combination != null)
+        {
+            // COMMENTED OUT: Check if combination has sample quantities defined
+            /*
+            var sampleQuantities = combination.GetSampleQuantities();
+            if (sampleQuantities.Length > 0)
+            {
+                // Set the sample availability flag on the model
+                model.SampleEnabled = true;
+
+                // Add all sample quantities to the allowed quantities list
+                foreach (var sampleQty in sampleQuantities)
+                {
+                    // Remove if it exists already (to avoid duplicates)
+                    allowedQuantitiesList.Remove(sampleQty);
+                    // Add sample quantity at the beginning of the list
+                    allowedQuantitiesList.Insert(0, sampleQty);
+                }
+            }
+            // Fallback to legacy AllowSample behavior for backward compatibility
+            else if (combination.AllowSample)
+            {
+                // Set the sample availability flag on the model
+                model.SampleEnabled = true;
+
+                // Remove 1 if it exists already (to avoid duplicates)
+                allowedQuantitiesList.Remove(1);
+                // Add sample quantity (1) at the beginning of the list
+                allowedQuantitiesList.Insert(0, 1);
+            }
+            */
+        }
+        
+        // Set case size if combination exists
+        if (combination != null)
+        {
+            model.CaseSize = combination.CaseSize;
+        }
+        else
+        {
+            // COMMENTED OUT: Set sample enabled to false
+            // model.SampleEnabled = false;
+        }
+        
+        // Add quantities to the model
+        foreach (var qty in allowedQuantitiesList)
+        {
+            // COMMENTED OUT: Check if this quantity is a sample quantity
+            // bool isSampleQuantity = combination != null && combination.IsSampleQuantity(qty);
+
+            model.AllowedQuantities.Add(new SelectListItem {
+                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.'), // + (isSampleQuantity ? " (Sample)" : ""),
+                Value = qty.ToString("F2").TrimEnd('0').TrimEnd('.')
+            });
+        }
+    }
+    
     private static List<string> PrepareNotAvailableAttributeMapping(GetProductDetailsAttributeChange request,
         IList<CustomAttribute> customAttributes)
     {

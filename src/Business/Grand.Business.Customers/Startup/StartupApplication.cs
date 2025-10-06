@@ -1,6 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Interfaces.System.Reports;
+using Grand.Business.Customers.Dto;
 using Grand.Business.Customers.Services;
 using Grand.Business.Customers.Services.ExportImport;
 using Grand.Domain.Common;
@@ -42,5 +43,6 @@ public class StartupApplication : IStartupApplication
         serviceCollection.AddScoped<IAffiliateService, AffiliateService>();
         serviceCollection.AddScoped<ISchemaProperty<Customer>, CustomerSchemaProperty>();
         serviceCollection.AddScoped<ISchemaProperty<Address>, AddressSchemaProperty>();
+        serviceCollection.AddScoped<IImportDataObject<CustomerImportDto>, CustomerImportDataObject>();
     }
 }

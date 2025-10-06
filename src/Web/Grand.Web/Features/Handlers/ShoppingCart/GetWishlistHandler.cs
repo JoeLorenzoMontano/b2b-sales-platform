@@ -13,6 +13,7 @@ using Grand.Domain.Common;
 using Grand.Domain.Customers;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
+using Grand.SharedKernel.Extensions;
 using Grand.Web.Common.Localization;
 using Grand.Web.Extensions;
 using Grand.Web.Features.Models.ShoppingCart;
@@ -112,7 +113,7 @@ public class GetWishlistHandler : IRequestHandler<GetWishlist, WishlistModel>
                 ProductName = product.GetTranslation(x => x.Name, request.Language.Id),
                 ProductSeName = sename,
                 ProductUrl = _linkGenerator.GetPathByRouteValues("Product", new { SeName = sename }),
-                Quantity = sci.Quantity,
+                Quantity = sci.Quantity.ToInt(),
                 AttributeInfo = await _productAttributeFormatter.FormatAttributes(product, sci.Attributes),
                 AllowItemEditing = _shoppingCartSettings.AllowCartItemEditing && product.VisibleIndividually
             };
@@ -121,8 +122,8 @@ public class GetWishlistHandler : IRequestHandler<GetWishlist, WishlistModel>
             var allowedQuantities = product.ParseAllowedQuantities();
             foreach (var qty in allowedQuantities)
                 cartItemModel.AllowedQuantities.Add(new SelectListItem {
-                    Text = qty.ToString(),
-                    Value = qty.ToString(),
+                    Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.'),
+                    Value = qty.ToString("F2").TrimEnd('0').TrimEnd('.'),
                     Selected = sci.Quantity == qty
                 });
 

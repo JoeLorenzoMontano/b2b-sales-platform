@@ -1,24 +1,37 @@
 ﻿using Grand.Business.Core.Commands.Checkout.Orders;
+using Grand.Business.Core.Interfaces.Catalog.Brands;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Checkout.Orders;
+using Grand.Business.Core.Interfaces.Checkout.Payments;
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Pdf;
+using Grand.Business.Core.Interfaces.Common.Security;
+using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
+using Grand.Business.Common.Services.ExportImport;
+using Grand.Business.Checkout.Services.ExportImpot;
 using Grand.Domain.Permissions;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Orders;
+using Grand.Domain.Payments;
+using Grand.Domain.Shipping;
+using Grand.Domain.Tax;
 using Grand.Infrastructure;
 using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Orders;
 using Grand.Web.Common.DataSource;
+using Grand.Web.Common.Models;
 using Grand.Web.Common.Security.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Globalization;
+using System.Text;
 
 namespace Grand.Web.Admin.Controllers;
 
@@ -32,7 +45,11 @@ public class OrderController(
     IPdfService pdfService,
     IGroupService groupService,
     IExportManager<Order> exportManager,
-    IMediator mediator)
+    IMediator mediator,
+    ISalesEmployeeService _salesEmployeeService,
+    IPermissionService _permissionService,
+    IWarehouseService warehouseService,
+    IPaymentTransactionService paymentTransactionService)
     : BaseAdminController
 {
     #region Utilities
@@ -43,6 +60,14 @@ public class OrderController(
                && contextAccessor.WorkContext.CurrentCustomer.SeId != order.SeId;
     }
 
+    protected virtual string GetCustomerDisplayName(Order order)
+    {
+        var customerName = $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}".Trim();
+        if (string.IsNullOrEmpty(customerName))
+            customerName = order.BillingAddress?.Email ?? "Guest";
+        return customerName;
+    }
+
     #endregion
 
     #region Fields
@@ -51,6 +76,135 @@ public class OrderController(
 
     #region Ctor
 
+    #endregion
+
+    #region Fulfillment helpers
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetOrderItemsForFulfillment(string orderId, [FromServices] IProductService productService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new DataSourceResult { Data = new List<object>(), Total = 0 });
+                
+            // Restrict access to own orders for sales staff
+            if (await CheckSalesManager(order))
+                return Json(new { success = false, error = "Access denied" });
+                
+            // Only include items with open quantities
+            var items = new List<object>();
+            
+            foreach (var item in order.OrderItems.Where(item => item.OpenQty > 0))
+            {
+                // Get the product name from product service
+                var product = await productService.GetProductById(item.ProductId);
+                var productName = product != null ? product.Name : "Product #" + item.ProductId;
+                
+                // Create a simple anonymous object with only the necessary properties
+                items.Add(new {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    ProductName = productName,
+                    Sku = item.Sku,
+                    Quantity = item.Quantity,
+                    OpenQty = item.OpenQty,
+                    UnitPriceInclTax = item.UnitPriceInclTax.ToString("C"),
+                    AttributeInfo = item.AttributeDescription,
+                    PictureThumbnailUrl = ""  // Empty for thumbnail since we removed it from the view
+                });
+            }
+                
+            var gridModel = new DataSourceResult
+            {
+                Data = items,
+                Total = items.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            return Json(new DataSourceResult { 
+                Data = new List<object>(), 
+                Total = 0, 
+                Errors = $"Error loading order items: {ex.Message}" 
+            });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetOrderItemsForIncoming(string orderId, [FromServices] IProductService productService, [FromServices] IWarehouseService warehouseService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new DataSourceResult { Data = new List<object>(), Total = 0 });
+                
+            // Restrict access to own orders for sales staff
+            if (await CheckSalesManager(order))
+                return Json(new { success = false, error = "Access denied" });
+                
+            // Include all order items for informational purposes (no filtering by OpenQty)
+            var items = new List<object>();
+            
+            foreach (var item in order.OrderItems)
+            {
+                // Get the product name from product service
+                var product = await productService.GetProductById(item.ProductId);
+                var productName = product != null ? product.Name : "Product #" + item.ProductId;
+                
+                // Get warehouse name from warehouse service
+                var warehouse = !string.IsNullOrEmpty(item.WarehouseId) ? await warehouseService.GetWarehouseById(item.WarehouseId) : null;
+                var warehouseName = warehouse?.Name ?? (string.IsNullOrEmpty(item.WarehouseId) ? "Default" : "Unknown");
+                
+                // Calculate subtotal for this line item
+                var subTotal = (item.Quantity * item.UnitPriceInclTax).ToString("C");
+                
+                // Create a simple anonymous object with only the necessary properties for display
+                items.Add(new {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    ProductName = productName,
+                    Sku = item.Sku,
+                    WarehouseId = item.WarehouseId,
+                    WarehouseName = warehouseName,
+                    Quantity = item.Quantity,
+                    OpenQty = item.OpenQty,
+                    ShipQty = item.ShipQty,
+                    CancelQty = item.CancelQty,
+                    UnitPriceInclTax = item.UnitPriceInclTax, // Return numeric value, not formatted string
+                    UnitPriceFormatted = item.UnitPriceInclTax.ToString("C"),
+                    SubTotal = subTotal,
+                    AttributeInfo = item.AttributeDescription,
+                    CanEdit = order.ShippingStatusId == ShippingStatus.Pending || 
+                             order.ShippingStatusId == ShippingStatus.ShippingNotRequired ||
+                             order.ShippingStatusId == ShippingStatus.PreparedToShipped
+                });
+            }
+                
+            var gridModel = new DataSourceResult
+            {
+                Data = items,
+                Total = items.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            return Json(new DataSourceResult { 
+                Data = new List<object>(), 
+                Total = 0, 
+                Errors = $"Error loading order items: {ex.Message}" 
+            });
+        }
+    }
+    
     #endregion
 
     #region Order list
@@ -111,6 +265,396 @@ public class OrderController(
             Total = totalCount
         };
         return Json(gridModel);
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> UnpaidOrdersList(DataSourceRequest command, OrderListModel model)
+    {
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+
+        // Filter specifically for orders with Pending payment status
+        // This will be handled by the PrepareUnpaidOrderModel method
+        model.PaymentStatusId = 0;
+
+        var (orderModels, totalCount) =
+            await orderViewModelService.PrepareUnpaidOrderModel(model, command.Page, command.PageSize);
+
+        var gridModel = new DataSourceResult {
+            Data = orderModels.ToList(),
+            Total = totalCount
+        };
+        return Json(gridModel);
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> FulfillmentOrderList(DataSourceRequest command, OrderListModel model,
+        [FromServices] ICustomerService customerService)
+    {
+        try
+        {
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+                model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+            
+            // Direct database access to get the 20 most recent orders 
+            // with paginated query that avoids the issue
+            var orders = await orderService.SearchOrders(
+                storeId: model.StoreId,
+                pageIndex: 0,  // Always first page
+                pageSize: 100,  // Increased number of orders
+                createdFromUtc: DateTime.UtcNow.AddDays(-90) // Get orders from the last 90 days (3 months)
+            );
+            
+            var fulfillmentOrders = new List<OrderModel>();
+            
+            foreach (var order in orders)
+            {
+                try
+                {
+                    // Check if any item has OpenQty > 0 AND order is verified
+                    bool hasUnfulfilledItems = order.OrderItems.Any(item => item.OpenQty > 0);
+                    
+                    if (hasUnfulfilledItems && order.IsVerifiedOrder && !order.NeedsReverification)
+                    {
+                        // Get the model for this order
+                        var orderModel = new OrderModel
+                        {
+                            Id = order.Id,
+                            OrderNumber = order.OrderNumber,
+                            OrderStatusId = order.OrderStatusId,
+                            OrderStatus = ((OrderStatusSystem)order.OrderStatusId).ToString(),
+                            PaymentStatus = order.PaymentStatusId.ToString(),
+                            ShippingStatus = order.ShippingStatusId.ToString(),
+                            CustomerEmail = order.BillingAddress?.Email,
+                            CustomerFullName = GetCustomerDisplayName(order),
+                            CustomerId = order.CustomerId,
+                            OrderTotal = order.OrderTotal.ToString("C"),
+                            CreatedOn = order.CreatedOnUtc,
+                            UpdatedOn = order.UpdatedOnUtc,
+                            StoreName = order.StoreId,
+                            ShippingAddressString = order.ShippingAddress?.Address1,
+                            TargetDeliveryDate = order.TargetDeliveryDate,
+                            RequestedShipmentDate = order.RequestedShipmentDate,
+                            CustomerCompany = order.BillingAddress?.Company
+                        };
+
+                        // Get customer groups that are not system groups
+                        if (!string.IsNullOrEmpty(order.CustomerId))
+                        {
+                            var customer = await customerService.GetCustomerById(order.CustomerId);
+                            if (customer != null && customer.Groups.Any())
+                            {
+                                // Get all customer groups by IDs
+                                var customerGroups = await groupService.GetAllByIds(customer.Groups.ToArray());
+                                
+                                // Filter out system groups
+                                var nonSystemGroups = customerGroups.Where(x => !x.IsSystem).ToList();
+                                
+                                if (nonSystemGroups.Any())
+                                {
+                                    // Join the group names with commas
+                                    orderModel.CustomerGroups = string.Join(", ", nonSystemGroups.Select(x => x.Name));
+                                }
+                            }
+                        }
+
+                        // Add impersonated employee name if available, otherwise blank
+                        if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+                        {
+                            // The impersonating user is a Customer entity, not a SalesEmployee
+                            var impersonatingCustomer = await customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+                            if (impersonatingCustomer != null)
+                            {
+                                orderModel.SalesEmployeeId = impersonatingCustomer.Id;
+                                orderModel.SalesEmployeeName = impersonatingCustomer.Email; // Using email as it's always available
+                            }
+                        }
+                        
+                        // Get distinct warehouses from order items
+                        var warehouseIds = order.OrderItems
+                            .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                            .Select(item => item.WarehouseId)
+                            .Distinct()
+                            .ToList();
+                            
+                        if (warehouseIds.Any())
+                        {
+                            var warehouses = new List<string>();
+                            foreach (var warehouseId in warehouseIds)
+                            {
+                                var warehouse = await warehouseService.GetWarehouseById(warehouseId);
+                                if (warehouse != null)
+                                {
+                                    warehouses.Add(warehouse.Name);
+                                }
+                            }
+                            orderModel.Warehouses = string.Join(", ", warehouses);
+                        }
+                        
+                        fulfillmentOrders.Add(orderModel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but continue to next order
+                    System.Diagnostics.Debug.WriteLine($"Error processing order {order.Id}: {ex.Message}");
+                    continue;
+                }
+            }
+            
+            var gridModel = new DataSourceResult
+            {
+                Data = fulfillmentOrders,
+                Total = fulfillmentOrders.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            // Log the error to help with debugging
+            System.Diagnostics.Debug.WriteLine($"Error in FulfillmentOrderList: {ex.Message}");
+            
+            // Return an empty result instead of an error
+            return Json(new DataSourceResult
+            {
+                Data = new List<OrderModel>(),
+                Total = 0
+            });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> IncomingOrdersList(DataSourceRequest command, OrderListModel model,
+        [FromServices] ICustomerService customerService)
+    {
+        try
+        {
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+                model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+            
+            // Get orders that are not verified yet
+            var orders = await orderService.SearchOrders(
+                storeId: model.StoreId,
+                pageIndex: 0,
+                pageSize: 50, // Show more incoming orders since they need verification
+                createdFromUtc: DateTime.UtcNow.AddDays(-7) // Get orders from the last 7 days
+            );
+            
+            var incomingOrders = new List<OrderModel>();
+            
+            foreach (var order in orders)
+            {
+                try
+                {
+                    // Only include orders that are not verified yet and don't need reverification
+                    if (!order.IsVerifiedOrder && !order.NeedsReverification)
+                    {
+                        var orderModel = new OrderModel
+                        {
+                            Id = order.Id,
+                            OrderNumber = order.OrderNumber,
+                            OrderStatusId = order.OrderStatusId,
+                            OrderStatus = ((OrderStatusSystem)order.OrderStatusId).ToString(),
+                            PaymentStatus = order.PaymentStatusId.ToString(),
+                            ShippingStatus = order.ShippingStatusId.ToString(),
+                            CustomerEmail = order.BillingAddress?.Email,
+                            CustomerFullName = GetCustomerDisplayName(order),
+                            CustomerId = order.CustomerId,
+                            OrderTotal = order.OrderTotal.ToString("C"),
+                            CreatedOn = order.CreatedOnUtc,
+                            CustomerCompany = order.BillingAddress?.Company
+                        };
+                        
+                        // Add sales employee information if available
+                        if (!string.IsNullOrEmpty(order.SeId))
+                        {
+                            var salesEmployee = await customerService.GetCustomerById(order.SeId);
+                            if (salesEmployee != null)
+                            {
+                                orderModel.SalesEmployeeId = salesEmployee.Id;
+                                orderModel.SalesEmployeeName = salesEmployee.Email;
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+                        {
+                            var impersonatingCustomer = await customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+                            if (impersonatingCustomer != null)
+                            {
+                                orderModel.SalesEmployeeId = impersonatingCustomer.Id;
+                                orderModel.SalesEmployeeName = impersonatingCustomer.Email;
+                            }
+                        }
+                        
+                        // Get distinct warehouses from order items
+                        var warehouseIds = order.OrderItems
+                            .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                            .Select(item => item.WarehouseId)
+                            .Distinct()
+                            .ToList();
+                            
+                        if (warehouseIds.Any())
+                        {
+                            var warehouses = new List<string>();
+                            foreach (var warehouseId in warehouseIds)
+                            {
+                                var warehouse = await warehouseService.GetWarehouseById(warehouseId);
+                                if (warehouse != null)
+                                {
+                                    warehouses.Add(warehouse.Name);
+                                }
+                            }
+                            orderModel.Warehouses = string.Join(", ", warehouses);
+                        }
+                        
+                        incomingOrders.Add(orderModel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but continue to next order
+                    System.Diagnostics.Debug.WriteLine($"Error processing order {order.Id}: {ex.Message}");
+                    continue;
+                }
+            }
+            
+            var gridModel = new DataSourceResult
+            {
+                Data = incomingOrders,
+                Total = incomingOrders.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            // Log the error to help with debugging
+            System.Diagnostics.Debug.WriteLine($"Error in IncomingOrdersList: {ex.Message}");
+            
+            // Return an empty result instead of an error
+            return Json(new DataSourceResult
+            {
+                Data = new List<OrderModel>(),
+                Total = 0
+            });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> ReverificationOrdersList(DataSourceRequest command, OrderListModel model,
+        [FromServices] ICustomerService customerService)
+    {
+        try
+        {
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+                model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+            
+            // Get orders that need reverification (previously verified but then modified)
+            var orders = await orderService.SearchOrders(
+                storeId: model.StoreId,
+                pageIndex: 0,
+                pageSize: 50, // Show more reverification orders since they need attention
+                createdFromUtc: DateTime.UtcNow.AddDays(-30) // Get orders from the last 30 days
+            );
+            
+            var reverificationOrders = new List<OrderModel>();
+            
+            foreach (var order in orders)
+            {
+                try
+                {
+                    // Only include orders that need reverification
+                    if (!order.IsVerifiedOrder && order.NeedsReverification)
+                    {
+                        var orderModel = new OrderModel
+                        {
+                            Id = order.Id,
+                            OrderNumber = order.OrderNumber,
+                            OrderStatusId = order.OrderStatusId,
+                            OrderStatus = ((OrderStatusSystem)order.OrderStatusId).ToString(),
+                            PaymentStatus = order.PaymentStatusId.ToString(),
+                            ShippingStatus = order.ShippingStatusId.ToString(),
+                            CustomerEmail = order.BillingAddress?.Email,
+                            CustomerFullName = GetCustomerDisplayName(order),
+                            CustomerId = order.CustomerId,
+                            OrderTotal = order.OrderTotal.ToString("C"),
+                            CreatedOn = order.CreatedOnUtc,
+                            CustomerCompany = order.BillingAddress?.Company
+                        };
+
+                        // Get customer groups that are not system groups
+                        if (!string.IsNullOrEmpty(order.CustomerId))
+                        {
+                            var customer = await customerService.GetCustomerById(order.CustomerId);
+                            if (customer != null && customer.Groups.Any())
+                            {
+                                // Get all customer groups by IDs
+                                var customerGroups = await groupService.GetAllByIds(customer.Groups.ToArray());
+                                
+                                // Filter out system groups
+                                var nonSystemGroups = customerGroups.Where(x => !x.IsSystem).ToList();
+                                
+                                if (nonSystemGroups.Any())
+                                {
+                                    // Join the group names with commas
+                                    orderModel.CustomerGroups = string.Join(", ", nonSystemGroups.Select(x => x.Name));
+                                }
+                            }
+                        }
+
+                        // Get warehouses from order items
+                        var warehouseIds = order.OrderItems.Where(x => !string.IsNullOrEmpty(x.WarehouseId))
+                                                         .Select(x => x.WarehouseId)
+                                                         .Distinct()
+                                                         .ToList();
+                        if (warehouseIds.Any())
+                        {
+                            var warehouseNames = new List<string>();
+                            foreach (var warehouseId in warehouseIds)
+                            {
+                                var warehouse = await warehouseService.GetWarehouseById(warehouseId);
+                                if (warehouse != null)
+                                {
+                                    warehouseNames.Add(warehouse.Name);
+                                }
+                            }
+                            orderModel.Warehouses = string.Join(", ", warehouseNames);
+                        }
+
+                        reverificationOrders.Add(orderModel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log individual order error but continue processing other orders
+                    System.Diagnostics.Debug.WriteLine($"Error processing order {order.Id} in ReverificationOrdersList: {ex.Message}");
+                }
+            }
+            
+            var gridModel = new DataSourceResult
+            {
+                Data = reverificationOrders.ToList(),
+                Total = reverificationOrders.Count
+            };
+            
+            return Json(gridModel);
+        }
+        catch (Exception ex)
+        {
+            // Log the error to help with debugging
+            System.Diagnostics.Debug.WriteLine($"Error in ReverificationOrdersList: {ex.Message}");
+            
+            // Return an empty result instead of an error
+            return Json(new DataSourceResult
+            {
+                Data = new List<OrderModel>(),
+                Total = 0
+            });
+        }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
@@ -182,6 +726,58 @@ public class OrderController(
             orders = orders.Where(x => x.StoreId == contextAccessor.WorkContext.CurrentCustomer.StaffStoreId).ToList();
         var bytes = await exportManager.Export(orders);
         return File(bytes, "text/xls", "orders.xlsx");
+    }
+
+    #endregion
+
+    #region CSV Export (New Feature)
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportCsvAll(OrderListModel model,
+        [FromServices] CsvExportProvider csvProvider,
+        [FromServices] OrderCsvSchemaProperty csvSchema)
+    {
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            model.StoreId = contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+
+        //load orders
+        var orders = await orderViewModelService.PrepareOrders(model);
+        try
+        {
+            var properties = await csvSchema.GetProperties();
+            var bytes = csvProvider.ExportToByte(properties, orders);
+            return File(bytes, "text/csv", "orders.csv");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportCsvSelected(string selectedIds,
+        [FromServices] CsvExportProvider csvProvider,
+        [FromServices] OrderCsvSchemaProperty csvSchema)
+    {
+        var orders = new List<Order>();
+        if (selectedIds != null)
+        {
+            var ids = selectedIds
+                .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x)
+                .ToArray();
+            orders.AddRange(await orderService.GetOrdersByIds(ids));
+        }
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            orders = orders.Where(x => x.StoreId == contextAccessor.WorkContext.CurrentCustomer.StaffStoreId).ToList();
+        
+        var properties = await csvSchema.GetProperties();
+        var bytes = csvProvider.ExportToByte(properties, orders);
+        return File(bytes, "text/csv", "orders.csv");
     }
 
     #endregion
@@ -282,6 +878,145 @@ public class OrderController(
         }
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> VerifyOrder(string orderId)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new { success = false, message = "Order not found" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            {
+                if (await CheckSalesManager(order))
+                    return Json(new { success = false, message = "Access denied" });
+            }
+
+            if (order.IsVerifiedOrder)
+                return Json(new { success = false, message = "Order is already verified" });
+
+            // Update the order verification status
+            order.IsVerifiedOrder = true;
+            order.UpdatedOnUtc = DateTime.UtcNow;
+            await orderService.UpdateOrder(order);
+
+            // Add order note
+            var orderNote = new OrderNote
+            {
+                Note = "Order verified by employee and moved to fulfillment queue",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            };
+            await orderService.InsertOrderNote(orderNote);
+
+            return Json(new { success = true, message = "Order verified successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error verifying order: {ex.Message}" });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> ReverifyOrder(string orderId)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new { success = false, message = "Order not found" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            {
+                if (await CheckSalesManager(order))
+                    return Json(new { success = false, message = "Access denied" });
+            }
+
+            if (!order.NeedsReverification)
+                return Json(new { success = false, message = "Order does not need reverification" });
+
+            if (order.IsVerifiedOrder)
+                return Json(new { success = false, message = "Order is already verified" });
+
+            // Update the order verification status
+            order.IsVerifiedOrder = true;
+            order.NeedsReverification = false;
+            order.UpdatedOnUtc = DateTime.UtcNow;
+            await orderService.UpdateOrder(order);
+
+            // Add order note
+            var orderNote = new OrderNote
+            {
+                Note = "Order re-verified after modifications and moved to fulfillment queue",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            };
+            await orderService.InsertOrderNote(orderNote);
+
+            return Json(new { success = true, message = "Order re-verified successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error re-verifying order: {ex.Message}" });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SendToReverification(string orderId, [FromServices] IShipmentService shipmentService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null)
+                return Json(new { success = false, message = "Order not found" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            {
+                if (await CheckSalesManager(order))
+                    return Json(new { success = false, message = "Access denied" });
+            }
+
+            if (!order.IsVerifiedOrder)
+                return Json(new { success = false, message = "Order is not in verified state" });
+
+            if (order.NeedsReverification)
+                return Json(new { success = false, message = "Order already needs reverification" });
+
+            // Delete all shipments before sending to reverification
+            await DeleteOrderShipmentsForReverification(order, shipmentService);
+
+            // Update the order to require reverification
+            order.IsVerifiedOrder = false;
+            order.NeedsReverification = true;
+            order.UpdatedOnUtc = DateTime.UtcNow;
+            await orderService.UpdateOrder(order);
+
+            // Add order note
+            var orderNote = new OrderNote
+            {
+                Note = "Order sent back to reverification queue for product modifications",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            };
+            await orderService.InsertOrderNote(orderNote);
+
+            return Json(new { success = true, message = "Order sent to reverification successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error sending order to reverification: {ex.Message}" });
+        }
+    }
+
+    #endregion
+
     #endregion
 
     #region Edit, delete
@@ -353,6 +1088,9 @@ public class OrderController(
     public async Task<IActionResult> PdfInvoice(string orderId)
     {
         var order = await orderService.GetOrderById(orderId);
+        if (order == null)
+            return RedirectToAction("List");
+            
         if ((await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
              order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) ||
             await CheckSalesManager(order)) return RedirectToAction("List");
@@ -367,7 +1105,9 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", $"order_{order.Id}.pdf");
+        // Setting inline disposition to view the PDF in browser
+        Response.Headers.Append("Content-Disposition", $"inline; filename=order_{order.Id}.pdf");
+        return File(bytes, "application/pdf");
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Export)]
@@ -386,7 +1126,9 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", "orders.pdf");
+        // Setting inline disposition to view the PDF in browser
+        Response.Headers.Append("Content-Disposition", "inline; filename=orders.pdf");
+        return File(bytes, "application/pdf");
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Export)]
@@ -420,7 +1162,9 @@ public class OrderController(
             bytes = stream.ToArray();
         }
 
-        return File(bytes, "application/pdf", "orders.pdf");
+        // Setting inline disposition to view the PDF in browser
+        Response.Headers.Append("Content-Disposition", "inline; filename=orders.pdf");
+        return File(bytes, "application/pdf");
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
@@ -516,6 +1260,217 @@ public class OrderController(
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    public async Task<IActionResult> CreatePaymentTransaction(string id)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            //No order found with the specified id
+            return RedirectToAction("List");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return RedirectToAction("Edit", "Order", new { id });
+
+        // Check if payment transaction already exists
+        var existingTransaction = await paymentTransactionService.GetOrderByGuid(order.OrderGuid);
+        if (existingTransaction != null)
+            return RedirectToAction("Edit", "PaymentTransaction", new { id = existingTransaction.Id, area = "Admin" });
+
+        // Create new payment transaction
+        var paymentTransaction = new Domain.Payments.PaymentTransaction
+        {
+            OrderCode = order.Code,
+            OrderGuid = order.OrderGuid,
+            CustomerEmail = order.CustomerEmail,
+            CustomerId = order.CustomerId,
+            CurrencyCode = order.CustomerCurrencyCode,
+            TransactionAmount = order.OrderTotal,
+            PaidAmount = 0,
+            RefundedAmount = 0,
+            PaymentMethodSystemName = order.PaymentMethodSystemName ?? "Manual",
+            TransactionStatus = TransactionStatus.Pending,
+            StoreId = order.StoreId,
+            IPAddress = string.Empty,
+            CreatedOnUtc = DateTime.UtcNow
+        };
+
+        await paymentTransactionService.InsertPaymentTransaction(paymentTransaction);
+
+        return RedirectToAction("Edit", "PaymentTransaction", new { id = paymentTransaction.Id, area = "Admin" });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> MarkPaymentAsPaid(string id)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        // Get payment transaction for this order
+        var paymentTransaction = await paymentTransactionService.GetOrderByGuid(order.OrderGuid);
+        if (paymentTransaction == null)
+            return Json(new { success = false, message = "Payment transaction not found" });
+
+        // Mark as paid
+        paymentTransaction.TransactionStatus = TransactionStatus.Paid;
+        paymentTransaction.PaidAmount = paymentTransaction.TransactionAmount;
+        await paymentTransactionService.UpdatePaymentTransaction(paymentTransaction);
+
+        // Add order note
+        await orderService.InsertOrderNote(new OrderNote {
+            Note = $"Payment marked as paid. Amount: {paymentTransaction.PaidAmount:C}",
+            DisplayToCustomer = false,
+            OrderId = order.Id
+        });
+
+        return Json(new { success = true, message = "Payment marked as paid successfully" });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> ChangePaymentMethod(string id, string paymentMethod)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        if (string.IsNullOrEmpty(paymentMethod))
+            return Json(new { success = false, message = "Payment method is required" });
+
+        // Get payment transaction for this order
+        var paymentTransaction = await paymentTransactionService.GetOrderByGuid(order.OrderGuid);
+        if (paymentTransaction == null)
+            return Json(new { success = false, message = "Payment transaction not found" });
+
+        var oldPaymentMethod = paymentTransaction.PaymentMethodSystemName;
+        paymentTransaction.PaymentMethodSystemName = paymentMethod;
+        await paymentTransactionService.UpdatePaymentTransaction(paymentTransaction);
+
+        // Add order note
+        await orderService.InsertOrderNote(new OrderNote {
+            Note = $"Payment method changed from '{oldPaymentMethod}' to '{paymentMethod}'",
+            DisplayToCustomer = false,
+            OrderId = order.Id
+        });
+
+        return Json(new { success = true, message = "Payment method updated successfully" });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveSalesEmployee(string id, string salesEmployeeId)
+    {
+        // Enhanced debug information
+        System.Diagnostics.Debug.WriteLine($"SaveSalesEmployee called - Order ID: {id}, Sales Employee ID: {salesEmployeeId}");
+        System.Diagnostics.Debug.WriteLine($"Request form data: {string.Join(", ", Request.Form.Select(x => $"{x.Key}={x.Value}"))}");
+        
+        // If salesEmployeeId is not provided directly, try to get it from form
+        if (string.IsNullOrEmpty(salesEmployeeId) && Request.Form.ContainsKey("salesEmployeeId"))
+        {
+            salesEmployeeId = Request.Form["salesEmployeeId"].ToString();
+            System.Diagnostics.Debug.WriteLine($"Retrieved salesEmployeeId from form: {salesEmployeeId}");
+        }
+        
+        try 
+        {
+            var order = await orderService.GetOrderById(id);
+            if (order == null || await CheckSalesManager(order))
+            {
+                System.Diagnostics.Debug.WriteLine("Order not found or CheckSalesManager failed");
+                //No order found with the specified id
+                return Json(new { success = false, message = "Order not found" });
+            }
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            {
+                System.Diagnostics.Debug.WriteLine("Staff permission check failed");
+                return Json(new { success = false, message = "Access denied" });
+            }
+
+            // Update sales employee
+            System.Diagnostics.Debug.WriteLine($"Current SeId: {order.SeId}, New SeId: {salesEmployeeId}");
+            order.SeId = salesEmployeeId;
+            await orderService.UpdateOrder(order);
+            System.Diagnostics.Debug.WriteLine($"Order updated with new SeId: {salesEmployeeId}");
+
+            // Add a note
+            await orderService.InsertOrderNote(new OrderNote {
+                Note = string.IsNullOrEmpty(salesEmployeeId) ? 
+                    "Sales representative has been removed from this order." :
+                    $"Sales representative has been assigned to this order. Sales employee ID: {salesEmployeeId}",
+                DisplayToCustomer = false,
+                OrderId = order.Id
+            });
+            System.Diagnostics.Debug.WriteLine("Order note added successfully");
+            
+            // Return success response for AJAX
+            return Json(new { success = true, message = "Sales representative has been updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in SaveSalesEmployee: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            
+            // Return error for AJAX
+            return Json(new { success = false, message = $"Error saving sales employee: {ex.Message}" });
+        }
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveImpersonatedEmployee(string id, string impersonatedEmployeeId)
+    {
+        try 
+        {
+            var order = await orderService.GetOrderById(id);
+            if (order == null || await CheckSalesManager(order))
+            {
+                // No order found with the specified id
+                return Json(new { success = false, message = "Order not found" });
+            }
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            {
+                return Json(new { success = false, message = "Access denied" });
+            }
+
+            // Update impersonated employee
+            order.ImpersonatedByEmployeeId = impersonatedEmployeeId;
+            await orderService.UpdateOrder(order);
+
+            // Add a note
+            await orderService.InsertOrderNote(new OrderNote {
+                Note = string.IsNullOrEmpty(impersonatedEmployeeId) ? 
+                    "Impersonated employee has been removed from this order." :
+                    $"Impersonated employee has been assigned to this order. Employee ID: {impersonatedEmployeeId}",
+                DisplayToCustomer = false,
+                OrderId = order.Id
+            });
+            
+            // Return success response for AJAX
+            return Json(new { success = true, message = "Impersonated employee has been updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            // Return error for AJAX
+            return Json(new { success = false, message = $"Error saving impersonated employee: {ex.Message}" });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
     public async Task<IActionResult> SaveOrderItem(string id, OrderItemsModel model)
     {
@@ -581,7 +1536,363 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     [HttpPost]
-    public async Task<IActionResult> DeleteOrderItem(string id, string orderItemId)
+    public async Task<IActionResult> UpdateOrderItemField(string orderId, string orderItemId, string fieldType, string value, string additionalData, [FromServices] ICurrencyService currencyService, [FromServices] IShipmentService shipmentService, [FromServices] IProductService productService, [FromServices] IProductAttributeService productAttributeService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null || await CheckSalesManager(order))
+                return Json(new { success = false, message = "Order not found or access denied" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+                return Json(new { success = false, message = "Access denied" });
+
+            if (order.OrderStatusId == (int)OrderStatusSystem.Cancelled)
+                return Json(new { success = false, message = "Cannot edit cancelled order" });
+
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null)
+                return Json(new { success = false, message = "Order item not found" });
+
+            // Validate and parse the new value
+            if (fieldType == "quantity")
+            {
+                if (!int.TryParse(value, out var newQuantity) || newQuantity <= 0)
+                    return Json(new { success = false, message = "Quantity must be a positive number" });
+
+                if (orderItem.OpenQty != orderItem.Quantity && orderItem.IsShipEnabled)
+                    return Json(new { success = false, message = "Cannot change quantity - item partially shipped" });
+
+                if (orderItem.Quantity == newQuantity)
+                    return Json(new { success = false, message = "No change detected" });
+
+                // Update quantity
+                orderItem.Quantity = newQuantity;
+                orderItem.OpenQty = newQuantity;
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+                orderItem.DiscountAmountInclTax = 0;
+                orderItem.DiscountAmountExclTax = 0;
+            }
+            else if (fieldType == "price")
+            {
+                if (!double.TryParse(value, out var newPrice) || newPrice < 0)
+                    return Json(new { success = false, message = "Price must be a valid decimal number" });
+
+                if (Math.Abs(orderItem.UnitPriceExclTax - newPrice) < 0.01)
+                    return Json(new { success = false, message = "No change detected" });
+
+                // Update price
+                orderItem.UnitPriceExclTax = newPrice;
+                orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+                orderItem.DiscountAmountInclTax = 0;
+                orderItem.DiscountAmountExclTax = 0;
+            }
+            else if (fieldType == "weightAttribute")
+            {
+                // value contains either combinationId (for combination-based) or attributeValueId (for non-combination)
+                var selectedId = value;
+                if (string.IsNullOrEmpty(selectedId))
+                    return Json(new { success = false, message = "Invalid selection ID" });
+
+                // Parse additional data to get the price
+                double newPrice = 0;
+                string productId = orderItem.ProductId;
+
+                if (!string.IsNullOrEmpty(additionalData))
+                {
+                    try
+                    {
+                        var dataObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(additionalData);
+                        if (dataObj != null && dataObj.ContainsKey("price"))
+                        {
+                            newPrice = Convert.ToDouble(dataObj["price"].ToString());
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore parsing errors
+                    }
+                }
+
+                // Get the product to find the combination or attribute value
+                var product = await productService.GetProductById(productId);
+                if (product == null)
+                    return Json(new { success = false, message = "Product not found" });
+
+                // Try to find as combination first (for products WITH combinations)
+                var combination = product.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == selectedId);
+
+                if (combination != null)
+                {
+                    // COMBINATION-BASED weight product
+                    // Update the order item's attributes to the selected combination
+                    orderItem.Attributes = combination.Attributes;
+
+                    // Update price based on combination
+                    var combinationPrice = (combination.OverriddenPrice.HasValue && combination.OverriddenPrice.Value > 0) ? combination.OverriddenPrice.Value : product.Price;
+                    orderItem.UnitPriceExclTax = combinationPrice;
+                    orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
+                    orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                    orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+
+                    // Update SKU if combination has one
+                    if (!string.IsNullOrEmpty(combination.Sku))
+                    {
+                        orderItem.Sku = combination.Sku;
+                    }
+
+                    // Update attribute description for display
+                    var attributeNames = new List<string>();
+                    foreach (var attr in combination.Attributes)
+                    {
+                        var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                        if (mapping != null)
+                        {
+                            var productAttribute = await productAttributeService.GetProductAttributeById(mapping.ProductAttributeId);
+                            var attrValue = attr.Value;
+                            var valueIds = attrValue?.Split(',') ?? new string[0];
+                            foreach (var valueId in valueIds)
+                            {
+                                var trimmedValueId = valueId.Trim();
+                                if (!string.IsNullOrEmpty(trimmedValueId))
+                                {
+                                    var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                    if (attributeValue != null && productAttribute != null)
+                                    {
+                                        attributeNames.Add($"{productAttribute.Name}: {attributeValue.Name}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (attributeNames.Any())
+                    {
+                        orderItem.AttributeDescription = string.Join("<br/>", attributeNames);
+                    }
+                }
+                else
+                {
+                    // NON-COMBINATION weight product (like Flower products)
+                    // selectedId is an attributeValueId, find it in the product's attribute values
+                    ProductAttributeValue selectedAttributeValue = null;
+                    ProductAttributeMapping selectedMapping = null;
+
+                    if (product.ProductAttributeMappings != null)
+                    {
+                        foreach (var mapping in product.ProductAttributeMappings)
+                        {
+                            if (mapping.ProductAttributeValues != null)
+                            {
+                                selectedAttributeValue = mapping.ProductAttributeValues.FirstOrDefault(v => v.Id == selectedId);
+                                if (selectedAttributeValue != null)
+                                {
+                                    selectedMapping = mapping;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (selectedAttributeValue == null || selectedMapping == null)
+                        return Json(new { success = false, message = "Selected attribute value not found" });
+
+                    // Build the attributes dictionary for this selection
+                    orderItem.Attributes = new List<Domain.Common.CustomAttribute>
+                    {
+                        new Domain.Common.CustomAttribute
+                        {
+                            Key = selectedMapping.Id,
+                            Value = selectedAttributeValue.Id
+                        }
+                    };
+
+                    // Update price based on attribute value's overridden price
+                    var attributePrice = (selectedAttributeValue.OverriddenPrice.HasValue && selectedAttributeValue.OverriddenPrice.Value > 0)
+                        ? selectedAttributeValue.OverriddenPrice.Value
+                        : product.Price;
+
+                    orderItem.UnitPriceExclTax = attributePrice;
+                    orderItem.UnitPriceInclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.TaxRate / 100 + orderItem.UnitPriceExclTax, 2);
+                    orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                    orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+
+                    // Update attribute description for display
+                    var productAttribute = await productAttributeService.GetProductAttributeById(selectedMapping.ProductAttributeId);
+                    if (productAttribute != null)
+                    {
+                        orderItem.AttributeDescription = $"{productAttribute.Name}: {selectedAttributeValue.Name}";
+                    }
+                }
+            }
+            else
+            {
+                return Json(new { success = false, message = "Invalid field type" });
+            }
+
+            // Save the changes
+            await mediator.Send(new UpdateOrderItemCommand { Order = order, OrderItem = orderItem });
+
+            // Refresh order from database to get updated totals
+            order = await orderService.GetOrderById(orderId);
+
+            // If order was previously verified, mark for reverification
+            if (order.IsVerifiedOrder)
+            {
+                // Delete all shipments before reverification
+                await DeleteOrderShipmentsForReverification(order, shipmentService);
+
+                order.NeedsReverification = true;
+                order.IsVerifiedOrder = false;
+                order.UpdatedOnUtc = DateTime.UtcNow;
+                await orderService.UpdateOrder(order);
+
+                // Add order note for audit trail
+                var orderNote = new OrderNote
+                {
+                    Note = $"Order moved to reverification queue due to {fieldType} modification",
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow,
+                    OrderId = order.Id
+                };
+                await orderService.InsertOrderNote(orderNote);
+            }
+
+            // Prepare response with updated values
+            var primaryCurrency = await currencyService.GetPrimaryStoreCurrency();
+            var cultureInfo = new CultureInfo(primaryCurrency.DisplayLocale ?? "en-US");
+
+            // Calculate total quantity
+            var totalQuantity = order.OrderItems.Sum(x => x.Quantity);
+
+            var response = new
+            {
+                success = true,
+                message = "Saved successfully",
+                newSubTotal = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                    orderItem.PriceInclTax.ToString("C", cultureInfo) :
+                    orderItem.PriceExclTax.ToString("C", cultureInfo),
+                displayValue = fieldType == "price" ?
+                    (order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                        orderItem.UnitPriceInclTax.ToString("C", cultureInfo) :
+                        orderItem.UnitPriceExclTax.ToString("C", cultureInfo)) : null,
+                // Order totals for Info tab
+                orderTotals = new
+                {
+                    totalQuantity = totalQuantity,
+                    orderSubtotal = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                        order.OrderSubtotalInclTax.ToString("C", cultureInfo) :
+                        order.OrderSubtotalExclTax.ToString("C", cultureInfo),
+                    orderShipping = order.CustomerTaxDisplayTypeId == (int)TaxDisplayType.IncludingTax ?
+                        order.OrderShippingInclTax.ToString("C", cultureInfo) :
+                        order.OrderShippingExclTax.ToString("C", cultureInfo),
+                    orderTax = order.OrderTax.ToString("C", cultureInfo),
+                    orderTotal = order.OrderTotal.ToString("C", cultureInfo)
+                }
+            };
+
+            return Json(response);
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error saving changes: {ex.Message}" });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> UpdateShipmentField(string orderId, string shipmentId, string fieldType, string value, [FromServices] IShipmentService shipmentService, [FromServices] IDateTimeService dateTimeService)
+    {
+        try
+        {
+            var order = await orderService.GetOrderById(orderId);
+            if (order == null || await CheckSalesManager(order))
+                return Json(new { success = false, message = "Order not found or access denied" });
+
+            if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+                order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+                return Json(new { success = false, message = "Access denied" });
+
+            var shipment = await shipmentService.GetShipmentById(shipmentId);
+            if (shipment == null || shipment.OrderId != orderId)
+                return Json(new { success = false, message = "Shipment not found" });
+
+            // Update the shipment field based on fieldType
+            switch (fieldType.ToLower())
+            {
+                case "trackingnumber":
+                    shipment.TrackingNumber = value?.Trim();
+                    break;
+
+                case "shippeddate":
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        shipment.ShippedDateUtc = null;
+                    }
+                    else if (DateTime.TryParse(value, out var shippedDate))
+                    {
+                        shipment.ShippedDateUtc = dateTimeService.ConvertToUtcTime(shippedDate, dateTimeService.CurrentTimeZone);
+                    }
+                    else
+                    {
+                        return Json(new { success = false, message = "Invalid shipped date format" });
+                    }
+                    break;
+
+                case "deliverydate":
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        shipment.DeliveryDateUtc = null;
+                    }
+                    else if (DateTime.TryParse(value, out var deliveryDate))
+                    {
+                        shipment.DeliveryDateUtc = dateTimeService.ConvertToUtcTime(deliveryDate, dateTimeService.CurrentTimeZone);
+                    }
+                    else
+                    {
+                        return Json(new { success = false, message = "Invalid delivery date format" });
+                    }
+                    break;
+
+                case "admincomment":
+                    shipment.AdminComment = value?.Trim();
+                    break;
+
+                default:
+                    return Json(new { success = false, message = "Unknown field type" });
+            }
+
+            await shipmentService.UpdateShipment(shipment);
+
+            var response = new
+            {
+                success = true,
+                message = "Shipment field updated successfully",
+                displayValue = fieldType.ToLower() switch
+                {
+                    "shippeddate" => shipment.ShippedDateUtc?.ToString("yyyy-MM-dd"),
+                    "deliverydate" => shipment.DeliveryDateUtc?.ToString("yyyy-MM-dd"),
+                    "trackingnumber" => shipment.TrackingNumber,
+                    "admincomment" => shipment.AdminComment,
+                    _ => value
+                }
+            };
+
+            return Json(response);
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error updating shipment field: {ex.Message}" });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> DeleteOrderItem(string id, string orderItemId, [FromServices] IShipmentService shipmentService)
     {
         var order = await orderService.GetOrderById(id);
         if (order == null || await CheckSalesManager(order))
@@ -852,8 +2163,11 @@ public class OrderController(
 
         var warnings = await orderViewModelService.AddProductToOrderDetails(model);
         if (!warnings.Any())
-            //redirect to order details page
+        {
+            //redirect to order details page - stay on Products tab (tab-index 3)
+            TempData["Grand.selected-tab-index"] = 3;
             return RedirectToAction("Edit", "Order", new { id = model.OrderId });
+        }
 
         //errors
         var result = await orderViewModelService.PrepareAddProductToOrderModel(order, model.ProductId);
@@ -861,7 +2175,849 @@ public class OrderController(
         return View(result);
     }
 
-    #endregion
+    #region Bulk Product Addition
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    public async Task<IActionResult> BulkAddProductsToOrder(string orderId, 
+        [FromServices] IBrandService brandService)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return RedirectToAction("List");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) 
+            return RedirectToAction("List");
+
+        var model = await orderViewModelService.PrepareBulkAddProductsToOrderModel(order);
+        
+        // Populate brands dropdown
+        var brands = await brandService.GetAllBrands(showHidden: true);
+        foreach (var brand in brands)
+        {
+            model.AvailableBrands.Add(new SelectListItem
+            {
+                Text = brand.Name,
+                Value = brand.Id
+            });
+        }
+        
+        return View(model);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> BulkProductSearch(DataSourceRequest command, BulkAddProductsToOrderModel model,
+        [FromServices] IProductService productService)
+    {
+        var categoryIds = new List<string>();
+        if (!string.IsNullOrEmpty(model.SearchCategoryId))
+            categoryIds.Add(model.SearchCategoryId);
+
+        // Perform standard product search
+        var searchResult = await productService.SearchProducts(categoryIds: categoryIds,
+            storeId: "",
+            brandId: model.SearchBrandId,
+            collectionId: model.SearchCollectionId,
+            productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+            keywords: model.SearchProductName,
+            pageIndex: command.Page - 1,
+            pageSize: command.PageSize,
+            showHidden: true);
+
+        var allProducts = searchResult.products.ToList();
+
+        // If there are keywords, also search through product attribute combination names
+        if (!string.IsNullOrWhiteSpace(model.SearchProductName))
+        {
+            var keywords = model.SearchProductName.Trim();
+            
+            // Search for products that have attribute combinations with matching attribute value names
+            var additionalSearchResult = await productService.SearchProducts(
+                categoryIds: categoryIds,
+                storeId: "",
+                brandId: model.SearchBrandId,
+                collectionId: model.SearchCollectionId,
+                productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+                pageIndex: 0, // Get all results for attribute filtering
+                pageSize: int.MaxValue,
+                showHidden: true);
+
+            var attributeMatchedProducts = additionalSearchResult.products
+                .Where(p => p.ProductAttributeCombinations.Any(combo =>
+                    combo.Attributes.Any(attr => 
+                        p.ProductAttributeMappings
+                            .Where(mapping => mapping.Id == attr.Key)
+                            .SelectMany(mapping => mapping.ProductAttributeValues)
+                            .Any(value => {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                return valueIds.Any(valueId => valueId.Trim() == value.Id) && 
+                                       !string.IsNullOrEmpty(value.Name) &&
+                                       value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase);
+                            })
+                    )
+                ))
+                .ToList();
+
+            // Combine and deduplicate results
+            var existingProductIds = allProducts.Select(p => p.Id).ToHashSet();
+            var newProducts = attributeMatchedProducts.Where(p => !existingProductIds.Contains(p.Id));
+            allProducts.AddRange(newProducts);
+        }
+
+        // Apply pagination to combined results
+        var totalCount = allProducts.Count;
+        var pagedProducts = allProducts
+            .Skip((command.Page - 1) * command.PageSize)
+            .Take(command.PageSize)
+            .ToList();
+
+        // Filter out grouped products
+        var filteredProducts = pagedProducts.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
+
+        var gridModel = new DataSourceResult {
+            Data = filteredProducts.Select(x => new OrderModel.AddOrderProductModel.ProductModel {
+                Id = x.Id,
+                Name = x.Name
+            }),
+            Total = totalCount
+        };
+
+        return Json(gridModel);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> GetProductConfigurationRows(string[] productIds, string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false });
+
+        var html = await orderViewModelService.GetProductConfigurationRowsHtml(productIds, orderId);
+        return Json(new { success = true, html });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> BulkAddProductsToOrder(BulkAddProductsToOrderModel model)
+    {
+        var order = await orderService.GetOrderById(model.OrderId);
+        if (order == null || await CheckSalesManager(order))
+            return RedirectToAction("List");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) 
+            return RedirectToAction("List");
+
+        var warnings = await orderViewModelService.ProcessBulkProductAddition(model);
+        if (!warnings.Any())
+        {
+            //redirect to order details page - stay on Products tab (tab-index 3)
+            TempData["Grand.selected-tab-index"] = 3;
+            return RedirectToAction("Edit", "Order", new { id = model.OrderId });
+        }
+
+        // If there are warnings, reload the page with errors
+        var reloadedModel = await orderViewModelService.PrepareBulkAddProductsToOrderModel(order);
+        reloadedModel.SearchProductName = model.SearchProductName;
+        reloadedModel.SearchCategoryId = model.SearchCategoryId;
+        reloadedModel.SearchBrandId = model.SearchBrandId;
+        reloadedModel.SearchCollectionId = model.SearchCollectionId;
+        reloadedModel.SearchProductTypeId = model.SearchProductTypeId;
+        
+        foreach (var warning in warnings)
+            ModelState.AddModelError("", warning);
+            
+        return View(reloadedModel);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> GetCombinationWarehouseInventory(string combinationId, string productId, string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        var warehouses = await orderViewModelService.GetCombinationWarehouseInventory(combinationId, productId);
+        var combinationDetails = await orderViewModelService.GetCombinationDetails(combinationId, productId);
+        
+        return Json(new { 
+            success = true, 
+            warehouses = warehouses,
+            overriddenPrice = combinationDetails.OverriddenPrice,
+            sku = combinationDetails.Sku
+        });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SearchProductsInline(DataSourceRequest command, OrderModel.AddOrderProductModel model,
+        [FromServices] IProductService productService,
+        [FromServices] IBrandService brandService,
+        [FromServices] IStockQuantityService stockQuantityService)
+    {
+        var categoryIds = new List<string>();
+        if (!string.IsNullOrEmpty(model.SearchCategoryId))
+            categoryIds.Add(model.SearchCategoryId);
+
+        // Perform standard product search
+        var searchResult = await productService.SearchProducts(categoryIds: categoryIds,
+            storeId: "",
+            brandId: model.SearchBrandId,
+            collectionId: model.SearchCollectionId,
+            productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+            keywords: model.SearchProductName,
+            pageIndex: (model.page ?? 1) - 1,
+            pageSize: model.pageSize ?? 10,
+            showHidden: true);
+
+        var allProducts = searchResult.products.ToList();
+
+        // If there are keywords, also search through product attribute combination names
+        if (!string.IsNullOrWhiteSpace(model.SearchProductName))
+        {
+            var keywords = model.SearchProductName.Trim();
+            
+            // Search for products that have attribute combinations with matching attribute value names
+            var additionalSearchResult = await productService.SearchProducts(
+                categoryIds: categoryIds,
+                storeId: "",
+                brandId: model.SearchBrandId,
+                collectionId: model.SearchCollectionId,
+                productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
+                pageIndex: 0, // Get all results for attribute filtering
+                pageSize: int.MaxValue,
+                showHidden: true);
+
+            var attributeMatchedProducts = additionalSearchResult.products
+                .Where(p => p.ProductAttributeCombinations.Any(combo =>
+                    combo.Attributes.Any(attr => 
+                        p.ProductAttributeMappings
+                            .Where(mapping => mapping.Id == attr.Key)
+                            .SelectMany(mapping => mapping.ProductAttributeValues)
+                            .Any(value => {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                return valueIds.Any(valueId => valueId.Trim() == value.Id) && 
+                                       !string.IsNullOrEmpty(value.Name) &&
+                                       value.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase);
+                            })
+                    )
+                ))
+                .ToList();
+
+            // Combine and deduplicate results
+            var existingProductIds = allProducts.Select(p => p.Id).ToHashSet();
+            var newProducts = attributeMatchedProducts.Where(p => !existingProductIds.Contains(p.Id));
+            allProducts.AddRange(newProducts);
+        }
+
+        // Filter out grouped products
+        var filteredProducts = allProducts.Where(x => x.ProductTypeId != ProductType.GroupedProduct).ToList();
+
+        // Get unique brand IDs and resolve brand names
+        var brandIds = filteredProducts.Where(p => !string.IsNullOrEmpty(p.BrandId))
+                                       .Select(p => p.BrandId)
+                                       .Distinct()
+                                       .ToList();
+        
+        var brands = new Dictionary<string, string>();
+        foreach (var brandId in brandIds)
+        {
+            var brand = await brandService.GetBrandById(brandId);
+            if (brand != null)
+            {
+                brands[brandId] = brand.Name;
+            }
+        }
+
+        // Get all warehouses for inventory lookup
+        var warehouses = await warehouseService.GetAllWarehouses();
+        
+        // Create search result items that include attribute combinations
+        var searchResultItems = new List<object>();
+
+        foreach (var product in filteredProducts)
+        {
+            // Get basic warehouse information - inventory will be loaded on-demand when warehouse is selected
+            var warehouseInventory = new List<object>();
+            foreach (var warehouse in warehouses)
+            {
+                warehouseInventory.Add(new {
+                    id = warehouse.Id,
+                    name = warehouse.Name,
+                    inventory = 0 // Will be updated via AJAX when warehouse is selected
+                });
+            }
+
+            if (product.ProductAttributeCombinations?.Any() == true && product.ProductAttributeMappings?.Any() == true)
+            {
+                // Detect attribute type: weight-based conversion or regular combinations
+                bool hasWeightBasedAttributes = false;
+
+                // Check each mapping to see if it has weight-based attribute values
+                foreach (var mapping in product.ProductAttributeMappings)
+                {
+                    if (mapping.ProductAttributeValues != null && mapping.ProductAttributeValues.Any())
+                    {
+                        foreach (var attrValue in mapping.ProductAttributeValues)
+                        {
+                            if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                            {
+                                hasWeightBasedAttributes = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasWeightBasedAttributes) break;
+                }
+
+                if (hasWeightBasedAttributes)
+                {
+                    // WEIGHT-BASED: Return base product with attribute options for dropdown
+                    var attributeOptions = new List<object>();
+                    foreach (var combination in product.ProductAttributeCombinations)
+                    {
+                        var attributeNames = new List<string>();
+                        foreach (var attr in combination.Attributes)
+                        {
+                            var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                            if (mapping != null)
+                            {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                foreach (var valueId in valueIds)
+                                {
+                                    var trimmedValueId = valueId.Trim();
+                                    if (!string.IsNullOrEmpty(trimmedValueId))
+                                    {
+                                        var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                        if (attributeValue != null)
+                                        {
+                                            attributeNames.Add(attributeValue.Name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        var combinationPrice = combination.OverriddenPrice > 0 ? combination.OverriddenPrice : product.Price;
+                        var optionName = attributeNames.Any() ? string.Join(", ", attributeNames) : "Default";
+
+                        attributeOptions.Add(new {
+                            combinationId = combination.Id,
+                            name = optionName,
+                            price = combinationPrice,
+                            sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku
+                        });
+                    }
+
+                    // Return base product only
+                    searchResultItems.Add(new {
+                        id = product.Id,
+                        name = product.Name,
+                        sku = product.Sku,
+                        price = product.Price,
+                        combinationId = (string)null,
+                        hasWeightBasedAttributes = true,
+                        hasCombinationAttributes = false,
+                        attributeOptions = attributeOptions,
+                        published = product.Published,
+                        brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                        warehouses = warehouseInventory,
+                        attributeInfo = (string)null
+                    });
+                }
+                else
+                {
+                    // REGULAR COMBINATIONS: Return individual combination items
+                    foreach (var combination in product.ProductAttributeCombinations)
+                    {
+                        var attributeNames = new List<string>();
+                        foreach (var attr in combination.Attributes)
+                        {
+                            var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                            if (mapping != null)
+                            {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                foreach (var valueId in valueIds)
+                                {
+                                    var trimmedValueId = valueId.Trim();
+                                    if (!string.IsNullOrEmpty(trimmedValueId))
+                                    {
+                                        var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                        if (attributeValue != null)
+                                        {
+                                            attributeNames.Add(attributeValue.Name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        var combinationName = attributeNames.Any()
+                            ? $"{product.Name} - {string.Join(", ", attributeNames)}"
+                            : product.Name;
+
+                        // Only include this combination if it matches the search criteria
+                        bool shouldInclude = true;
+                        if (!string.IsNullOrWhiteSpace(model.SearchProductName))
+                        {
+                            var keywords = model.SearchProductName.Trim();
+                            shouldInclude = product.Name.Contains(keywords, StringComparison.OrdinalIgnoreCase) ||
+                                           combinationName.Contains(keywords, StringComparison.OrdinalIgnoreCase) ||
+                                           attributeNames.Any(name => name.Contains(keywords, StringComparison.OrdinalIgnoreCase));
+                        }
+
+                        if (shouldInclude)
+                        {
+                            var combinationPrice = combination.OverriddenPrice > 0 ? combination.OverriddenPrice : product.Price;
+
+                            searchResultItems.Add(new {
+                                id = product.Id,
+                                name = combinationName,
+                                sku = !string.IsNullOrEmpty(combination.Sku) ? combination.Sku : product.Sku,
+                                price = combinationPrice,
+                                combinationId = combination.Id,
+                                hasWeightBasedAttributes = false,
+                                hasCombinationAttributes = true,
+                                caseSize = combination.CaseSize,
+                                published = product.Published,
+                                brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                                warehouses = warehouseInventory,
+                                attributeInfo = string.Join(", ", attributeNames)
+                            });
+                        }
+                    }
+                }
+            }
+            else if (product.ProductAttributeMappings?.Any() == true)
+            {
+                // Check for weight-based attributes (products without combinations but with attribute mappings)
+                bool hasWeightBasedAttributes = false;
+
+                // Check each mapping to see if it has weight-based attribute values
+                foreach (var mapping in product.ProductAttributeMappings)
+                {
+                    if (mapping.ProductAttributeValues != null && mapping.ProductAttributeValues.Any())
+                    {
+                        foreach (var attrValue in mapping.ProductAttributeValues)
+                        {
+                            if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                            {
+                                hasWeightBasedAttributes = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasWeightBasedAttributes) break;
+                }
+
+                if (hasWeightBasedAttributes)
+                {
+                    // WEIGHT-BASED: Return base product with attribute options for dropdown
+                    var attributeOptions = new List<object>();
+
+                    // Build options from attribute values directly (no combinations)
+                    foreach (var mapping in product.ProductAttributeMappings)
+                    {
+                        if (mapping.ProductAttributeValues != null)
+                        {
+                            foreach (var attrValue in mapping.ProductAttributeValues)
+                            {
+                                if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                                {
+                                    var optionPrice = (attrValue.OverriddenPrice.HasValue && attrValue.OverriddenPrice.Value > 0)
+                                        ? attrValue.OverriddenPrice.Value
+                                        : product.Price;
+
+                                    attributeOptions.Add(new {
+                                        attributeValueId = attrValue.Id,
+                                        mappingId = mapping.Id,
+                                        name = attrValue.Name,
+                                        price = optionPrice,
+                                        conversionRatio = attrValue.Quantity,
+                                        sku = product.Sku
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    // Return base product only
+                    searchResultItems.Add(new {
+                        id = product.Id,
+                        name = product.Name,
+                        sku = product.Sku,
+                        price = product.Price,
+                        combinationId = (string)null,
+                        hasWeightBasedAttributes = true,
+                        hasCombinationAttributes = false,
+                        attributeOptions = attributeOptions,
+                        published = product.Published,
+                        brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                        warehouses = warehouseInventory,
+                        attributeInfo = (string)null
+                    });
+                }
+                else
+                {
+                    // Regular product with attributes but not weight-based
+                    searchResultItems.Add(new {
+                        id = product.Id,
+                        name = product.Name,
+                        sku = product.Sku,
+                        price = product.Price,
+                        combinationId = (string)null,
+                        hasAttributes = true,
+                        hasWeightBasedAttributes = false,
+                        hasCombinationAttributes = false,
+                        attributeOptions = new List<object>(),
+                        published = product.Published,
+                        brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                        warehouses = warehouseInventory,
+                        attributeInfo = (string)null
+                    });
+                }
+            }
+            else
+            {
+                // Add regular product without any attributes
+                searchResultItems.Add(new {
+                    id = product.Id,
+                    name = product.Name,
+                    sku = product.Sku,
+                    price = product.Price,
+                    combinationId = (string)null,
+                    hasAttributes = false,
+                    hasWeightBasedAttributes = false,
+                    hasCombinationAttributes = false,
+                    attributeOptions = new List<object>(),
+                    published = product.Published,
+                    brandName = !string.IsNullOrEmpty(product.BrandId) && brands.ContainsKey(product.BrandId) ? brands[product.BrandId] : "",
+                    warehouses = warehouseInventory,
+                    attributeInfo = (string)null
+                });
+            }
+        }
+
+        // Apply pagination to search result items
+        var totalCount = searchResultItems.Count;
+        var pagedItems = searchResultItems
+            .Skip(((model.page ?? 1) - 1) * (model.pageSize ?? 10))
+            .Take(model.pageSize ?? 10)
+            .ToList();
+
+        return Json(new { 
+            success = true, 
+            data = pagedItems,
+            totalCount = totalCount
+        });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> ProductSearchWarehouseChange(string productId, string warehouseId, string attributeCombinationId,
+        [FromServices] IProductService productService,
+        [FromServices] IStockQuantityService stockQuantityService)
+    {
+        var product = await productService.GetProductById(productId);
+        if (product == null)
+            return Json(new { success = false, message = "Product not found" });
+
+        // Get stock quantity for the specific warehouse
+        var stockQuantity = stockQuantityService.GetTotalStockQuantity(product, warehouseId: warehouseId);
+        
+        // If this is for a specific attribute combination, handle that
+        if (!string.IsNullOrEmpty(attributeCombinationId))
+        {
+            var combination = product.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == attributeCombinationId);
+            if (combination != null)
+            {
+                stockQuantity = stockQuantityService.GetTotalStockQuantityForCombination(product, combination, warehouseId: warehouseId);
+            }
+        }
+
+        return Json(new { 
+            success = true, 
+            inventory = stockQuantity,
+            warehouseId = warehouseId
+        });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> AddProductToOrderInline(string orderId, string productId,
+        int quantity, decimal unitPrice, string warehouseId, string attributeCombinationId = null,
+        string attributeValueId = null, string mappingId = null,
+        [FromServices] IProductService productService = null, [FromServices] IShipmentService shipmentService = null)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            var model = new AddProductToOrderModel(
+                OrderId: orderId,
+                ProductId: productId,
+                UnitPriceInclTax: (double)unitPrice,
+                UnitPriceExclTax: (double)unitPrice, // Simplified for now
+                Quantity: quantity,
+                TaxRate: 0, // Simplified for now
+                WarehouseId: warehouseId ?? ""
+            );
+            
+            // Initialize SelectedAttributes to prevent null reference errors
+            model.SelectedAttributes = new List<CustomAttributeModel>();
+
+            // Initialize SelectedAttributes to prevent null reference errors
+            model.SelectedAttributes = new List<CustomAttributeModel>();
+
+            // If we have an attribute combination ID, we need to set up the selected attributes
+            if (!string.IsNullOrEmpty(attributeCombinationId))
+            {
+                var product = await productService.GetProductById(productId);
+                var combination = product?.ProductAttributeCombinations?.FirstOrDefault(c => c.Id == attributeCombinationId);
+                
+                if (combination != null && product != null)
+                {
+                    var selectedAttributes = new List<CustomAttributeModel>();
+                    
+                    foreach (var attr in combination.Attributes)
+                    {
+                        var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                        if (mapping != null)
+                        {
+                            // Split the Value string if it contains multiple values (comma-separated)
+                            var valueIds = attr.Value?.Split(',') ?? new string[0];
+                            foreach (var valueId in valueIds)
+                            {
+                                var trimmedValueId = valueId.Trim();
+                                if (!string.IsNullOrEmpty(trimmedValueId))
+                                {
+                                    var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                    if (attributeValue != null)
+                                    {
+                                        selectedAttributes.Add(new CustomAttributeModel
+                                        {
+                                            Key = attr.Key,
+                                            Value = trimmedValueId
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    model.SelectedAttributes = selectedAttributes;
+                }
+            }
+            // Handle non-combination weight attributes (Flower products)
+            else if (!string.IsNullOrEmpty(attributeValueId) && !string.IsNullOrEmpty(mappingId))
+            {
+                var product = await productService.GetProductById(productId);
+                if (product != null)
+                {
+                    var selectedAttributes = new List<CustomAttributeModel>
+                    {
+                        new CustomAttributeModel
+                        {
+                            Key = mappingId,
+                            Value = attributeValueId
+                        }
+                    };
+
+                    model.SelectedAttributes = selectedAttributes;
+                }
+            }
+
+            var warnings = await orderViewModelService.AddProductToOrderDetails(model);
+            
+            if (!warnings.Any())
+            {
+                // If order was previously verified, mark for reverification
+                if (order.IsVerifiedOrder)
+                {
+                    // Delete all shipments before reverification
+                    await DeleteOrderShipmentsForReverification(order, shipmentService);
+                    
+                    order.NeedsReverification = true;
+                    order.IsVerifiedOrder = false;
+                    order.UpdatedOnUtc = DateTime.UtcNow;
+                    await orderService.UpdateOrder(order);
+                    
+                    // Add order note for audit trail
+                    var orderNote = new OrderNote
+                    {
+                        Note = "Order moved to reverification queue due to product addition",
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow,
+                        OrderId = order.Id
+                    };
+                    await orderService.InsertOrderNote(orderNote);
+                }
+                
+                return Json(new { 
+                    success = true, 
+                    message = "Product added successfully",
+                    originalPrice = unitPrice
+                });
+            }
+            else
+            {
+                return Json(new { 
+                    success = false, 
+                    message = string.Join(", ", warnings)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            return Json(new { 
+                success = false, 
+                message = "Error adding product: " + ex.Message
+            });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> UpdateOrderItem(string orderId, string orderItemId, 
+        int? quantity, decimal? unitPrice, [FromServices] IMediator mediator)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null)
+                return Json(new { success = false, message = "Order item not found" });
+
+            bool updated = false;
+
+            if (quantity.HasValue && quantity.Value > 0)
+            {
+                orderItem.Quantity = quantity.Value;
+                orderItem.OpenQty = quantity.Value;
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+                updated = true;
+            }
+
+            if (unitPrice.HasValue && unitPrice.Value >= 0)
+            {
+                orderItem.UnitPriceInclTax = (double)unitPrice.Value;
+                orderItem.UnitPriceExclTax = (double)unitPrice.Value; // Simplified - should calculate based on tax
+                orderItem.PriceInclTax = Math.Round(orderItem.UnitPriceInclTax * orderItem.Quantity, 2);
+                orderItem.PriceExclTax = Math.Round(orderItem.UnitPriceExclTax * orderItem.Quantity, 2);
+                updated = true;
+            }
+
+            if (updated)
+            {
+                // Use UpdateOrderItemCommand to ensure proper inventory management
+                await mediator.Send(new UpdateOrderItemCommand { Order = order, OrderItem = orderItem });
+                
+                // If order was previously verified, mark for reverification
+                if (order.IsVerifiedOrder)
+                {
+                    order.NeedsReverification = true;
+                    order.IsVerifiedOrder = false;
+                    order.UpdatedOnUtc = DateTime.UtcNow;
+                    await orderService.UpdateOrder(order);
+                    
+                    // Add order note for audit trail
+                    var orderNote = new OrderNote
+                    {
+                        Note = "Order moved to reverification queue due to item modification",
+                        DisplayToCustomer = false,
+                        CreatedOnUtc = DateTime.UtcNow,
+                        OrderId = order.Id
+                    };
+                    await orderService.InsertOrderNote(orderNote);
+                }
+                
+                return Json(new { success = true, message = "Order item updated successfully" });
+            }
+
+            return Json(new { success = false, message = "No changes to update" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error updating order item: " + ex.Message });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> DeleteOrderItemInline(string orderId, string orderItemId, [FromServices] IShipmentService shipmentService)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null)
+                return Json(new { success = false, message = "Order item not found" });
+
+            var result = await mediator.Send(new DeleteOrderItemCommand { Order = order, OrderItem = orderItem });
+            if (result.error)
+                return Json(new { success = false, message = result.message });
+            
+            // If order was previously verified, mark for reverification
+            if (order.IsVerifiedOrder)
+            {
+                // Delete all shipments before reverification
+                await DeleteOrderShipmentsForReverification(order, shipmentService);
+                
+                order.NeedsReverification = true;
+                order.IsVerifiedOrder = false;
+                order.UpdatedOnUtc = DateTime.UtcNow;
+                await orderService.UpdateOrder(order);
+                
+                // Add order note for audit trail
+                var orderNote = new OrderNote
+                {
+                    Note = "Order moved to reverification queue due to item deletion",
+                    DisplayToCustomer = false,
+                    CreatedOnUtc = DateTime.UtcNow,
+                    OrderId = order.Id
+                };
+                await orderService.InsertOrderNote(orderNote);
+            }
+            
+            return Json(new { success = true, message = "Order item deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error deleting order item: " + ex.Message });
+        }
+    }
 
     #endregion
 
@@ -936,8 +3092,31 @@ public class OrderController(
 
         if (ModelState.IsValid)
         {
-            var customAttributes =
-                await model.Address.ParseCustomAddressAttributes(addressAttributeParser, addressAttributeService);
+            var customAttributes = new List<CustomAttribute>();
+            
+            // Get form values for custom attributes
+            foreach (var attribute in await addressAttributeService.GetAllAddressAttributes())
+            {
+                string controlId = $"attributes[{attribute.Id}]";
+                var attributeValue = Request.Form[controlId].ToString();
+                
+                if (!string.IsNullOrEmpty(attributeValue))
+                {
+                    if (attribute.AttributeControlTypeId == (int)AttributeControlType.Checkboxes)
+                    {
+                        foreach (var item in attributeValue.Split(','))
+                        {
+                            if (!string.IsNullOrEmpty(item))
+                                customAttributes = addressAttributeParser.AddAddressAttribute(customAttributes, attribute, item).ToList();
+                        }
+                    }
+                    else
+                    {
+                        customAttributes = addressAttributeParser.AddAddressAttribute(customAttributes, attribute, attributeValue).ToList();
+                    }
+                }
+            }
+            
             await orderViewModelService.UpdateOrderAddress(order, address, model, customAttributes);
             return RedirectToAction("AddressEdit",
                 new { addressId = model.Address.Id, orderId = model.OrderId, model.BillingAddress });
@@ -946,6 +3125,361 @@ public class OrderController(
         //If we got this far, something failed, redisplay form
         model = await orderViewModelService.PrepareOrderAddressModel(order, address);
         return View(model);
+    }
+
+    #endregion
+
+    #region Fulfillment
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpGet]
+    public async Task<IActionResult> GetTargetDeliveryDate(string orderId)
+    {
+        if (string.IsNullOrEmpty(orderId))
+            return Json(new { success = false });
+            
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+            
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false });
+            
+        if (order.TargetDeliveryDate.HasValue)
+        {
+            // Return the date directly without any adjustments
+            string formattedDate = order.TargetDeliveryDate.Value.ToString("yyyy-MM-dd");
+            
+            // Debug info
+            System.Diagnostics.Debug.WriteLine($"Target delivery date from DB: {order.TargetDeliveryDate.Value}");
+            System.Diagnostics.Debug.WriteLine($"Formatted date for display: {formattedDate}");
+            
+            return Json(new { success = true, value = formattedDate });
+        }
+        
+        return Json(new { success = false });
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SaveTargetDeliveryDate(string orderId, string date)
+    {
+        if (string.IsNullOrEmpty(orderId))
+            return Json(new { success = false, error = "Missing required parameters" });
+            
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, error = "Order not found" });
+            
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, error = "Access denied" });
+        
+        // Update target delivery date
+        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+        {
+            // Store the date as is without adjustments
+            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            
+            // Debug info
+            System.Diagnostics.Debug.WriteLine($"Saving date from input: {date}");
+            System.Diagnostics.Debug.WriteLine($"Parsed date: {parsedDate}");
+            System.Diagnostics.Debug.WriteLine($"Saved date to DB: {order.TargetDeliveryDate}");
+        }
+        else
+        {
+            order.TargetDeliveryDate = null;
+        }
+        
+        await orderService.UpdateOrder(order);
+        
+        return Json(new { success = true });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpGet]
+    public async Task<IActionResult> GetRequestedShipmentDate(string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { success = false });
+
+        if (order.RequestedShipmentDate.HasValue)
+        {
+            string formattedDate = order.RequestedShipmentDate.Value.ToString("yyyy-MM-dd");
+            return Json(new { success = true, value = formattedDate });
+        }
+        return Json(new { success = false });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> SaveRequestedShipmentDate(string orderId, string date)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { success = false });
+
+        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+        {
+            order.RequestedShipmentDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+        }
+        else
+        {
+            order.RequestedShipmentDate = null;
+        }
+
+        await orderService.UpdateOrder(order);
+
+        return Json(new { success = true });
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetProductSavings(string productId, double currentPrice,
+        string warehouseId = null,
+        string attributeValueId = null,
+        [FromServices] IProductService productService = null,
+        [FromServices] IWarehouseService warehouseService = null)
+    {
+        try
+        {
+            var product = await productService.GetProductById(productId);
+            if (product == null)
+                return Json(new { hasSavings = false });
+
+            // Get standard price - use attribute value's overridden price if specified
+            var standardPrice = product.Price;
+
+            if (!string.IsNullOrEmpty(attributeValueId) && product.ProductAttributeMappings != null)
+            {
+                // Find the attribute value in the product's mappings
+                foreach (var mapping in product.ProductAttributeMappings)
+                {
+                    var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == attributeValueId);
+                    if (attributeValue != null)
+                    {
+                        // Use overridden price if it exists, otherwise fall back to product price
+                        if (attributeValue.OverriddenPrice.HasValue && attributeValue.OverriddenPrice.Value > 0)
+                        {
+                            standardPrice = attributeValue.OverriddenPrice.Value;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Get inventory and warehouse information
+            var stockQuantity = product.StockQuantity;
+
+            // Get warehouse-specific information
+            string warehouseName = null;
+            if (product.ProductWarehouseInventory?.Any() == true)
+            {
+                // If specific warehouse ID provided, use that warehouse's inventory
+                ProductWarehouseInventory targetInventory = null;
+                if (!string.IsNullOrEmpty(warehouseId))
+                {
+                    targetInventory = product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouseId);
+                }
+
+                // Fall back to warehouse with highest stock if no specific warehouse or not found
+                if (targetInventory == null)
+                {
+                    targetInventory = product.ProductWarehouseInventory.OrderByDescending(x => x.StockQuantity).First();
+                }
+
+                var warehouse = await warehouseService.GetWarehouseById(targetInventory.WarehouseId);
+                if (warehouse != null)
+                {
+                    warehouseName = warehouse.Name;
+                    stockQuantity = targetInventory.StockQuantity; // Use warehouse-specific stock
+                }
+            }
+
+            // If no warehouse inventory, try to get default warehouse for the product
+            if (string.IsNullOrEmpty(warehouseName))
+            {
+                var allWarehouses = await warehouseService.GetAllWarehouses();
+                var defaultWarehouse = allWarehouses.FirstOrDefault();
+                if (defaultWarehouse != null)
+                {
+                    warehouseName = defaultWarehouse.Name;
+                }
+            }
+
+            // Only show savings when current price is lower than standard price
+            if (currentPrice < standardPrice && (standardPrice - currentPrice) > 0.01)
+            {
+                var savings = standardPrice - currentPrice;
+                return Json(new {
+                    hasSavings = true,
+                    standardPrice = standardPrice,
+                    currentPrice = currentPrice,
+                    savings = savings,
+                    stockQuantity = stockQuantity,
+                    warehouseName = warehouseName
+                });
+            }
+
+            return Json(new {
+                hasSavings = false,
+                stockQuantity = stockQuantity,
+                warehouseName = warehouseName
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { hasSavings = false, error = ex.Message });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> CreateFulfillmentShipment(string orderId, string orderItemIds, string quantities, string targetDeliveryDate,
+        [FromServices] IShipmentService shipmentService)
+    {
+        if (string.IsNullOrEmpty(orderItemIds))
+            return Json(new { success = false, error = "No items selected" });
+
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, error = "Order not found" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, error = "Access denied" });
+        
+        // Store target delivery date in the order
+        if (!string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var parsedDate))
+        {
+            // Store the date as is without adjustments
+            order.TargetDeliveryDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            await orderService.UpdateOrder(order);
+            
+            // Debug info
+            System.Diagnostics.Debug.WriteLine($"Create Shipment - Date from input: {targetDeliveryDate}");
+            System.Diagnostics.Debug.WriteLine($"Create Shipment - Parsed date: {parsedDate}");
+            System.Diagnostics.Debug.WriteLine($"Create Shipment - Saved to DB: {order.TargetDeliveryDate}");
+        }
+
+        var selectedOrderItemIds = orderItemIds.Split(',');
+        
+        // Parse quantities from JSON
+        Dictionary<string, string> quantityMap = new Dictionary<string, string>();
+        if (!string.IsNullOrEmpty(quantities))
+        {
+            try
+            {
+                quantityMap = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(quantities);
+            }
+            catch
+            {
+                // If parsing fails, we'll use default quantities
+            }
+        }
+        
+        // Create a new shipment
+        try
+        {
+            var shipment = new Shipment
+            {
+                OrderId = orderId,
+                StoreId = order.StoreId,
+                VendorId = contextAccessor.WorkContext.CurrentVendor?.Id,
+                SeId = contextAccessor.WorkContext.CurrentCustomer.SeId,
+                TrackingNumber = "",
+                TotalWeight = null,
+                ShippedDateUtc = null,
+                DeliveryDateUtc = null,
+                AdminComment = "Created from Fulfillment Queue",
+                CreatedOnUtc = DateTime.UtcNow
+            };
+
+        // Add items to shipment
+        foreach (var orderItemId in selectedOrderItemIds)
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(x => x.Id == orderItemId);
+            if (orderItem == null || orderItem.OpenQty <= 0)
+                continue;
+
+            // Get the quantity to ship from the provided quantities JSON
+            double shipQty = orderItem.OpenQty;
+            if (quantityMap.TryGetValue(orderItemId, out var qtyStr) &&
+                double.TryParse(qtyStr, out var parsedQty) &&
+                parsedQty > 0 && parsedQty <= orderItem.OpenQty)
+            {
+                shipQty = parsedQty;
+            }
+
+            var shipmentItem = new ShipmentItem
+            {
+                OrderItemId = orderItemId,
+                ProductId = orderItem.ProductId,
+                Quantity = shipQty,
+                WarehouseId = orderItem.WarehouseId,
+                Attributes = orderItem.Attributes
+            };
+
+            shipment.ShipmentItems.Add(shipmentItem);
+        }
+
+        if (!shipment.ShipmentItems.Any())
+            return Json(new { success = false, error = "No valid items to ship" });
+
+        // Insert shipment
+        await shipmentService.InsertShipment(shipment);
+
+        // Add a note
+        await orderService.InsertOrderNote(new OrderNote
+        {
+            Note = !string.IsNullOrEmpty(targetDeliveryDate) && DateTime.TryParse(targetDeliveryDate, out var noteDate) ? 
+                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment Queue with target delivery date: {noteDate:yyyy-MM-dd}" :
+                $"Shipment #{shipment.ShipmentNumber} has been created from Fulfillment Queue",
+            DisplayToCustomer = false,
+            OrderId = order.Id,
+            CreatedOnUtc = DateTime.UtcNow
+        });
+        
+        return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            // Log the exception
+            System.Diagnostics.Debug.WriteLine($"Error creating fulfillment shipment: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            
+            return Json(new { success = false, error = $"Error creating shipment: {ex.Message}" });
+        }
+    }
+
+    #endregion
+
+    #region User Fields
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpGet]
+    public async Task<IActionResult> UserFieldsTab(string id)
+    {
+        var order = await orderService.GetOrderById(id);
+        if (order == null || await CheckSalesManager(order))
+            return Content("Order not found");
+            
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Content("Access denied");
+            
+        var model = new OrderModel();
+        await orderViewModelService.PrepareOrderDetailsModel(model, order);
+        
+        return View("Partials/_UserFieldsTab", model);
     }
 
     #endregion
@@ -973,7 +3507,7 @@ public class OrderController(
 
     [PermissionAuthorizeAction(PermissionActionName.Edit)]
     public async Task<IActionResult> OrderNoteAdd(string orderId, string downloadId, bool displayToCustomer,
-        string message)
+        bool includeOnInvoice, string message)
     {
         var order = await orderService.GetOrderById(orderId);
         if (order == null || await CheckSalesManager(order))
@@ -981,7 +3515,7 @@ public class OrderController(
 
         if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
             order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { Result = false });
-        await orderViewModelService.InsertOrderNote(order, downloadId, displayToCustomer, message);
+        await orderViewModelService.InsertOrderNote(order, downloadId, displayToCustomer, includeOnInvoice, message);
 
         return Json(new { Result = true });
     }
@@ -1002,5 +3536,277 @@ public class OrderController(
         return new JsonResult("");
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> OrderNoteUpdate(string id, string orderId, bool? displayToCustomer, bool? includeOnInvoice)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { Result = false });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId) return Json(new { Result = false });
+
+        await orderViewModelService.UpdateOrderNote(order, id, displayToCustomer, includeOnInvoice);
+
+        return Json(new { Result = true });
+    }
+
+    #endregion
+    
+    #region Impersonated Orders
+
+    [PermissionAuthorizeAction(PermissionActionName.List)]
+    [HttpPost]
+    public async Task<IActionResult> RecentImpersonatedOrdersList(DataSourceRequest command)
+    {
+        if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
+            return Json(new { Data = new List<OrderModel>(), Total = 0 });
+
+        // We display only orders that were impersonated by the current user
+        var model = new OrderListModel
+        {
+            // Filter by the currently logged in user as the impersonator
+            ImpersonatedByEmployeeId = contextAccessor.WorkContext.CurrentCustomer.Id,
+            StartDate = DateTime.UtcNow.AddDays(-30) // Show orders from the last 30 days
+        };
+
+        var (orderModels, totalCount) =
+            await orderViewModelService.PrepareOrderModel(model, command.Page, command.PageSize);
+
+        var gridModel = new DataSourceResult
+        {
+            Data = orderModels.ToList(),
+            Total = totalCount
+        };
+
+        return Json(gridModel);
+    }
+
+    #endregion
+    
+    #region Export CSV
+    
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportCsv(OrderListModel model)
+    {
+        // Load orders using existing service
+        var orders = await orderViewModelService.PrepareOrders(model);
+        
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer))
+            orders = orders.Where(x => x.StoreId == contextAccessor.WorkContext.CurrentCustomer.StaffStoreId).ToList();
+        
+        // Build CSV content
+        var csv = new StringBuilder();
+        
+        // Add CSV header
+        csv.AppendLine("OrderNumber,CustomerName,OrderDate,OrderTotal,PaymentStatus");
+        
+        // Add order data
+        foreach (var order in orders)
+        {
+            var customerName = $"{order.FirstName} {order.LastName}".Trim();
+            
+            if (string.IsNullOrEmpty(customerName))
+                customerName = order.CustomerEmail ?? "Guest";
+            
+            // Get payment status text
+            string paymentStatus = order.PaymentStatusId switch
+            {
+                PaymentStatus.Paid => "Paid",
+                PaymentStatus.Pending => "Pending",
+                PaymentStatus.PartiallyPaid => "Partially Paid",
+                PaymentStatus.PartiallyRefunded => "Partially Refunded",
+                PaymentStatus.Refunded => "Refunded",
+                PaymentStatus.Voided => "Voided",
+                _ => "Unknown"
+            };
+            
+            var line = new List<string>
+            {
+                EscapeCsvField(order.OrderNumber.ToString()),
+                EscapeCsvField(customerName),
+                EscapeCsvField(order.CreatedOnUtc.ToString("yyyy-MM-dd")),
+                EscapeCsvField(order.OrderTotal.ToString("0.00", CultureInfo.InvariantCulture)),
+                EscapeCsvField(paymentStatus)
+            };
+            
+            csv.AppendLine(string.Join(",", line));
+        }
+        
+        // Return CSV file
+        var fileName = $"orders_{DateTime.Now:yyyy-MM-dd}.csv";
+        return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", fileName);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetProductSearchComponent(string orderId)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Json(new { success = false, message = "Order not found or access denied" });
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Json(new { success = false, message = "Access denied" });
+
+        try
+        {
+            // Return the ViewComponent directly - this will return HTML content
+            return ViewComponent("ProductSearchAdd", new { contextId = orderId, contextType = "order" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new {
+                success = false,
+                message = "Error loading component: " + ex.Message
+            });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetOrderProductsTableComponent(string orderId, string contextId = null, bool showAddProducts = false, bool showSummary = false, bool collapsible = false)
+    {
+        var order = await orderService.GetOrderById(orderId);
+        if (order == null || await CheckSalesManager(order))
+            return Content("<div class='alert alert-danger'>Order not found or access denied</div>");
+
+        if (await groupService.IsStaff(contextAccessor.WorkContext.CurrentCustomer) &&
+            order.StoreId != contextAccessor.WorkContext.CurrentCustomer.StaffStoreId)
+            return Content("<div class='alert alert-danger'>Access denied</div>");
+
+        try
+        {
+            // Prepare the order model
+            var model = new OrderModel();
+            await orderViewModelService.PrepareOrderDetailsModel(model, order);
+
+            // Return the OrderProductsTable ViewComponent as HTML
+            return ViewComponent("OrderProductsTable", new {
+                model = model,
+                showAddProducts = showAddProducts,
+                showSummary = showSummary,
+                collapsible = collapsible,
+                contextId = contextId
+            });
+        }
+        catch (Exception ex)
+        {
+            return Content($"<div class='alert alert-danger'>Error loading component: {ex.Message}</div>");
+        }
+    }
+
+    /// <summary>
+    /// Deletes all shipments associated with an order when it's sent to reverification
+    /// and resets OpenQty values to allow re-fulfillment
+    /// </summary>
+    /// <param name="order">The order whose shipments should be deleted</param>
+    /// <param name="shipmentService">The shipment service</param>
+    private async Task DeleteOrderShipmentsForReverification(Order order, IShipmentService shipmentService)
+    {
+        // Get all shipments for this order
+        var shipments = await shipmentService.GetShipmentsByOrder(order.Id);
+        
+        if (!shipments.Any()) return;
+        
+        var totalItemsRestored = 0;
+        
+        // Delete each shipment and restore OpenQty values
+        foreach (var shipment in shipments)
+        {
+            // Before deleting, restore OpenQty for each shipment item
+            foreach (var shipmentItem in shipment.ShipmentItems)
+            {
+                var orderItem = order.OrderItems.FirstOrDefault(oi => oi.Id == shipmentItem.OrderItemId);
+                if (orderItem != null)
+                {
+                    orderItem.OpenQty += shipmentItem.Quantity;
+                    orderItem.ShipQty -= shipmentItem.Quantity;
+                    
+                    // Ensure OpenQty doesn't exceed original Quantity
+                    if (orderItem.OpenQty > orderItem.Quantity)
+                        orderItem.OpenQty = orderItem.Quantity;
+                    
+                    // Ensure ShipQty doesn't go below 0
+                    if (orderItem.ShipQty < 0)
+                        orderItem.ShipQty = 0;
+                    
+                    // Update status based on OpenQty
+                    orderItem.Status = orderItem.OpenQty > 0 ? OrderItemStatus.Open : OrderItemStatus.Close;
+                    
+                    totalItemsRestored++;
+                }
+            }
+            
+            await shipmentService.DeleteShipment(shipment);
+            
+            // Add order note for each deleted shipment
+            await orderService.InsertOrderNote(new OrderNote
+            {
+                Note = $"Shipment #{shipment.ShipmentNumber} deleted due to order reverification",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            });
+        }
+        
+        // Safety check: Ensure all order items have consistent OpenQty values
+        foreach (var orderItem in order.OrderItems)
+        {
+            // If an item shows as completely fulfilled but should be open, reset it
+            if (orderItem.OpenQty == 0 && orderItem.ShipQty < orderItem.Quantity)
+            {
+                orderItem.OpenQty = orderItem.Quantity - orderItem.ShipQty;
+                orderItem.Status = OrderItemStatus.Open;
+            }
+        }
+        
+        // Update the order to persist OpenQty changes
+        await orderService.UpdateOrder(order);
+        
+        // Add summary order notes
+        if (totalItemsRestored > 0)
+        {
+            await orderService.InsertOrderNote(new OrderNote
+            {
+                Note = $"Restored {totalItemsRestored} order items to unfulfilled state for re-fulfillment",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            });
+        }
+        
+        if (shipments.Count() > 1)
+        {
+            await orderService.InsertOrderNote(new OrderNote
+            {
+                Note = $"Total of {shipments.Count()} shipments deleted due to order reverification",
+                DisplayToCustomer = false,
+                CreatedOnUtc = DateTime.UtcNow,
+                OrderId = order.Id
+            });
+        }
+    }
+
+    private string EscapeCsvField(string field)
+    {
+        if (string.IsNullOrEmpty(field))
+            return string.Empty;
+            
+        // Escape quotes and wrap field in quotes if it contains comma, quotes or newlines
+        bool needsQuotes = field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r');
+        if (needsQuotes)
+        {
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+        
+        return field;
+    }
+    
+    #endregion
+    
     #endregion
 }

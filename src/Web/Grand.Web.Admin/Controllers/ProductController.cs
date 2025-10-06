@@ -3,6 +3,7 @@ using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
+using Grand.Business.Core.Interfaces.Common.Pdf;
 using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Interfaces.Storage;
@@ -16,6 +17,8 @@ using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Catalog;
 using Grand.Web.Admin.Models.Orders;
+using Grand.Web.Admin.Services;
+using Grand.Business.Catalog.Models;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Extensions;
 using Grand.Web.Common.Filters;
@@ -1492,6 +1495,55 @@ public class ProductController : BaseAdminController
         return File(bytes, "text/xls", "products.xlsx");
     }
 
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportExcelAllWithCombinations(ProductListModel model,
+        [FromServices] IExportManager<ProductCombinationExportModel> exportManager,
+        [FromServices] ProductCombinationExportService combinationExportService)
+    {
+        var products = await _productViewModelService.PrepareProducts(model);
+        try
+        {
+            var flattenedModels = await combinationExportService.TransformProductsForExport(products);
+            var bytes = await exportManager.Export(flattenedModels);
+            return File(bytes, "text/xls", "products-with-combinations.xlsx");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportExcelSelectedWithCombinations(string selectedIds,
+        [FromServices] IExportManager<ProductCombinationExportModel> exportManager,
+        [FromServices] ProductCombinationExportService combinationExportService)
+    {
+        var products = new List<Product>();
+        if (selectedIds != null)
+        {
+            var ids = selectedIds
+                .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x)
+                .ToArray();
+            products.AddRange(await _productService.GetProductsByIds(ids, true));
+        }
+
+        try
+        {
+            var flattenedModels = await combinationExportService.TransformProductsForExport(products);
+            var bytes = await exportManager.Export(flattenedModels);
+            return File(bytes, "text/xls", "products-with-combinations.xlsx");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
+    }
+
     [PermissionAuthorizeAction(PermissionActionName.Import)]
     [HttpPost]
     public async Task<IActionResult> ImportExcel(IFormFile importexcelfile,
@@ -1511,6 +1563,30 @@ public class ProductController : BaseAdminController
 
             Success(_translationService.GetResource("Admin.Catalog.Products.Imported"));
             return RedirectToAction("List");
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+            return RedirectToAction("List");
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Export)]
+    [HttpPost]
+    public async Task<IActionResult> ExportProductsPdf(ProductListModel model,
+        [FromServices] IPdfService pdfService)
+    {
+        var allProducts = await _productViewModelService.PrepareProducts(model);
+        // Filter out products hidden from catalog and only include simple products
+        var products = allProducts
+            .Where(p => !p.HideFromCatalog && p.ProductTypeId == ProductType.SimpleProduct)
+            .ToList();
+        try
+        {
+            var fileName = $"products_catalog_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";
+            using var stream = new MemoryStream();
+            await pdfService.PrintProductCatalogToPdf(stream, products);
+            return File(stream.ToArray(), "application/pdf", fileName);
         }
         catch (Exception exc)
         {
@@ -2234,9 +2310,11 @@ public class ProductController : BaseAdminController
         if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
         {
             var pr = await _productService.GetProductById(productId);
+            var prevStockQuantity = pr.StockQuantity;
             pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            await _inventoryManageService.UpdateStockProduct(pr, false);
+            var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+            await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId);
         }
 
         return new JsonResult("");
@@ -2311,9 +2389,14 @@ public class ProductController : BaseAdminController
 
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
+                var prevStockQuantity = product.StockQuantity;
                 product.StockQuantity = 0;
                 product.ReservedQuantity = 0;
-                await _inventoryManageService.UpdateStockProduct(product, false);
+                var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+                
+                // Create an inventory journal entry for the net change when clearing combinations
+                // This is a legitimate inventory operation to track, unlike generating combinations
+                await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId, null);
             }
 
             return Json(new { Success = true });
@@ -2698,5 +2781,50 @@ public class ProductController : BaseAdminController
 
     #endregion
 
+    #region Inventory Journal
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    public async Task<IActionResult> InventoryJournalTab(string productId)
+    {
+        var product = await _productService.GetProductById(productId);
+        if (product == null)
+            return RedirectToAction("List");
+            
+        var model = product.ToModel(_dateTimeService);
+        return View("Partials/_InventoryJournalTab", model);
+    }
+
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> InventoryJournalList(DataSourceRequest command, string productId, string warehouseId)
+    {
+        if (!await _permissionService.Authorize(PermissionSystemName.Products))
+            return Content("Access denied");
+
+        var journals = await _inventoryManageService.GetInventoryJournal(productId, warehouseId, command.Page - 1, command.PageSize);
+        
+        var gridModel = new DataSourceResult
+        {
+            Data = journals.Select(x => new InventoryJournalModel
+            {
+                Id = x.Id,
+                ObjectId = x.ObjectId,
+                ObjectType = x.ObjectType,
+                PositionId = x.PositionId,
+                CreateDateUtc = x.CreateDateUtc,
+                ProductId = x.ProductId,
+                WarehouseId = x.WarehouseId,
+                InQty = x.InQty,
+                OutQty = x.OutQty,
+                Comments = x.Comments,
+                Reference = x.Reference
+            }),
+            Total = journals.TotalCount
+        };
+
+        return Json(gridModel);
+    }
+
+    #endregion
     #endregion
 }

@@ -23,6 +23,19 @@ public class CustomerListModel : BaseModel
     [UIHint("MultiSelect")]
     public IList<string> SearchCustomerTagIds { get; set; } = new List<string>();
 
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.DefaultReps")]
+    public IList<SelectListItem> AvailableDefaultReps { get; set; } = new List<SelectListItem>();
+
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.DefaultReps")]
+    [UIHint("MultiSelect")]
+    public IList<string> SearchDefaultRepIds { get; set; } = new List<string>();
+
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.Cities")]
+    public IList<SelectListItem> AvailableCities { get; set; } = new List<SelectListItem>();
+
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.Cities")]
+    [UIHint("MultiSelect")]
+    public IList<string> SearchCityNames { get; set; } = new List<string>();
 
     [GrandResourceDisplayName("Admin.Customers.Customers.List.SearchEmail")]
 
@@ -60,4 +73,8 @@ public class CustomerListModel : BaseModel
     public string SearchZipPostalCode { get; set; }
 
     public bool ZipPostalCodeEnabled { get; set; }
+
+    [GrandResourceDisplayName("Admin.Customers.Customers.List.SearchAddress")]
+
+    public string SearchAddressKeyword { get; set; }
 }

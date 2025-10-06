@@ -39,9 +39,23 @@ public class OrderModel : BaseEntityModel
     public string CustomerEmail { get; set; }
 
     public string CustomerFullName { get; set; }
+    
+    public string CustomerCompany { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.CustomerGroups")]
+    public string CustomerGroups { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.Warehouses")]
+    public string Warehouses { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomerIP")]
     public string CustomerIp { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.ImpersonatedByEmployee")]
+    public string ImpersonatedByEmployeeId { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.ImpersonatedByEmployee")]
+    public string ImpersonatedByEmployeeName { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.Fields.CustomValues")]
     public Dictionary<string, object> CustomValues { get; set; } = new();
@@ -193,9 +207,18 @@ public class OrderModel : BaseEntityModel
 
     [GrandResourceDisplayName("Admin.Orders.Fields.ShippingAddress")]
     public AddressModel ShippingAddress { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.ShippingAddress.Address1")]
+    public string ShippingAddressString { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.Fields.ShippingMethod")]
     public string ShippingMethod { get; set; }
+
+    [GrandResourceDisplayName("Admin.Orders.Fulfillment.TargetDeliveryDate")]
+    public DateTime? TargetDeliveryDate { get; set; }
+
+    [GrandResourceDisplayName("Admin.Orders.Fulfillment.RequestedShipmentDate")]
+    public DateTime? RequestedShipmentDate { get; set; }
 
     public string ShippingAdditionDescription { get; set; }
     public string ShippingAddressGoogleMapsUrl { get; set; }
@@ -218,6 +241,10 @@ public class OrderModel : BaseEntityModel
     //creation date
     [GrandResourceDisplayName("Admin.Orders.Fields.CreatedOn")]
     public DateTime CreatedOn { get; set; }
+    
+    //update date
+    [GrandResourceDisplayName("Admin.Orders.Fields.UpdatedOn")]
+    public DateTime? UpdatedOn { get; set; }
 
     //checkout attributes
     public string CheckoutAttributeInfo { get; set; }
@@ -226,6 +253,9 @@ public class OrderModel : BaseEntityModel
     //order notes
     [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.DisplayToCustomer")]
     public bool AddOrderNoteDisplayToCustomer { get; set; }
+
+    [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.IncludeOnInvoice")]
+    public bool AddOrderNoteIncludeOnInvoice { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.Note")]
 
@@ -246,6 +276,7 @@ public class OrderModel : BaseEntityModel
 
     //workflow info
     public bool CanCancelOrder { get; set; }
+    public bool IsVerifiedOrder { get; set; }
 
 
     //order's tags
@@ -261,6 +292,9 @@ public class OrderModel : BaseEntityModel
         public string VendorName { get; set; }
         public string Sku { get; set; }
 
+        public string WarehouseId { get; set; }
+        public string WarehouseName { get; set; }
+
         public string PictureThumbnailUrl { get; set; }
 
         public string UnitPriceInclTax { get; set; }
@@ -268,11 +302,11 @@ public class OrderModel : BaseEntityModel
         public double UnitPriceInclTaxValue { get; set; }
         public double UnitPriceExclTaxValue { get; set; }
 
-        public int Quantity { get; set; }
-        public int OpenQty { get; set; }
-        public int CancelQty { get; set; }
-        public int ShipQty { get; set; }
-        public int ReturnQty { get; set; }
+        public double Quantity { get; set; }
+        public double OpenQty { get; set; }
+        public double CancelQty { get; set; }
+        public double ShipQty { get; set; }
+        public double ReturnQty { get; set; }
 
         public string DiscountInclTax { get; set; }
         public string DiscountExclTax { get; set; }
@@ -298,6 +332,21 @@ public class OrderModel : BaseEntityModel
 
         public string Commission { get; set; }
         public double CommissionValue { get; set; }
+
+        public double CaseSize { get; set; }
+
+        public bool HasWeightBasedAttributes { get; set; }
+        public List<WeightAttributeOption> WeightOptions { get; set; } = new List<WeightAttributeOption>();
+        public string SelectedWeightCombinationId { get; set; }
+    }
+
+    public class WeightAttributeOption
+    {
+        public string CombinationId { get; set; }
+        public string Name { get; set; }
+        public double Price { get; set; }
+        public string Sku { get; set; }
+        public double ConversionRatio { get; set; }
     }
 
     public class TaxRate : BaseModel
@@ -335,6 +384,9 @@ public class OrderModel : BaseEntityModel
 
         [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.CreatedByCustomer")]
         public bool CreatedByCustomer { get; set; }
+
+        [GrandResourceDisplayName("Admin.Orders.OrderNotes.Fields.IncludeOnInvoice")]
+        public bool IncludeOnInvoice { get; set; }
     }
 
     public class UploadLicenseModel : BaseModel
@@ -371,6 +423,10 @@ public class OrderModel : BaseEntityModel
 
         public string OrderId { get; set; }
         public int OrderNumber { get; set; }
+        
+        // For inline search pagination
+        public int? page { get; set; }
+        public int? pageSize { get; set; }
 
         #region Nested classes
 

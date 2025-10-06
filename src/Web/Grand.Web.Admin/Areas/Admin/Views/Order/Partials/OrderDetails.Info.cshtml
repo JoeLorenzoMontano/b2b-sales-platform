@@ -1,545 +1,1667 @@
-﻿@using System.Text.Encodings.Web
+@using System.Text.Encodings.Web
 @using Grand.Business.Core.Interfaces.Checkout.Orders
+@using Grand.Business.Core.Interfaces.Customers
 @using Grand.Domain.Payments
 @using Grand.Domain.Tax
 @using Constants = Grand.SharedUIResources.Constants
 @model OrderModel
 @inject IOrderTagService orderTagService
+@inject ISalesEmployeeService _salesEmployeeService
 
+@{
+    var salesEmployees = await _salesEmployeeService.GetAll();
+}
 
 <link rel="stylesheet" type="text/css" asp-src="@(Constants.WwwRoot)/administration/tagEditor/jquery.tag-editor.css"/>
 <script asp-location="Footer" asp-src="@(Constants.WwwRoot)/administration/tagEditor/jquery.tag-editor.min.js"></script>
 <script asp-location="Footer" asp-src="@(Constants.WwwRoot)/administration/tagEditor/jquery.caret.min.js"></script>
 
 @{
-    //tags
-    var orderTags = await orderTagService.GetAllOrderTags();
-    var orderTagsSB = new StringBuilder();
-    orderTagsSB.Append("var initialOrderTags = [");
-    for (var i = 0; i < orderTags.Count; i++)
+    var orderTagsSB = new System.Text.StringBuilder();
+    if (Model.OrderTags?.Any() == true)
     {
-        var tag = orderTags[i];
-        orderTagsSB.Append("'");
-        orderTagsSB.Append(JavaScriptEncoder.Default.Encode(tag.Name));
-        orderTagsSB.Append("'");
-        if (i != orderTags.Count - 1)
+        orderTagsSB.AppendLine("var initialOrderTags = [");
+        foreach (var tag in Model.OrderTags)
         {
-            orderTagsSB.Append(",");
+            var safeTag = tag.ToString().Replace("'", "\\'");
+            orderTagsSB.AppendLine($"'{safeTag}',");
         }
+        orderTagsSB.AppendLine("];");
     }
-
-    orderTagsSB.Append("]");
+    else
+    {
+        orderTagsSB.AppendLine("var initialOrderTags = [];");
+    }
 }
+
+<!-- Clean 3-Column Bootstrap Layout -->
+<div class="container-fluid">
+    <div class="row">
+        <!-- Seller Section -->
+        <div class="col-lg-4 col-md-6 col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Seller</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>@Model.StoreName</h6>
+                    </div>
+                    
+                    <!-- Sales Employee -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Customer Default Rep:</strong></label>
+                        <select name="salesEmployeeId" class="form-control" id="salesEmployeeIdSelect">
+                            <option value="">Select</option>
+                            @foreach (var salesEmployee in salesEmployees)
+                            {
+                                if (salesEmployee.Id == Model.SalesEmployeeId)
+                                {
+                                    <option value="@salesEmployee.Id" selected="selected">@salesEmployee.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@salesEmployee.Id">@salesEmployee.Name</option>
+                                }
+                            }
+                        </select>
+                        <button type="button" class="btn btn-sm btn-success mt-2" id="submitSalesEmployee">Save</button>
+                    </div>
+                    
+                    <!-- Impersonation -->
+                    @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeId))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Impersonated By:</strong></label>
+                            <div>
+                                @if (!string.IsNullOrEmpty(Model.ImpersonatedByEmployeeName))
+                                {
+                                    <a href="@Url.Action("Edit", "Customer", new { id = Model.ImpersonatedByEmployeeId })" class="text-primary">@Model.ImpersonatedByEmployeeName</a>
+                                }
+                                else
+                                {
+                                    <span>@Model.ImpersonatedByEmployeeId</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Payment Method -->
+                    <div class="mb-2">
+                        <label class="form-label"><strong>Payment Method:</strong></label>
+                        <div>@Model.PaymentMethod</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Buyer & Delivery Section -->
+        <div class="col-lg-4 col-md-6 col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Buyer & Delivery</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        @Html.ActionLink(Model.CustomerInfo, "Edit", "Customer", new { id = Model.CustomerId }, new { @class = "text-primary" })
+                    </div>
+                    
+                    
+                    @if (!string.IsNullOrEmpty(Model.VatNumber))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label"><strong>VAT Number:</strong></label>
+                            <div>@Model.VatNumber</div>
+                        </div>
+                    }
+                    
+                    <!-- Payment Status with Quick Actions -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Payment Status:</strong></label>
+                        <div>
+                            @{
+                                string labelStatus = "secondary";
+                                switch (Model.PaymentStatus.ToLower())
+                                {
+                                    case "paid":
+                                        labelStatus = "success";
+                                        break;
+                                    case "pending":
+                                        labelStatus = "warning";
+                                        break;
+                                    case "cancelled":
+                                    case "refunded":
+                                        labelStatus = "danger";
+                                        break;
+                                }
+                            }
+                            @if (string.IsNullOrEmpty(Model.PaymentTransactionId))
+                            {
+                                <a class="btn btn-primary btn-sm" href="@Url.Action("CreatePaymentTransaction", "Order", new { id = Model.Id })">
+                                    <i class="fa fa-plus"></i> Create Payment
+                                </a>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <a class="btn btn-@labelStatus btn-sm" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId })">
+                                        @Model.PaymentStatus
+                                    </a>
+                                    @if (Model.PaymentStatus.ToLower() == "pending")
+                                    {
+                                        <button type="button" class="btn btn-success btn-sm" onclick="markPaymentAsPaid('@Model.Id')">
+                                            <i class="fa fa-check"></i> Mark as Paid
+                                        </button>
+                                    }
+                                </div>
+                                <div class="small text-muted">
+                                    <strong>Method:</strong> @Model.PaymentMethod
+                                    <a href="#" class="ms-2" onclick="changePaymentMethod('@Model.Id'); return false;">
+                                        <i class="fa fa-edit"></i> Change
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Shipping Status:</strong></label>
+                        <div>
+                            @{
+                                string shippingLabelStatus = "secondary";
+                                switch (Model.ShippingStatus.ToLower())
+                                {
+                                    case "shipped":
+                                    case "delivered":
+                                        shippingLabelStatus = "success";
+                                        break;
+                                    case "not yet shipped":
+                                    case "processing":
+                                        shippingLabelStatus = "warning";
+                                        break;
+                                    case "returned":
+                                        shippingLabelStatus = "danger";
+                                        break;
+                                }
+
+                                // Determine shipment tab index (Info=0, Addresses=1, Shipments=2 if shippable, otherwise Products=2)
+                                var shipmentTabIndex = Model.IsShippable ? 2 : -1;
+                            }
+                            @if (Model.IsShippable && Model.CanAddNewShipments)
+                            {
+                                <a class="btn btn-primary btn-sm" href="@Url.Action("AddShipment", "Shipment", new { orderId = Model.Id })">
+                                    <i class="fa fa-plus"></i> Create Shipment
+                                </a>
+                            }
+                            else if (Model.IsShippable)
+                            {
+                                <a class="btn btn-@shippingLabelStatus btn-sm" href="#" onclick="$('a[href=\'#tab-@shipmentTabIndex\']').click(); return false;">
+                                    @Model.ShippingStatus
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="badge badge-@shippingLabelStatus">@Model.ShippingStatus</span>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Customer Requested Shipment Date (always visible for shippable orders) -->
+                    @if (Model.IsShippable)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Customer Requested Shipment Date:</strong></label>
+                            <input type="datetime-local" class="form-control order-edit-field"
+                                   data-field-type="requestedshipmentdate"
+                                   value=""
+                                   data-original-value=""
+                                   placeholder="Customer requested shipment date"
+                                   id="customer-requested-shipment-date"/>
+                        </div>
+                    }
+
+                    <!-- Shipment Details Section -->
+                    @if (Model.IsShippable)
+                    {
+                        <div class="mb-3" id="shipment-details-section">
+                            <!-- This section will be populated by JavaScript when shipments exist -->
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Order Total:</strong></label>
+                        <div><strong>@Model.OrderTotal</strong></div>
+                    </div>
+                    
+                    <!-- Address Information -->
+                    @{
+                        var addressesAreSame = Model.BillingAddress != null && Model.ShippingAddress != null &&
+                                               Model.BillingAddress.FirstName == Model.ShippingAddress.FirstName &&
+                                               Model.BillingAddress.LastName == Model.ShippingAddress.LastName &&
+                                               Model.BillingAddress.Address1 == Model.ShippingAddress.Address1 &&
+                                               Model.BillingAddress.City == Model.ShippingAddress.City;
+                    }
+                    
+                    @if (addressesAreSame && Model.BillingAddress != null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Billing & Shipping Address:</strong></label>
+                            <div class="border p-2 bg-light">
+                                @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
+                                {
+                                    <div><strong>@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</strong></div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
+                                {
+                                    <div>@Model.BillingAddress.Company</div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.BillingAddress.Address1))
+                                {
+                                    <div>@Model.BillingAddress.Address1</div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.BillingAddress.City))
+                                {
+                                    <div>@Model.BillingAddress.City, @Model.BillingAddress.ZipPostalCode</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (Model.ShippingAddress != null)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label"><strong>Shipping Address:</strong></label>
+                                <div class="border p-2" style="background-color: #e3f2fd;">
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.FirstName) || !string.IsNullOrEmpty(Model.ShippingAddress.LastName))
+                                    {
+                                        <div><strong>@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</strong></div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.Company))
+                                    {
+                                        <div>@Model.ShippingAddress.Company</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.Address1))
+                                    {
+                                        <div>@Model.ShippingAddress.Address1</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.ShippingAddress.City))
+                                    {
+                                        <div>@Model.ShippingAddress.City, @Model.ShippingAddress.ZipPostalCode</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        
+                        @if (Model.BillingAddress != null)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label"><strong>Billing Address:</strong></label>
+                                <div class="border p-2" style="background-color: #e8f5e8;">
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.FirstName) || !string.IsNullOrEmpty(Model.BillingAddress.LastName))
+                                    {
+                                        <div><strong>@Model.BillingAddress.FirstName @Model.BillingAddress.LastName</strong></div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.Company))
+                                    {
+                                        <div>@Model.BillingAddress.Company</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.Address1))
+                                    {
+                                        <div>@Model.BillingAddress.Address1</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.BillingAddress.City))
+                                    {
+                                        <div>@Model.BillingAddress.City, @Model.BillingAddress.ZipPostalCode</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                    
+                    @if (Model.PickupAddress != null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Pickup Address:</strong></label>
+                            <div class="border p-2" style="background-color: #fff3cd;">
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.FirstName) || !string.IsNullOrEmpty(Model.PickupAddress.LastName))
+                                {
+                                    <div><strong>@Model.PickupAddress.FirstName @Model.PickupAddress.LastName</strong></div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.Company))
+                                {
+                                    <div>@Model.PickupAddress.Company</div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.Address1))
+                                {
+                                    <div>@Model.PickupAddress.Address1</div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.PickupAddress.City))
+                                {
+                                    <div>@Model.PickupAddress.City, @Model.PickupAddress.ZipPostalCode</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Information Section -->
+        <div class="col-lg-4 col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Order Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label"><strong>Order number:</strong></label>
+                            <div>@Model.OrderNumber</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label"><strong>Order status:</strong></label>
+                            <div><span class="badge badge-warning">@Model.OrderStatus</span></div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label"><strong>Order created:</strong></label>
+                            <div>@Html.DisplayFor(model => model.CreatedOn)</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label"><strong>Currency:</strong></label>
+                            <div>@Model.CurrencyCode @if (Model.CurrencyRate != 1) { <text>(@Model.CurrencyRate)</text> }</div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(Model.Code))
+                        {
+                            <div class="col-12 mb-3">
+                                <label class="form-label"><strong>Code:</strong></label>
+                                <div>@Model.Code</div>
+                            </div>
+                        }
+                        
+                        
+                        @if (!string.IsNullOrEmpty(Model.RefundedAmount))
+                        {
+                            <div class="col-12 mb-3">
+                                <label class="form-label"><strong>Refunded:</strong></label>
+                                <div>@Model.RefundedAmount</div>
+                            </div>
+                        }
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label"><strong>Profit:</strong></label>
+                            <div>@Model.Profit</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Section - Using Reusable Component -->
+    @await Component.InvokeAsync("OrderProductsTable", new { model = Model, showAddProducts = true, showSummary = true, collapsible = true })
+</div>
+
+<style>
+/* ProductSearchAdd component integration with Order Info tab - Transparent styling */
+.add-products-section {
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-products-section .x_panel {
+    margin-bottom: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.add-products-section .x_title {
+    background: transparent;
+    padding: 10px 15px;
+    margin-bottom: 0;
+}
+
+.add-products-section .x_title .caption {
+    color: white;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.add-products-section .x_content {
+    padding: 10px;
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure Bootstrap grid stays within bounds */
+.add-products-section .row {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+}
+
+.add-products-section [class*="col-"] {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Ensure form controls don't overflow */
+.add-products-section .form-control,
+.add-products-section .form-group {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Unit/Case quantity selector styling */
+.quantity-unit-case-wrapper {
+    display: inline-block;
+}
+
+.quantity-unit-case-wrapper .d-flex {
+    gap: 4px;
+}
+
+.quantity-unit-case-wrapper .quantity-display-input {
+    text-align: center;
+}
+
+.quantity-unit-case-wrapper .unit-case-selector {
+    font-size: 13px;
+    padding: 4px 8px;
+}
+
+.quantity-unit-case-wrapper small {
+    font-size: 11px;
+    text-align: center;
+}
+
+/* Product savings indicator styling */
+.savings-indicator {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.savings-indicator small {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    background-color: rgba(40, 167, 69, 0.1);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+    border-radius: 3px;
+    color: #28a745;
+}
+
+/* Dark mode adjustments for savings indicator */
+@@media (prefers-color-scheme: dark) {
+    .savings-indicator small {
+        background-color: rgba(40, 167, 69, 0.2);
+        border-color: rgba(40, 167, 69, 0.4);
+        color: #48d96e;
+    }
+}
+
+[data-theme="dark"] .savings-indicator small {
+    background-color: rgba(40, 167, 69, 0.2);
+    border-color: rgba(40, 167, 69, 0.4);
+    color: #48d96e;
+}
+</style>
 
 <script>
-        $(document).ready(function() {
-            toggleChangeOrderStatus(false);
-            toggleOrderTotals(false);
+$(document).ready(function() {
+    // Initialize order tags
+    @Html.Raw(orderTagsSB.ToString())
+    $("#OrderTags").tagEditor({
+        autocomplete: {
+            delay: 0,
+            position: { collision: 'flip' },
+            source: initialOrderTags
+        },
+        delimiter: ',',
+        placeholder: 'Enter tags...'
+    });
 
-            //tags
-            @Html.Raw(orderTagsSB.ToString())
-            $("#@Html.IdFor(model => model.OrderTags)").tagEditor({
-                autocomplete: {
-                    delay: 0,
-                    position: { collision: 'flip' },
-                    source: initialOrderTags
-                },
-                delimiter: ',',
-                placeholder: 'Enter tags...'
-            });
+    // Sales employee functionality
+    $("#salesEmployeeIdSelect").change(function() {
+        $("#submitSalesEmployee").removeClass("btn-success").addClass("btn-primary");
+    });
+    
+    $("#submitSalesEmployee").click(function(e) {
+        e.preventDefault();
+        
+        var orderId = '@Model.Id';
+        var salesEmployeeId = $("#salesEmployeeIdSelect").val();
+        
+        $.ajax({
+            url: '@Url.Action("SaveSalesEmployee", "Order", new { area = "Admin" })',
+            type: 'POST',
+            data: {
+                id: orderId,
+                salesEmployeeId: salesEmployeeId,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                if (result.success) {
+                    $("#submitSalesEmployee").removeClass("btn-primary").addClass("btn-success");
+                    showSuccessMessage("Sales representative updated successfully");
+                } else {
+                    showErrorMessage(result.message || "Error saving sales employee");
+                }
+            },
+            error: function() {
+                showErrorMessage("Error saving sales employee. Please try again.");
+            }
         });
+    });
+    
+    // Toggle products collapse
+    $('#productsCollapse').on('show.bs.collapse', function () {
+        $(this).prev().find('i').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    });
+    
+    $('#productsCollapse').on('hide.bs.collapse', function () {
+        $(this).prev().find('i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+    });
 
-        function toggleChangeOrderStatus(editmode) {
-            if (editmode) {
-                $('#pnlChangeOrderStatus').show();
-                $('#btnChangeOrderStatus').hide();
-            } else {
-                $('#pnlChangeOrderStatus').hide();
-                $('#btnChangeOrderStatus').show();
-            }
-        }
+    // Check shipments on page load for ProductSearchAdd component
+    checkShipmentsForInfoTab();
 
-        function toggleOrderTotals(editmode) {
-            if (editmode) {
-                $('#trEditOrderTotals').show();
-                $('#btnEditOrderTotals').hide();
-                $('#btnSaveOrderTotals').show();
-                $('#btnCancelOrderTotals').show();
-            } else {
-                $('#trEditOrderTotals').hide();
-                $('#btnEditOrderTotals').show();
-                $('#btnSaveOrderTotals').hide();
-                $('#btnCancelOrderTotals').hide();
-            }
-        }
+    // Load shipment details for inline editing
+    loadShipmentDetailsForInfoTab();
 
-    </script>
+    // Always load customer requested shipment date for shippable orders
+    if (@Json.Serialize(Model.IsShippable)) {
+        loadOrderRequestedShipmentDate();
+    }
 
-<div class="form-horizontal">
-<vc:admin-widget widget-zone="order_details_info_top" additional-data="Model"/>
-<div class="form-body">
-<div class="form-group">
-    <admin-label asp-for="OrderNumber" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.OrderNumber</label>
-    </div>
-</div>
+    // Initialize unit/case quantity handlers
+    initializeUnitCaseQuantityHandlers();
 
-<div class="form-group order-status-block @Model.OrderStatus">
-    <admin-label asp-for="OrderStatus" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3 pt-2"></admin-label>
-    <div class="col-12 col-md-9 col-sm-9 orderEditBtn">
-        <div class="d-inline-flex w-100 align-items-center mb-3">
-            <div class="alert mb-0">
-                @Model.OrderStatus
-            </div>&nbsp;&nbsp;&nbsp;&nbsp;
-            @if (Model.CanCancelOrder)
-            {
-                <input type="submit" name="cancelorder" asp-action="CancelOrder" value="@Loc["Admin.Orders.Fields.OrderStatus.Cancel"]" id="cancelorder" class="btn red" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');"/>
-            }
-            <input type="submit" name="btnChangeOrderStatus" value="@Loc["Admin.Orders.Fields.OrderStatus.Change"]" onclick="toggleChangeOrderStatus(true);return false;" id="btnChangeOrderStatus" class="btn green"/>
-        </div>
-        <div id="pnlChangeOrderStatus">
-            <div class="note note-info">@Loc["Admin.Orders.Fields.OrderStatus.Change.ForAdvancedUsers"]</div>
-            <admin-select asp-for="OrderStatusId" asp-items="Model.OrderStatuses"/>
-            <div class="form-actions btn-group btn-group-devided mt-3">
-                <input type="submit" name="btnSaveOrderStatus" asp-action="ChangeOrderStatus" value="@Loc["Admin.Common.Save"]" id="btnSaveOrderStatus" class="k-button" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');"/>
-                <input type="submit" name="btnCancelOrderStatus" value="@Loc["Admin.Common.Cancel"]" onclick="toggleChangeOrderStatus(false);return false;" id="btnCancelOrderStatus" class="k-button"/>
-            </div>
-        </div>
-    </div>
-</div>
+    // Initialize auto-save original values
+    initializeAutoSaveValues();
 
-<div class="form-group">
-    <admin-label asp-for="ShippingStatus" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-    <div class="col-12 col-md-9 col-sm-9">
-        <label class="control-label">
-            @Model.ShippingStatus
-        </label>
-    </div>
-</div>
+    // Load product savings indicators
+    loadProductSavings();
+});
 
-<div class="form-group">
-    <admin-label asp-for="PaymentStatus" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        @{
-            var labelStatus = "";
-            switch (Model.PaymentStatusEnum)
-            {
-                case PaymentStatus.Paid:
-                    labelStatus = "success";
-                    break;
-                case PaymentStatus.PartiallyPaid:
-                    labelStatus = "info";
-                    break;
-                case PaymentStatus.Pending:
-                    labelStatus = "default";
-                    break;
-                case PaymentStatus.Authorized:
-                    labelStatus = "info";
-                    break;
-                case PaymentStatus.PartiallyRefunded:
-                    labelStatus = "info";
-                    break;
-                case PaymentStatus.Refunded:
-                    labelStatus = "warning";
-                    break;
-                case PaymentStatus.Voided:
-                    labelStatus = "danger";
-                    break;
-            }
-        }
-        <div>
-
-            <a class="btn btn-@labelStatus" href="@Url.Action("Edit", "PaymentTransaction", new { id = Model.PaymentTransactionId, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })">@Model.PaymentStatus - @Loc["Admin.Common.View"]</a>
-
-        </div>
-    </div>
-</div>
-
-<div class="form-group" id="trEditOrderTags">
-    <admin-label asp-for="OrderTags"/>
-    <div class="col-md-9 col-sm-9">
-        <span asp-validation-for="OrderTags"></span>
-        <div class="input-group flex-nowrap w-100">
-            <admin-input asp-for="OrderTags"/>
-            <input type="submit" name="btnSaveOrderTags" asp-action="SaveOrderTags" value="@Loc["Admin.Orders.Fields.SaveOrderTags"]" id="btnSaveOrderTags" class="k-button" onclick=" return confirm('@Loc["Admin.Common.AreYouSure"]'); "/>
-        </div>
-    </div>
-</div>
-
-@if (!string.IsNullOrEmpty(Model.Code))
-{
-    <div class="form-group">
-        <admin-label asp-for="Code" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.Code</label>
-        </div>
-    </div>
+function showSuccessMessage(message) {
+    var alert = $('<div class="alert alert-success alert-dismissible fade show mt-2" role="alert">' + 
+                  message + 
+                  '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>' +
+                  '</div>');
+    $("#salesEmployeeIdSelect").after(alert);
+    setTimeout(function() {
+        alert.fadeOut();
+    }, 3000);
 }
-<div class="form-group">
-    <admin-label asp-for="CurrencyCode" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">
-            @Model.CurrencyCode
-            @if (Model.CurrencyRate != 1)
-            {
-                <text>(@Model.CurrencyRate)</text>
-            }
-        </label>
-    </div>
-</div>
 
-<div class="form-group">
-    <admin-label asp-for="OrderGuid" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.OrderGuid</label>
-    </div>
-</div>
+function showErrorMessage(message) {
+    var alert = $('<div class="alert alert-danger alert-dismissible fade show mt-2" role="alert">' + 
+                  message + 
+                  '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>' +
+                  '</div>');
+    $("#salesEmployeeIdSelect").after(alert);
+    setTimeout(function() {
+        alert.fadeOut();
+    }, 5000);
+}
 
-<div class="form-group">
-    <admin-label asp-for="StoreName" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.StoreName</label>
-    </div>
-</div>
-
-<div class="form-group">
-    <admin-label asp-for="CustomerId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">
-            @Html.ActionLink(Model.CustomerInfo, "Edit", "Customer", new { id = Model.CustomerId }, new { })
-        </label>
-    </div>
-</div>
-<div class="form-group">
-    <admin-label asp-for="CustomerIp" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.CustomerIp</label>
-    </div>
-</div>
-@if (!string.IsNullOrEmpty(Model.VatNumber))
-{
-    <div class="form-group">
-        <admin-label asp-for="VatNumber" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.VatNumber</label>
-        </div>
-    </div>
-}
-@if (!string.IsNullOrEmpty(Model.AffiliateId))
-{
-    <div class="form-group">
-        <admin-label asp-for="AffiliateId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">
-                <a href="@Url.Action("Edit", "Affiliate", new { id = Model.AffiliateId, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })">@Model.AffiliateName - @Loc["Admin.Common.View"]</a>
-            </label>
-        </div>
-    </div>
-}
-@if (!string.IsNullOrEmpty(Model.SalesEmployeeId))
-{
-    <div class="form-group">
-        <admin-label asp-for="SalesEmployeeId" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.SalesEmployeeName</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubtotalInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubtotalInclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubtotalExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubtotalExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax
-     && !string.IsNullOrEmpty(Model.OrderSubTotalDiscountInclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubTotalDiscountInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubTotalDiscountInclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax
-     && !string.IsNullOrEmpty(Model.OrderSubTotalDiscountExclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderSubTotalDiscountExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderSubTotalDiscountExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderShippingInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderShippingInclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderShippingExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderShippingExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.IncludingTax
-     && !string.IsNullOrEmpty(Model.PaymentMethodAdditionalFeeInclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="PaymentMethodAdditionalFeeInclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.PaymentMethodAdditionalFeeInclTax</label>
-        </div>
-    </div>
-}
-@if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax
-     && !string.IsNullOrEmpty(Model.PaymentMethodAdditionalFeeExclTax))
-{
-    <div class="form-group">
-        <admin-label asp-for="PaymentMethodAdditionalFeeExclTax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.PaymentMethodAdditionalFeeExclTax</label>
-        </div>
-    </div>
-}
-@if (Model.DisplayTaxRates)
-{
-    foreach (var tr in Model.TaxRates)
-    {
-        <div class="form-group">
-            <admin-label asp-for="Tax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-            <div class="col-9 col-md-9 col-sm-9">
-                <label class="control-label">@tr.Rate% - @tr.Value</label>
-            </div>
-        </div>
+function toggleChangeOrderStatus(editmode) {
+    if (editmode) {
+        $('#pnlChangeOrderStatus').show();
+        $('#btnChangeOrderStatus').hide();
+    } else {
+        $('#pnlChangeOrderStatus').hide();
+        $('#btnChangeOrderStatus').show();
     }
 }
-@if (Model.DisplayTax)
-{
-    <div class="form-group">
-        <admin-label asp-for="Tax" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.Tax</label>
-        </div>
-    </div>
+
+function toggleOrderTotals(editmode) {
+    if (editmode) {
+        $('#trEditOrderTotals').show();
+        $('#btnEditOrderTotals').hide();
+        $('#btnSaveOrderTotals').show();
+        $('#btnCancelOrderTotals').show();
+    } else {
+        $('#trEditOrderTotals').hide();
+        $('#btnEditOrderTotals').show();
+        $('#btnSaveOrderTotals').hide();
+        $('#btnCancelOrderTotals').hide();
+    }
 }
-@if (!string.IsNullOrEmpty(Model.OrderTotalDiscount))
-{
-    <div class="form-group">
-        <admin-label asp-for="OrderTotalDiscount" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.OrderTotalDiscount</label>
-        </div>
-    </div>
-}
-@foreach (var gc in Model.GiftVouchers)
-{
-    <div class="form-group">
-        <admin-label asp-for="GiftVouchers[0].CouponCode" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">(@(gc.CouponCode))</label>
-            <label class="control-label">@gc.Amount</label>
-        </div>
-    </div>
-}
-@if (Model.RedeemedLoyaltyPoints > 0)
-{
-    <div class="form-group">
-        <admin-label asp-for="RedeemedLoyaltyPoints" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">
-                @Model.RedeemedLoyaltyPoints @Loc["Admin.Orders.Fields.RedeemedLoyaltyPoints.Points"]
-                <text>/</text>
-                @Model.RedeemedLoyaltyPointsAmount
-            </label>
-        </div>
-    </div>
-}
-<div class="form-group">
-    <admin-label asp-for="OrderTotal" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.OrderTotal</label>
-    </div>
-</div>
-@if (!string.IsNullOrEmpty(Model.RefundedAmount))
-{
-    <div class="form-group">
-        <admin-label asp-for="RefundedAmount" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.RefundedAmount</label>
-        </div>
-    </div>
-}
-@if (!string.IsNullOrEmpty(Model.SuggestedRefundedAmount))
-{
-    <div class="form-group">
-        <admin-label asp-for="SuggestedRefundedAmount" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <label class="control-label">@Model.SuggestedRefundedAmount</label>
-        </div>
-    </div>
-}
-@if (Model.UsedDiscounts.Count > 0)
-{
-    <div class="form-group">
-        <admin-label asp-for="UsedDiscounts" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            @for (var i = 0; i < Model.UsedDiscounts.Count; i++)
-            {
-                var discount = Model.UsedDiscounts[i];
-                <label class="control-label">
-                    <a href="@Url.Action("Edit", "Discount", new { id = discount.DiscountId, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })">@discount.DiscountName</a>
-                    @if (i != Model.UsedDiscounts.Count - 1)
-                    {
-                        <text>,</text>
-                    }
-                </label>
+
+// Function expected by the ProductSearchAdd component in Info tab
+function refreshCurrentProductsGrid() {
+    var orderId = '@Model.Id';
+
+    // Reload just the OrderProductsTable component via AJAX instead of full page refresh
+    $.ajax({
+        url: '@Html.Raw(Url.Action("GetOrderProductsTableComponent", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            contextId: orderId,
+            showAddProducts: true,
+            showSummary: true,
+            collapsible: true,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(html) {
+            // Find and replace the OrderProductsTable component
+            var $container = $('.row[data-order-id="' + orderId + '"]');
+            if ($container.length > 0) {
+                $container.replaceWith(html);
+
+                // Re-register the callback after component reload
+                var contextId = orderId.replace(/-/g, '_');
+                var componentId = 'product_search_' + contextId;
+                window['refreshCallback_' + componentId] = refreshCurrentProductsGrid;
+            } else {
+                console.error('OrderProductsTable container not found, falling back to page reload');
+                window.location.reload();
             }
-        </div>
-    </div>
+        },
+        error: function() {
+            console.error('Error reloading OrderProductsTable component, falling back to page reload');
+            window.location.reload();
+        }
+    });
 }
-<div class="form-group">
-    <admin-label asp-for="Profit" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.Profit</label>
-    </div>
-</div>
 
-<div class="form-group" id="trEditOrderTotals">
-    <label class="control-label col-md-3"></label>
-    <div class="col-12 col-md-12 col-sm-12">
-        <div class="form-horizontal portlet light bg-inverse form-fit">
-            <div class="form-body">
-                <div class="form-group">
-                    <admin-label asp-for="OrderSubtotalInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label"> @Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="OrderSubtotalInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.ExclTax"] </label>
-                        <admin-input asp-for="OrderSubtotalExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderSubTotalDiscountInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="OrderSubTotalDiscountInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.ExclTax"] </label>
-                        <admin-input asp-for="OrderSubTotalDiscountExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderShippingInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="OrderShippingInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label">@Loc["Admin.Orders.Fields.Edit.ExclTax"]</label>
-                        <admin-input asp-for="OrderShippingExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="PaymentMethodAdditionalFeeInclTaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label"> @Loc["Admin.Orders.Fields.Edit.InclTax"] </label>
-                        <admin-input asp-for="PaymentMethodAdditionalFeeInclTaxValue"/>
-                    </div>
-                    <div class="col-8 col-md-4 col-sm-6">
-                        <label class="control-label"> @Loc["Admin.Orders.Fields.Edit.ExclTax"] </label>
-                        <admin-input asp-for="PaymentMethodAdditionalFeeExclTaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="TaxValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="TaxValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderTotalDiscountValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="OrderTotalDiscountValue"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="CurrencyRate" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="CurrencyRate"/>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <admin-label asp-for="OrderTotalValue" asp-display-hint="false" class="control-label col-12 col-md-3 col-sm-3"></admin-label>
-                    <div class="col-md-8">
-                        <admin-input asp-for="OrderTotalValue"/>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="form-group">
-    <label class="control-label col-md-3"></label>
-    <div class="col-md-9 actions btn-group btn-group-devided">
-        <button type="submit" id="btnEditOrderTotals" onclick=" toggleOrderTotals(true);return false; " name="btnEditOrderTotals" class="k-button"><span class="k-icon k-i-edit"></span>&nbsp;@Loc["Admin.Orders.Fields.EditOrderTotals"]</button>
-        <input type="submit" name="btnSaveOrderTotals" asp-action="EditOrderTotals" value="@Loc["Admin.Orders.Fields.SaveOrderTotals"]" id="btnSaveOrderTotals" class="k-button" onclick=" return confirm('@Loc["Admin.Common.AreYouSure"]'); "/>
-        <input type="submit" name="btnCancelOrderTotals" value="@Loc["Admin.Orders.Fields.CancelOrderTotals"]" onclick=" toggleOrderTotals(false);return false; " id="btnCancelOrderTotals" class="k-button"/>
-    </div>
-</div>
-<div class="form-group">
-    <admin-label asp-for="PaymentMethod" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label">@Model.PaymentMethod</label>
-    </div>
-</div>
+// Register instance-specific callback for ProductSearchAdd component
+// ProductSearchAdd uses componentId pattern: "product-search-" + contextId
+// Then replaces hyphens with underscores for the callback name
+var contextId = '@Model.Id'.replace(/-/g, '_');
+var componentId = 'product_search_' + contextId;
+window['refreshCallback_' + componentId] = refreshCurrentProductsGrid;
 
-@if (Model.CustomValues is { Count: > 0 })
-{
-    <div class="form-group">
-        <admin-label asp-for="CustomValues" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-        <div class="col-9 col-md-9 col-sm-9">
-            <table>
-                @foreach (var item in Model.CustomValues)
-                {
-                    <tr>
-                        <td>@item.Key:</td>
-                        <td>@(item.Value != null ? item.Value.ToString() : "")</td>
-                    </tr>
+// Check for existing shipments and hide ProductSearchAdd if shipments exist or order is in fulfillment
+var isCheckingShipmentsForInfoTab = false; // Flag to prevent multiple simultaneous calls
+
+function checkShipmentsForInfoTab() {
+    // Prevent multiple simultaneous executions
+    if (isCheckingShipmentsForInfoTab) {
+        return;
+    }
+    isCheckingShipmentsForInfoTab = true;
+
+    var isVerifiedOrder = @Json.Serialize(Model.IsVerifiedOrder);
+
+    if (isVerifiedOrder) {
+        // Remove any existing warnings first, then hide ProductSearchAdd section for verified orders (in fulfillment queue)
+        $('.shipment-warning').remove();
+        $('.add-products-section').hide();
+        $('.add-products-section').after(
+            '<div class="shipment-warning alert alert-warning mt-3">' +
+            '<i class="fa fa-warning"></i> ' +
+            'Cannot add products to orders in fulfillment queue. ' +
+            '<button type="button" class="btn btn-primary btn-sm ml-2" onclick="sendToReverificationFromInfoTab(\'@Model.Id\')">' +
+            '<i class="fa fa-undo"></i> Send to Reverification' +
+            '</button>' +
+            '</div>'
+        );
+        isCheckingShipmentsForInfoTab = false; // Reset flag
+        return;
+    }
+
+    $.ajax({
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))",
+        type: "POST",
+        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+        dataType: "json",
+        success: function(data) {
+            if (data && data.Total > 0) {
+                // Remove any existing warnings first, then hide ProductSearchAdd section and show warning
+                $('.shipment-warning').remove();
+                $('.add-products-section').hide();
+                $('.add-products-section').after(
+                    '<div class="shipment-warning alert alert-warning mt-3">' +
+                    '<i class="fa fa-warning"></i> ' +
+                    'Cannot add products when shipments exist. Please delete existing shipments first to add new products.' +
+                    '</div>'
+                );
+            } else {
+                // Show ProductSearchAdd section if no shipments and not verified
+                $('.add-products-section').show();
+                $('.shipment-warning').remove();
+            }
+            isCheckingShipmentsForInfoTab = false; // Reset flag on success
+        },
+        error: function() {
+            // On error, show ProductSearchAdd (fail safe) only if not verified
+            if (!isVerifiedOrder) {
+                $('.add-products-section').show();
+            }
+            isCheckingShipmentsForInfoTab = false; // Reset flag on error
+        }
+    });
+}
+
+function sendToReverificationFromInfoTab(orderId) {
+    if (!confirm('Are you sure you want to send this order back to reverification? This will delete any existing shipments.')) {
+        return;
+    }
+
+    $.ajax({
+          url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))",
+        type: "POST",
+        data: addAntiForgeryToken({ orderId: orderId }),
+        dataType: "json",
+        success: function(result) {
+            if (result.success) {
+                // Refresh the page to update the UI state
+                window.location.reload();
+            } else {
+                alert('Error: ' + (result.message || 'Failed to send order to reverification'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while sending order to reverification.');
+        }
+    });
+}
+
+function initializeUnitCaseQuantityHandlers() {
+    // Handle unit/case selector change
+    $(document).on('change', '.unit-case-selector', function() {
+        const $selector = $(this);
+        const $wrapper = $selector.closest('.quantity-unit-case-wrapper');
+        const $displayInput = $wrapper.find('.quantity-display-input');
+        const $hiddenInput = $wrapper.find('.actual-quantity-input');
+        const caseSize = parseFloat($wrapper.data('case-size'));
+        const currentActualQty = parseFloat($hiddenInput.val());
+        const selectedUnit = $selector.val();
+
+        if (selectedUnit === 'case') {
+            // Convert units to cases for display
+            const cases = currentActualQty / caseSize;
+            // Round to 2 decimal places for display
+            $displayInput.val(Math.round(cases * 100) / 100 || 1);
+            $displayInput.attr('step', '0.01');
+        } else {
+            // Show actual units
+            $displayInput.val(currentActualQty);
+            $displayInput.attr('step', '1');
+        }
+
+        // Store the current display value as original to prevent auto-save on unit switch
+        $displayInput.data('display-original-value', $displayInput.val());
+    });
+
+    // Handle display input change - update hidden field with unit quantity
+    $(document).on('blur', '.quantity-display-input', function() {
+        const $displayInput = $(this);
+        const $wrapper = $displayInput.closest('.quantity-unit-case-wrapper');
+        const $selector = $wrapper.find('.unit-case-selector');
+        const $hiddenInput = $wrapper.find('.actual-quantity-input');
+        const caseSize = parseFloat($wrapper.data('case-size'));
+        const displayValue = parseFloat($displayInput.val());
+        const selectedUnit = $selector.val();
+
+        // Convert to unit quantity
+        let unitQuantity;
+        if (selectedUnit === 'case') {
+            // Convert cases to units
+            unitQuantity = displayValue * caseSize;
+        } else {
+            // Direct unit value
+            unitQuantity = displayValue;
+        }
+
+        // Update hidden input value
+        $hiddenInput.val(unitQuantity);
+
+        // Trigger blur on hidden input to fire the existing auto-save logic
+        $hiddenInput.trigger('blur');
+    });
+
+    // Initialize display values based on current quantities
+    $('.quantity-unit-case-wrapper').each(function() {
+        const $wrapper = $(this);
+        const $displayInput = $wrapper.find('.quantity-display-input');
+        const $hiddenInput = $wrapper.find('.actual-quantity-input');
+        const $selector = $wrapper.find('.unit-case-selector');
+        const caseSize = parseFloat($wrapper.data('case-size'));
+        const actualQty = parseFloat($hiddenInput.val());
+
+        // Default to units view
+        $selector.val('unit');
+        $displayInput.val(actualQty);
+    });
+}
+
+// Initialize auto-save original values for inline edit fields
+function initializeAutoSaveValues() {
+    $('.inline-edit-field').each(function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        $field.data('original-value', currentValue);
+    });
+}
+
+// Load and display shipment details for inline editing
+function loadShipmentDetailsForInfoTab() {
+    if (!@Json.Serialize(Model.IsShippable)) {
+        return;
+    }
+
+    $.ajax({
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Grand.Web.Admin.Extensions.Constants.AreaAdmin }))",
+        type: "POST",
+        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+        dataType: "json",
+        success: function(data) {
+            if (data && data.Data && data.Data.length > 0) {
+                displayShipmentDetails(data.Data);
+            } else {
+                // Even if there are no shipments, we need to initialize handlers for order-level fields
+                initializeShipmentFieldAutoSave();
+            }
+        },
+        error: function() {
+            console.log('Error loading shipment details');
+            // Initialize handlers even on error so order-level fields work
+            initializeShipmentFieldAutoSave();
+        }
+    });
+}
+
+// Display shipment details with inline editing
+function displayShipmentDetails(shipments) {
+    var $section = $('#shipment-details-section');
+    var html = '';
+
+    if (shipments.length > 0) {
+        html += '<div class="card mt-3">';
+        html += '<div class="card-header d-flex justify-content-between align-items-center">';
+        html += '<h6 class="mb-0">Shipment Details</h6>';
+        html += '<button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#shipmentDetailsCollapse">';
+        html += '<i class="fa fa-chevron-down"></i>';
+        html += '</button>';
+        html += '</div>';
+        html += '<div class="collapse" id="shipmentDetailsCollapse">';
+        html += '<div class="card-body">';
+
+
+        shipments.forEach(function(shipment, index) {
+            html += '<div class="shipment-item" data-shipment-id="' + shipment.Id + '">';
+            html += '<h6>Shipment #' + (shipment.ShipmentNumber || (index + 1)) + '</h6>';
+
+            // Tracking Number
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Tracking Number:</strong></label>';
+            html += '<input type="text" class="form-control shipment-edit-field" ';
+            html += 'data-field-type="trackingnumber" ';
+            html += 'value="' + (shipment.TrackingNumber || '') + '" ';
+            html += 'data-original-value="' + (shipment.TrackingNumber || '') + '" ';
+            html += 'placeholder="Enter tracking number"/>';
+            html += '</div>';
+
+            // Shipped Date
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Shipped Date:</strong></label>';
+            html += '<input type="datetime-local" class="form-control shipment-edit-field" ';
+            html += 'data-field-type="shippeddate" ';
+            var shippedDate = shipment.ShippedDateUtc ? new Date(shipment.ShippedDateUtc) : null;
+            if (shippedDate) {
+                // Convert to local datetime-local format (YYYY-MM-DDTHH:mm)
+                var localDate = new Date(shippedDate.getTime() - shippedDate.getTimezoneOffset() * 60000);
+                html += 'value="' + localDate.toISOString().slice(0, 16) + '" ';
+                html += 'data-original-value="' + localDate.toISOString().slice(0, 16) + '" ';
+            } else {
+                html += 'value="" data-original-value="" ';
+            }
+            html += '/>';
+            html += '</div>';
+
+            // Delivery Date
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Delivery Date:</strong></label>';
+            html += '<input type="datetime-local" class="form-control shipment-edit-field" ';
+            html += 'data-field-type="deliverydate" ';
+            var deliveryDate = shipment.DeliveryDateUtc ? new Date(shipment.DeliveryDateUtc) : null;
+            if (deliveryDate) {
+                var localDate = new Date(deliveryDate.getTime() - deliveryDate.getTimezoneOffset() * 60000);
+                html += 'value="' + localDate.toISOString().slice(0, 16) + '" ';
+                html += 'data-original-value="' + localDate.toISOString().slice(0, 16) + '" ';
+            } else {
+                html += 'value="" data-original-value="" ';
+            }
+            html += '/>';
+            html += '</div>';
+
+            // Admin Comment
+            html += '<div class="mb-2">';
+            html += '<label class="form-label"><strong>Admin Comment:</strong></label>';
+            html += '<textarea class="form-control shipment-edit-field" rows="2" ';
+            html += 'data-field-type="admincomment" ';
+            html += 'data-original-value="' + (shipment.AdminComment || '') + '" ';
+            html += 'placeholder="Enter admin comment">' + (shipment.AdminComment || '') + '</textarea>';
+            html += '</div>';
+
+            if (index < shipments.length - 1) {
+                html += '<hr>';
+            }
+            html += '</div>';
+        });
+
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+    }
+
+    $section.html(html);
+
+    // Initialize auto-save for shipment fields
+    initializeShipmentFieldAutoSave();
+
+    // Initialize collapse toggle functionality
+    $('#shipmentDetailsCollapse').on('show.bs.collapse', function () {
+        $(this).prev().find('i').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    });
+
+    $('#shipmentDetailsCollapse').on('hide.bs.collapse', function () {
+        $(this).prev().find('i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+    });
+}
+
+// Track pending save timeouts to prevent multiple simultaneous saves
+var saveOrderDateTimeout = null;
+
+// Initialize auto-save functionality for shipment fields
+function initializeShipmentFieldAutoSave() {
+    console.log('Initializing shipment field auto-save handlers');
+    $(document).off('blur change input', '.shipment-edit-field, .order-edit-field');
+
+    // Handle shipment-level fields
+    $(document).on('blur change', '.shipment-edit-field', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || '';
+
+        // Only save if value has changed
+        if (currentValue !== originalValue) {
+            saveShipmentField($field);
+        }
+    });
+
+    // Handle order-level fields (like requested shipment date)
+    // Use 'input' event in addition to 'blur change' for datetime-local fields
+    $(document).on('blur change input', '.order-edit-field', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || '';
+        var fieldType = $field.data('field-type');
+
+        console.log('Order field changed:', fieldType, 'Current:', currentValue, 'Original:', originalValue);
+
+        // Only save if value has changed
+        if (currentValue !== originalValue) {
+            console.log('Value changed, saving:', fieldType);
+            if (fieldType === 'requestedshipmentdate') {
+                // Update original value immediately to prevent duplicate event triggers
+                $field.data('original-value', currentValue);
+                saveOrderRequestedShipmentDate($field);
+            }
+        } else {
+            console.log('No change detected for:', fieldType);
+        }
+    });
+}
+
+// Save individual shipment field
+function saveShipmentField($field) {
+    var $shipmentItem = $field.closest('.shipment-item');
+    var shipmentId = $shipmentItem.data('shipment-id');
+    var fieldType = $field.data('field-type');
+    var value = $field.val();
+    var orderId = '@Model.Id';
+
+    // Show saving indicator
+    var $indicator = $('<small class="text-muted ml-2"><i class="fa fa-spinner fa-spin"></i> Saving...</small>');
+    $field.after($indicator);
+    $field.prop('disabled', true);
+
+    $.ajax({
+        url: '@Url.Action("UpdateShipmentField", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            shipmentId: shipmentId,
+            fieldType: fieldType,
+            value: value,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            $indicator.remove();
+            $field.prop('disabled', false);
+
+            if (result.success) {
+                // Update original value to prevent re-saving
+                $field.data('original-value', value);
+
+                // Show success indicator briefly
+                var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
+                $field.after($success);
+                setTimeout(function() {
+                    $success.fadeOut(function() {
+                        $success.remove();
+                    });
+                }, 2000);
+            } else {
+                // Show error and revert value
+                var originalValue = $field.data('original-value') || '';
+                $field.val(originalValue);
+
+                var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> ' + (result.message || 'Save failed') + '</small>');
+                $field.after($error);
+                setTimeout(function() {
+                    $error.fadeOut(function() {
+                        $error.remove();
+                    });
+                }, 3000);
+            }
+        },
+        error: function() {
+            $indicator.remove();
+            $field.prop('disabled', false);
+
+            // Revert value on error
+            var originalValue = $field.data('original-value') || '';
+            $field.val(originalValue);
+
+            var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Network error</small>');
+            $field.after($error);
+            setTimeout(function() {
+                $error.fadeOut(function() {
+                    $error.remove();
+                });
+            }, 3000);
+        }
+    });
+}
+
+// Load and populate the customer requested shipment date
+function loadOrderRequestedShipmentDate() {
+    $.ajax({
+        url: '@Url.Action("GetRequestedShipmentDate", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'GET',
+        data: {
+            orderId: '@Model.Id'
+        },
+        success: function(result) {
+            if (result.success && result.value) {
+                var $field = $('#customer-requested-shipment-date');
+                if ($field.length > 0) {
+                    // Convert date to datetime-local format (YYYY-MM-DDTHH:mm)
+                    var date = new Date(result.value + 'T00:00:00');
+                    var localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+                    var formattedValue = localDate.toISOString().slice(0, 16);
+
+                    $field.val(formattedValue);
+                    $field.data('original-value', formattedValue);
                 }
-            </table>
-        </div>
-    </div>
+            }
+        },
+        error: function() {
+            console.log('Error loading requested shipment date');
+        }
+    });
 }
-<div class="form-group">
-    <admin-label asp-for="CreatedOn" asp-display-hint="false" class="control-label col-3 col-md-3 col-sm-3"></admin-label>
-    <div class="col-9 col-md-9 col-sm-9">
-        <label class="control-label"> @Html.DisplayFor(model => model.CreatedOn)</label>
-    </div>
-</div>
-</div>
-<vc:admin-widget widget-zone="order_details_info_bottom" additional-data="Model"/>
-</div>
+
+// Save order-level requested shipment date
+function saveOrderRequestedShipmentDate($field) {
+    // Clear any pending save to prevent duplicate calls
+    if (saveOrderDateTimeout) {
+        clearTimeout(saveOrderDateTimeout);
+        saveOrderDateTimeout = null;
+    }
+
+    // Debounce the save by 300ms to consolidate multiple events (blur, change, input)
+    saveOrderDateTimeout = setTimeout(function() {
+        var value = $field.val();
+        var orderId = '@Model.Id';
+
+        console.log('saveOrderRequestedShipmentDate executing - Value:', value, 'OrderId:', orderId);
+
+        // Show saving indicator
+        var $indicator = $('<small class="text-muted ml-2"><i class="fa fa-spinner fa-spin"></i> Saving...</small>');
+        $field.after($indicator);
+        $field.prop('disabled', true);
+
+        // Convert datetime-local to date format for the API (YYYY-MM-DD)
+        var dateValue = value ? value.split('T')[0] : '';
+        console.log('Sending date value to API:', dateValue);
+
+        $.ajax({
+            url: '@Url.Action("SaveRequestedShipmentDate", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                date: dateValue,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                console.log('Save response:', result);
+                $indicator.remove();
+                $field.prop('disabled', false);
+
+                if (result.success) {
+                    console.log('Save succeeded, original-value already updated in event handler');
+
+                    // Show success indicator briefly
+                    var $success = $('<small class="text-success ml-2"><i class="fa fa-check"></i> Saved</small>');
+                    $field.after($success);
+                    setTimeout(function() {
+                        $success.fadeOut(function() {
+                            $success.remove();
+                        });
+                    }, 2000);
+                } else {
+                    console.log('Save failed, result.success was false');
+                    // Show error and revert value
+                    var originalValue = $field.data('original-value') || '';
+                    $field.val(originalValue);
+
+                    var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Save failed</small>');
+                    $field.after($error);
+                    setTimeout(function() {
+                        $error.fadeOut(function() {
+                            $error.remove();
+                        });
+                    }, 3000);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('RequestedShipmentDate save AJAX error:', status, error, 'Response:', xhr.responseText);
+                $indicator.remove();
+                $field.prop('disabled', false);
+
+                // Revert value on error
+                var originalValue = $field.data('original-value') || '';
+                $field.val(originalValue);
+
+                var $error = $('<small class="text-danger ml-2"><i class="fa fa-times"></i> Network error</small>');
+                $field.after($error);
+                setTimeout(function() {
+                    $error.fadeOut(function() {
+                        $error.remove();
+                    });
+                }, 3000);
+            }
+        });
+    }, 300); // Debounce delay
+}
+
+// Load and display product savings indicators
+function loadProductSavings() {
+    // Find all price input fields with product IDs (not weight dropdowns)
+    $('input.inline-edit-field[data-product-id]').each(function() {
+        var $priceInput = $(this);
+        var productId = $priceInput.data('product-id');
+        var currentPrice = parseFloat($priceInput.val()) || 0;
+        var orderItemId = $priceInput.attr('name').match(/Items\[(\d+)\]/)?.[1];
+
+        if (productId && currentPrice > 0 && orderItemId !== undefined) {
+            checkProductSavings(productId, currentPrice, orderItemId);
+        }
+    });
+}
+
+// Check individual product for savings
+function checkProductSavings(productId, currentPrice, orderItemId) {
+    var orderId = '@Model.Id';
+    var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId, SelectedWeightCombinationId = item.SelectedWeightCombinationId })));
+    var orderItem = orderItems.find(item => item.Index == orderItemId);
+
+    $.ajax({
+        url: '@Url.Action("GetProductSavings", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            productId: productId,
+            currentPrice: currentPrice,
+            warehouseId: orderItem ? orderItem.WarehouseId : null,
+            attributeValueId: orderItem ? orderItem.SelectedWeightCombinationId : null,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            if (orderItem) {
+                // Display savings if available
+                if (result.hasSavings) {
+                    displaySavingsIndicator(orderItem.Id, result.savings);
+                }
+
+                // Display inventory information
+                if (result.stockQuantity !== undefined && result.warehouseName) {
+                    displayInventoryInfo(orderItem.Id, result.stockQuantity, orderItem.CaseSize, result.warehouseName);
+                }
+            }
+        },
+        error: function() {
+            console.log('Error checking product savings for product: ' + productId);
+        }
+    });
+}
+
+// Display savings indicator for a specific order item
+function displaySavingsIndicator(orderItemId, savings) {
+    var $indicator = $('#savings-' + orderItemId);
+    var $small = $indicator.find('small');
+
+    // Format savings amount (assuming currency formatting)
+    var formattedSavings = '$' + savings.toFixed(2);
+
+    $small.text('Save ' + formattedSavings);
+    $indicator.show();
+}
+
+// Display inventory information for a specific order item
+function displayInventoryInfo(orderItemId, stockQuantity, caseSize, warehouseName) {
+    var $indicator = $('#inventory-' + orderItemId);
+
+    if (stockQuantity > 0 && caseSize > 0) {
+        var casesAvailable = Math.floor(stockQuantity / caseSize);
+        var inventoryText = ' • ' + stockQuantity + ' Available (' + casesAvailable + ' cases)';
+
+        // Add warehouse information on separate line if available
+        if (warehouseName && warehouseName.trim()) {
+            // Escape HTML to prevent XSS
+            var escapedWarehouseName = $('<div>').text(warehouseName).html();
+            inventoryText += '<br>Warehouse: ' + escapedWarehouseName;
+        }
+
+        $indicator.html(inventoryText);
+        $indicator.show();
+    }
+}
+
+// Add real-time price change detection
+$(document).on('input change', 'input.inline-edit-field[data-product-id]', function() {
+    var $priceInput = $(this);
+    var productId = $priceInput.data('product-id');
+    var currentPrice = parseFloat($priceInput.val()) || 0;
+    var orderItemId = $priceInput.attr('name').match(/Items\[(\d+)\]/)?.[1];
+
+    if (productId && currentPrice > 0 && orderItemId !== undefined) {
+        // Hide existing indicators first
+        var orderId = '@Model.Id';
+        var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId })));
+        var orderItem = orderItems.find(item => item.Index == orderItemId);
+
+        if (orderItem) {
+            $('#savings-' + orderItem.Id).hide();
+            $('#inventory-' + orderItem.Id).hide();
+        }
+
+        // Recalculate savings and inventory with new price
+        checkProductSavings(productId, currentPrice, orderItemId);
+    } else {
+        // If price is 0 or invalid, hide indicators
+        if (orderItemId !== undefined) {
+            var orderId = '@Model.Id';
+            var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id, CaseSize = item.CaseSize, WarehouseId = item.WarehouseId })));
+            var orderItem = orderItems.find(item => item.Index == orderItemId);
+
+            if (orderItem) {
+                $('#savings-' + orderItem.Id).hide();
+                $('#inventory-' + orderItem.Id).hide();
+            }
+        }
+    }
+});
+
+// Save order item quantity changes
+function saveOrderItemQuantity($field, newQuantity) {
+    // Get order item ID from the field's name attribute (e.g., Items[0].Quantity)
+    var fieldName = $field.attr('name') || '';
+    var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
+
+    if (!orderItemIndexMatch) {
+        console.log('Could not determine order item from field name: ' + fieldName);
+        return;
+    }
+
+    var orderItemIndex = parseInt(orderItemIndexMatch[1]);
+    var orderId = '@Model.Id';
+    var orderItems = @Html.Raw(Json.Serialize(Model.Items.Select((item, index) => new { Index = index, Id = item.Id })));
+    var orderItem = orderItems.find(item => item.Index === orderItemIndex);
+
+    if (!orderItem) {
+        console.log('Could not find order item for index: ' + orderItemIndex);
+        return;
+    }
+
+    // Show saving indicator
+    var $saveStatus = $('#save-status-' + orderItem.Id);
+    if ($saveStatus.length === 0) {
+        // Create save status indicator if it doesn't exist
+        $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItem.Id + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+        $field.closest('td').append($saveStatus);
+    }
+    $saveStatus.show();
+    $field.prop('disabled', true);
+
+    $.ajax({
+        url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            orderItemId: orderItem.Id,
+            fieldType: 'quantity',
+            value: newQuantity,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(result) {
+            $field.prop('disabled', false);
+
+            if (result.success) {
+                // Update original value to prevent re-saving
+                $field.data('original-value', newQuantity);
+                $field.attr('value', newQuantity);
+
+                // Show success indicator briefly
+                $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 2000);
+            } else {
+                // Show error and revert value
+                var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                $field.val(originalValue);
+
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        },
+        error: function() {
+            $field.prop('disabled', false);
+
+            // Show error and revert value
+            var originalValue = $field.data('original-value') || $field.attr('value') || '';
+            $field.val(originalValue);
+
+            $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+            setTimeout(function() {
+                $saveStatus.fadeOut();
+            }, 5000);
+        }
+    });
+}
+
+// General auto-save handler for inline-edit-field elements (excluding price fields which are handled separately)
+$(document).on('blur change', '.inline-edit-field:not([data-product-id])', function() {
+    var $field = $(this);
+    var currentValue = $field.val();
+    var originalValue = $field.data('original-value') || $field.attr('value') || '';
+
+    // Only save if value has changed
+    if (currentValue !== originalValue && currentValue !== '') {
+        // Determine field type and handle accordingly
+        if ($field.hasClass('actual-quantity-input') || $field.attr('name')?.includes('Quantity')) {
+            saveOrderItemQuantity($field, currentValue);
+        }
+        // Add other field types here as needed
+    }
+});
+</script>
+
+<style>
+/* Light mode improvements for order info layout */
+@@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+    /* Table improvements for light mode - ensure proper contrast */
+    .table-striped thead th {
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
+        border-bottom: 2px solid #dee2e6 !important;
+    }
+
+    .table-striped td {
+        border-top: 1px solid #dee2e6 !important;
+        color: #212529 !important;
+    }
+
+    /* Ensure quantity, price, and total columns have dark text in light mode */
+    .table-striped td:nth-child(3),
+    .table-striped td:nth-child(4),
+    .table-striped td:nth-child(5) {
+        color: #212529 !important;
+    }
+
+    /* Ensure spans within these cells also have dark text */
+    .table-striped td:nth-child(3) span,
+    .table-striped td:nth-child(4) span,
+    .table-striped td:nth-child(5) span,
+    .table-striped .subtotal-display {
+        color: #212529 !important;
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .table-info th {
+        background-color: #d1ecf1 !important;
+        color: #0c5460 !important;
+        border-color: #bee5eb !important;
+    }
+}
+
+/* Default/fallback light mode styles */
+.table-striped thead th {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+.table-striped td {
+    border-top: 1px solid #dee2e6 !important;
+    color: #212529 !important;
+}
+
+/* Ensure quantity, price, and total columns have dark text in light mode */
+.table-striped td:nth-child(3),
+.table-striped td:nth-child(4),
+.table-striped td:nth-child(5) {
+    color: #212529 !important;
+}
+
+/* Ensure spans within these cells also have dark text */
+.table-striped td:nth-child(3) span,
+.table-striped td:nth-child(4) span,
+.table-striped td:nth-child(5) span,
+.table-striped .subtotal-display {
+    color: #212529 !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.table-info th {
+    background-color: #d1ecf1 !important;
+    color: #0c5460 !important;
+    border-color: #bee5eb !important;
+}
+
+/* Dark mode improvements for order info layout */
+@@media (prefers-color-scheme: dark) {
+    /* Address boxes - ensure text is readable in dark mode */
+    .address-box,
+    .border.p-2.bg-light,
+    .border.p-2[style*="background-color: #e3f2fd"],
+    .border.p-2[style*="background-color: #e8f5e8"], 
+    .border.p-2[style*="background-color: #fff3cd"] {
+        color: #000 !important;
+        background-color: #f8f9fa !important;
+    }
+    
+    .address-box div,
+    .border.p-2.bg-light div,
+    .border.p-2[style*="background-color: #e3f2fd"] div,
+    .border.p-2[style*="background-color: #e8f5e8"] div,
+    .border.p-2[style*="background-color: #fff3cd"] div {
+        color: #000 !important;
+    }
+    
+    /* Card headers and borders */
+    .card-header {
+        border-bottom: 1px solid #6c757d !important;
+    }
+    
+    .card {
+        border: 1px solid #6c757d !important;
+    }
+    
+    /* Table improvements for dark mode - more specific selectors */
+    .table-striped thead th {
+        border-bottom: 2px solid #6c757d !important;
+        color: #fff !important;
+        background-color: #495057 !important;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    /* Table borders and basic cell styling */
+    .table-striped td {
+        border-top: 1px solid #6c757d !important;
+    }
+    
+    /* Only target basic text, not styled elements */
+    .table-striped td:first-child {
+        color: #fff !important; /* # column */
+    }
+    
+    .table-striped td:nth-child(3),
+    .table-striped td:nth-child(4),
+    .table-striped td:nth-child(5) {
+        color: #fff !important; /* Quantity, Price, Total columns */
+    }
+    
+    /* Preserve Bootstrap color classes in dark mode */
+    .table-striped .text-primary {
+        color: #79aecb !important; /* Lighter blue for dark mode */
+    }
+    
+    .table-striped .text-muted {
+        color: #adb5bd !important; /* Proper muted color for dark mode */
+    }
+    
+    .table-info th {
+        background-color: #17a2b8 !important;
+        color: #fff !important;
+        border-color: #17a2b8 !important;
+    }
+}
+
+/* Force styles for data-theme attribute (fallback) */
+[data-theme="dark"] .address-box,
+[data-theme="dark"] .border.p-2.bg-light,
+[data-theme="dark"] .border.p-2[style*="background-color: #e3f2fd"],
+[data-theme="dark"] .border.p-2[style*="background-color: #e8f5e8"],
+[data-theme="dark"] .border.p-2[style*="background-color: #fff3cd"] {
+    color: #000 !important;
+    background-color: #f8f9fa !important;
+}
+
+[data-theme="dark"] .address-box div,
+[data-theme="dark"] .border.p-2.bg-light div,
+[data-theme="dark"] .border.p-2[style*="background-color: #e3f2fd"] div,
+[data-theme="dark"] .border.p-2[style*="background-color: #e8f5e8"] div,
+[data-theme="dark"] .border.p-2[style*="background-color: #fff3cd"] div {
+    color: #000 !important;
+}
+
+/* Dark mode table styles with data-theme */
+[data-theme="dark"] .table-striped thead th {
+    border-bottom: 2px solid #6c757d !important;
+    color: #fff !important;
+    background-color: #495057 !important;
+}
+
+[data-theme="dark"] .table-striped td {
+    border-top: 1px solid #6c757d !important;
+}
+
+[data-theme="dark"] .table-striped td:first-child,
+[data-theme="dark"] .table-striped td:nth-child(3),
+[data-theme="dark"] .table-striped td:nth-child(4),
+[data-theme="dark"] .table-striped td:nth-child(5) {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .table-striped .text-primary {
+    color: #79aecb !important;
+}
+
+[data-theme="dark"] .table-striped .text-muted {
+    color: #adb5bd !important;
+}
+</style>
+
+<script>
+function markPaymentAsPaid(orderId) {
+    if (!confirm('Are you sure you want to mark this payment as paid?')) {
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("MarkPaymentAsPaid", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: { id: orderId },
+        success: function(response) {
+            if (response.success) {
+                displayNotification(response.message, 'success', true);
+                // Reload the page to show updated status
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                displayNotification(response.message || 'Error marking payment as paid', 'error', true);
+            }
+        },
+        error: function() {
+            displayNotification('Error marking payment as paid', 'error', true);
+        }
+    });
+}
+
+function changePaymentMethod(orderId) {
+    var newMethod = prompt('Enter new payment method (e.g., Cash, Credit Card, Bank Transfer):');
+    if (!newMethod || newMethod.trim() === '') {
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("ChangePaymentMethod", "Order", new { area = Grand.Web.Admin.Extensions.Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            id: orderId,
+            paymentMethod: newMethod.trim()
+        },
+        success: function(response) {
+            if (response.success) {
+                displayNotification(response.message, 'success', true);
+                // Reload the page to show updated method
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                displayNotification(response.message || 'Error changing payment method', 'error', true);
+            }
+        },
+        error: function() {
+            displayNotification('Error changing payment method', 'error', true);
+        }
+    });
+}
+</script>

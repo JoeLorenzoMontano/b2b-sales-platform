@@ -454,7 +454,7 @@ public class OrderReportService : IOrderReportService
         var queryItem = query.GroupBy(x => new { x.ProductId }).Select(x => new BestsellersReportLine {
             ProductId = x.Key.ProductId,
             TotalAmount = x.Sum(y => y.PriceInclTax / y.Rate),
-            TotalQuantity = x.Sum(y => y.Quantity)
+            TotalQuantity = (int)x.Sum(y => y.Quantity)
         });
 
         var queryItemOrdered = orderBy == 1
@@ -476,21 +476,32 @@ public class OrderReportService : IOrderReportService
     public virtual async Task<ReportPeriodOrder> GetOrderPeriodReport(int days, string storeId = "",
         string salesEmployeeId = "")
     {
-        var currentdate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day);
-        var date = days != 0
-            ? _dateTimeService.ConvertToUtcTime(currentdate, _dateTimeService.CurrentTimeZone).AddDays(-days)
-            : _dateTimeService.ConvertToUtcTime(currentdate, _dateTimeService.CurrentTimeZone);
+        // Get the current UTC date
+        var currentUtcDate = DateTime.UtcNow.Date;
+        
+        // Calculate start date based on the requested period
+        var startDate = days != 0
+            ? currentUtcDate.AddDays(-days) // For previous days
+            : currentUtcDate; // For today (starts at midnight UTC)
+
+        // Calculate end date - for "today" queries, we need to use tomorrow's date at midnight
+        // to include all of today's orders
+        var endDate = days == 0
+            ? currentUtcDate.AddDays(1) // End at midnight of the next day to include all of today's orders
+            : DateTime.UtcNow; // For historical periods, use current time
 
         var query = from o in _orderRepository.Table
-            where !o.Deleted && o.CreatedOnUtc >= date
-                             && (string.IsNullOrEmpty(storeId) || o.StoreId == storeId)
-                             && (string.IsNullOrEmpty(salesEmployeeId) || o.SeId == salesEmployeeId)
+            where !o.Deleted 
+                  && o.CreatedOnUtc >= startDate
+                  && o.CreatedOnUtc < endDate // Use < to exclude the start of the next day
+                  && (string.IsNullOrEmpty(storeId) || o.StoreId == storeId)
+                  && (string.IsNullOrEmpty(salesEmployeeId) || o.SeId == salesEmployeeId)
             group o by 1
             into g
             select new ReportPeriodOrder { Amount = g.Sum(x => x.OrderTotal / x.CurrencyRate), Count = g.Count() };
 
         var report = query.FirstOrDefault() ?? new ReportPeriodOrder();
-        report.Date = date;
+        report.Date = startDate;
         return await Task.FromResult(report);
     }
 

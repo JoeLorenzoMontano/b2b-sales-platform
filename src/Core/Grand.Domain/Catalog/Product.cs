@@ -332,12 +332,12 @@ public class Product : BaseEntity, ITranslationEntity, ISlugEntity, IGroupLinkEn
     /// <summary>
     ///     Gets or sets the stock quantity
     /// </summary>
-    public int StockQuantity { get; set; }
+    public double StockQuantity { get; set; }
 
     /// <summary>
     ///     Gets or sets the reserved quantity (ordered but not shipped yet)
     /// </summary>
-    public int ReservedQuantity { get; set; }
+    public double ReservedQuantity { get; set; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether to display stock availability
@@ -591,6 +591,11 @@ public class Product : BaseEntity, ITranslationEntity, ISlugEntity, IGroupLinkEn
     ///     Gets or sets a value indicating whether the entity is published
     /// </summary>
     public bool Published { get; set; }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the product should be hidden from catalog exports (like PDF catalogs)
+    /// </summary>
+    public bool HideFromCatalog { get; set; }
 
     /// <summary>
     ///     Gets or sets the sold

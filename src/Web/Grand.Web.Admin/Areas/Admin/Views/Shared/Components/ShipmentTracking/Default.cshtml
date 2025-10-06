@@ -1,0 +1,713 @@
+@inject AdminAreaSettings adminAreaSettings
+
+<div id="shipment-tracking-grid"></div>
+
+<style>
+    .shipment-details-grid .k-grid-header .k-header {
+        background-color: #3f51b5; /* Match the theme's primary color */
+        color: white !important;
+    }
+    .shipment-details-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .select-shipment-item {
+        accent-color: white; /* Customize the checkbox color */
+        transform: scale(1.3); /* Make it larger */
+    }
+    /* Style for the order row */
+    .k-master-row {
+        transition: background-color 0.2s;
+    }
+    .k-master-row:hover {
+        background-color: #f5f5f5;
+    }
+    /* Style for badges */
+    .badge.bg-teal {
+        background-color: #0e8a76;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Action button styling */
+    .action-button {
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        width: 34px;
+        height: 34px;
+        padding: 6px 0;
+        border-radius: 50%;
+        text-align: center;
+        font-size: 12px;
+        line-height: 1.42857143;
+        cursor: pointer;
+        color: #333;
+    }
+    
+    .action-button:hover {
+        background-color: #e9ecef;
+    }
+    
+    /* Dropdown styling */
+    .action-dropdown {
+        position: absolute;
+        background-color: white;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 4px;
+        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+        min-width: 200px;
+        z-index: 9999;
+        display: none;
+    }
+    
+    .action-dropdown.show {
+        display: block;
+    }
+    
+    .action-dropdown .action-item {
+        display: block;
+        padding: 8px 16px;
+        clear: both;
+        font-weight: 400;
+        color: #212529;
+        text-decoration: none;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    
+    .action-dropdown .action-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .action-dropdown .action-divider {
+        height: 0;
+        margin: 6px 0;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .action-dropdown .action-item i {
+        width: 16px;
+        margin-right: 8px;
+        text-align: center;
+    }
+    
+    /* Shipment action buttons styling */
+    .ship-btn, .deliver-btn {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+        margin-left: 10px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+    
+    .ship-btn {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .ship-btn:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+    
+    .deliver-btn {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .deliver-btn:hover {
+        background-color: #0069d9;
+        border-color: #0062cc;
+    }
+    
+    .badge.bg-success {
+        background-color: #28a745 !important;
+        color: white !important;
+        font-size: 0.9rem;
+        padding: 8px 12px;
+    }
+    
+    /* Clickable Order ID styling */
+    .badge.bg-teal.order-link {
+        display: inline-block;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .badge.bg-teal.order-link:hover {
+        background-color: #0b6d5f !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transform: translateY(-1px);
+        color: white !important;
+        text-decoration: none;
+    }
+</style>
+
+<script>
+    // Create a container for our action dropdowns to ensure they're not constrained by table layout
+    $(document).ready(function() {
+        // Append container to body for action menus
+        $('body').append('<div id="action-dropdown-container"></div>');
+    });
+    
+    // Global variable to track the active dropdown ID
+    var activeDropdownId = null;
+    
+    // Function to handle action button clicks
+    $(document).on('click', '.action-button', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        var shipmentId = $(this).data('shipment-id');
+        
+        // Close any open dropdown
+        $('#action-dropdown-container .action-dropdown').hide();
+        
+        // If clicking the same dropdown that's already open, just close it
+        if (activeDropdownId === shipmentId) {
+            activeDropdownId = null;
+            return;
+        }
+        
+        // Set this as the active dropdown
+        activeDropdownId = shipmentId;
+        
+        // Get button position
+        var buttonPos = $(this).offset();
+        
+        // Position the dropdown for this shipment
+        var $dropdown = $('#action-dropdown-' + shipmentId);
+        $dropdown.css({
+            top: (buttonPos.top + $(this).outerHeight() + 5) + 'px',
+            left: (buttonPos.left - 180 + $(this).outerWidth()) + 'px'
+        }).show();
+    });
+    
+    // Close dropdown when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.action-button, .action-dropdown').length) {
+            $('#action-dropdown-container .action-dropdown').hide();
+            activeDropdownId = null;
+        }
+    });
+    
+    // Prevent propagation for clicks inside dropdown
+    $(document).on('click', '.action-dropdown', function(e) {
+        e.stopPropagation();
+    });
+    
+    $(document).ready(function () {
+        // No need for initialization, dropdowns are created dynamically
+        
+        // Using direct string templates for Kendo UI
+        var valueOrDashTemplate = function(fieldName) {
+            return function(dataItem) {
+                if (dataItem[fieldName]) {
+                    return dataItem[fieldName];
+                }
+                return "--";
+            };
+        };
+        
+        var dateTemplate = function(fieldName) {
+            return function(dataItem) {
+                if (dataItem[fieldName]) {
+                    var date = new Date(dataItem[fieldName]);
+                    return kendo.toString(date, "MM/dd/yyyy hh:mm tt");
+                }
+                return "";
+            };
+        };
+        
+        // Initialize the grid
+        $("#shipment-tracking-grid").kendoGrid({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "@Html.Raw(Url.Action("ShipmentListSelect", "Shipment", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        dataType: "json",
+                        data: additionalData
+                    }
+                },
+                schema: {
+                    data: "Data",
+                    total: "Total",
+                    errors: "Errors",
+                    model: {
+                        fields: {
+                            Id: { type: "string" },
+                            OrderId: { type: "string" },
+                            ShipmentNumber: { type: "string" },
+                            OrderNumber: { type: "string" },
+                            TrackingNumber: { type: "string" },
+                            TotalWeight: { type: "number" },
+                            ShippedDate: { 
+                                type: "date",
+                                parse: function(value) {
+                                    // Handle null or empty dates properly
+                                    return value ? new Date(value) : null;
+                                }
+                            },
+                            DeliveryDate: { 
+                                type: "date",
+                                parse: function(value) {
+                                    // Handle null or empty dates properly
+                                    return value ? new Date(value) : null;
+                                }
+                            },
+                            ShippedDateUtc: { type: "date" },
+                            DeliveryDateUtc: { type: "date" },
+                            CreatedOn: { type: "date" },
+                            UpdatedOn: { type: "date" },
+                            ShippingAddressString: { type: "string" },
+                            ShippingCity: { type: "string" },
+                            ShippingStateProvince: { type: "string" },
+                            CustomerId: { type: "string" },
+                            CustomerFullName: { type: "string" },
+                            CustomerEmail: { type: "string" },
+                            SalesEmployeeName: { type: "string" },
+                            OrderTotal: { type: "number" }
+                        }
+                    }
+                },
+                // // Apply client-side filtering to exclude completed shipments
+                // filter: function(item) {
+                //     // Check both ShippedDate and ShippedDateUtc properties
+                //     var hasShippedDate = (item.ShippedDate && item.ShippedDate !== null) || 
+                //                         (item.ShippedDateUtc && item.ShippedDateUtc !== null);
+                                        
+                //     // Check both DeliveryDate and DeliveryDateUtc properties
+                //     var hasDeliveryDate = (item.DeliveryDate && item.DeliveryDate !== null) || 
+                //                         (item.DeliveryDateUtc && item.DeliveryDateUtc !== null);
+                    
+                //     // Log for debugging
+                //     if (hasShippedDate && hasDeliveryDate) {
+                //         console.log("Found completed shipment to exclude:", item.Id);
+                //     }
+                    
+                //     // The negation of: "Exclude shipments that have both dates set"
+                //     // Keep a shipment in the queue if:
+                //     // 1. It is NOT shipped (hasShippedDate is false) OR
+                //     // 2. It is shipped but NOT delivered (hasShippedDate is true but hasDeliveryDate is false)
+                //     var keepInQueue = !hasShippedDate || !hasDeliveryDate;
+                //     return keepInQueue;
+                // },
+                error: function(e) {
+                    display_kendoui_grid_error(e);
+                    // Cancel the changes
+                    this.cancelChanges();
+                },
+                pageSize: 10,
+                serverPaging: true,
+                serverFiltering: true,
+                serverSorting: true
+            },
+            dataBound: function() {
+                // Clear existing dropdowns when grid refreshes
+                $('#action-dropdown-container').empty();
+            },
+            pageable: {
+                refresh: true,
+                pageSizes: [10,20,50]
+            },
+            editable: {
+                confirmation: false,
+                mode: "inline"
+            },
+            scrollable: false,
+            dataBound: function() {
+                console.log("Grid dataBound triggered");
+                
+                // Get all data items in the grid
+                var grid = this;
+                var dataItems = grid.dataSource.data();
+                
+                // Log summary of items showing and filtered out
+                var totalItems = dataItems.length;
+                var shippedItems = dataItems.filter(function(item) { 
+                    return item.ShippedDate && item.ShippedDate !== "null" && item.ShippedDate !== "";
+                }).length;
+                var deliveredItems = dataItems.filter(function(item) { 
+                    return item.DeliveryDate && item.DeliveryDate !== "null" && item.DeliveryDate !== "";
+                }).length;
+                
+                console.log("Shipment Queue Status:");
+                console.log("Total items in queue:", totalItems);
+                console.log("Items with shipped date:", shippedItems);
+                console.log("Items with delivery date:", deliveredItems);
+            },
+            detailInit: shipmentItemsDetailInit,
+            columns: [
+                {
+                    field: "OrderNumber",
+                    title: "Order ID",
+                    width: 100,
+                    template: function(dataItem) {
+                        return '<a href="@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/' + dataItem.OrderId + '" class="badge bg-teal order-link" title="View order details">' + 
+                                '<i class="fa fa-shopping-cart mr-1"></i>' + dataItem.OrderNumber + '</a>';
+                    }
+                },
+                {
+                    field: "CustomerFullName",
+                    title: "Customer",
+                    width: 200,
+                    template: function(dataItem) {
+                        if (dataItem.CustomerFullName) {
+                            var customerDisplay = kendo.htmlEncode(dataItem.CustomerFullName);
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + kendo.htmlEncode(dataItem.CustomerCompany) + '</small>';
+                            }
+                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
+                        } else {
+                            return '--';
+                        }
+                    }
+                },
+                {
+                    field: "SalesEmployeeName",
+                    title: "Sales Employee",
+                    width: 150,
+                    template: valueOrDashTemplate("SalesEmployeeName")
+                },
+                {
+                    field: "Warehouses",
+                    title: "@Loc["Admin.Orders.Fields.Warehouses"]",
+                    width: 150
+                },
+                {
+                    field: "CreatedOn",
+                    title: "Created On",
+                    width: 120,
+                    template: dateTemplate("CreatedOn"),
+                    headerAttributes: { style: "text-align:center" },
+                    attributes: { style: "text-align:center" }
+                },
+                {
+                    field: "UpdatedOn",
+                    title: "Last Modified",
+                    width: 120,
+                    template: dateTemplate("UpdatedOn"),
+                    headerAttributes: { style: "text-align:center" },
+                    attributes: { style: "text-align:center" }
+                },
+                {
+                    field: "ShippedDate",
+                    title: "Ship Date",
+                    width: 120,
+                    template: function(dataItem) {
+                        if (dataItem.ShippedDate) {
+                            var date = new Date(dataItem.ShippedDate);
+                            return kendo.toString(date, "MMM. dd, yyyy");
+                        }
+                        return "";
+                    },
+                    headerAttributes: { style: "text-align:center" },
+                    attributes: { style: "text-align:center" }
+                },
+                {
+                    field: "ShippingAddressString",
+                    title: "Address",
+                    width: 200,
+                    template: valueOrDashTemplate("ShippingAddressString")
+                },
+                {
+                    field: "ShippingCity",
+                    title: "City",
+                    width: 120,
+                    template: valueOrDashTemplate("ShippingCity")
+                },
+                {
+                    field: "ShippingStateProvince",
+                    title: "State",
+                    width: 80,
+                    template: valueOrDashTemplate("ShippingStateProvince")
+                },
+                {
+                    field: "OrderTotal",
+                    title: "Total",
+                    width: 100,
+                    template: function(dataItem) {
+                        if (dataItem.OrderTotal) {
+                            return '$' + dataItem.OrderTotal;
+                        }
+                        return "--";
+                    },
+                    headerAttributes: { style: "text-align:center" },
+                    attributes: { style: "text-align:center" }
+                }
+            ]
+        });
+
+        function additionalData() {
+            var data = {
+                // The LoadNotShipped parameter only filters for shipments without ShippedDate
+                // But we need to handle both "not shipped" and "shipped but not delivered" cases
+                // We'll use client-side filtering to exclude fully processed shipments
+                LoadNotShipped: false,
+                shipmentModel: {
+                    LoadNotShipped: false
+                }
+            };
+            addAntiForgeryToken(data);
+            return data;
+        }
+        
+        // Function to initialize the detail grid
+        function shipmentItemsDetailInit(e) {
+            console.log("Detail init called for shipment: ", e.data);
+            var shipmentId = e.data.Id;
+            
+            // Create a detail grid to show shipment items
+            $("<div class='shipment-details-grid'/>").appendTo(e.detailCell).kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Html.Raw(Url.Action("ShipmentsItemsByShipmentId", "Shipment", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            dataType: "json",
+                            data: function() {
+                                var data = {
+                                    shipmentId: shipmentId  
+                                };
+                                addAntiForgeryToken(data);
+                                return data;
+                            }
+                        }
+                    },
+                    schema: {
+                        data: "Data",
+                        total: "Total",
+                        errors: "Errors",
+                        model: {
+                            fields: {
+                                ProductName: { type: "string" },
+                                ProductId: { type: "string" },
+                                AttributeInfo: { type: "string" },
+                                Sku: { type: "string" },
+                                QuantityToAdd: { type: "number" },
+                                UnitPrice: { type: "number" }
+                            }
+                        }
+                    },
+                    error: function(e) {
+                        display_kendoui_grid_error(e);
+                        this.cancelChanges();
+                    },
+                    serverPaging: false,
+                    serverFiltering: false,
+                    serverSorting: false
+                },
+                scrollable: false,
+                sortable: true,
+                pageable: false,
+                columns: [
+                    {
+                        field: "ProductName",
+                        title: "Product Name",
+                        template: function(dataItem) {
+                            var output = '<div><a href="@Url.Action("Edit", "Product", new { area = Constants.AreaAdmin })/' + dataItem.ProductId + '">' + dataItem.ProductName + '</a>';
+                            if (dataItem.AttributeInfo && dataItem.AttributeInfo.length > 0) {
+                                output += '<br /><small>' + dataItem.AttributeInfo + '</small>';
+                            }
+                            output += '</div>';
+                            return output;
+                        },
+                        width: 350,
+                        headerAttributes: { style: "background-color: #3f51b5; color: white;" }
+                    },
+                    {
+                        field: "QuantityInThisShipment",
+                        title: "Quantity",
+                        width: 100,
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" },
+                        attributes: { style: "text-align:center" }
+                    },
+                    {
+                        field: "ProductTotal",
+                        title: "Product Total",
+                        template: function(dataItem) {
+                            if (dataItem.ProductTotal) {
+                                return '$' + dataItem.ProductTotal.toFixed(2);
+                            }
+                            return "$0.00";
+                        },
+                        width: 120,
+                        headerAttributes: { style: "text-align:right; background-color: #3f51b5; color: white;" },
+                        attributes: { style: "text-align:right" }
+                    }
+                ],
+                dataBound: function() {
+                    // After the grid is loaded, add the action panel
+                    var grid = this;
+                    var gridElement = $(grid.element);
+                    var shipmentId = e.data.Id;
+                    var isShipped = e.data.ShippedDate != null;
+                    var isDelivered = e.data.DeliveryDate != null;
+                    
+                    // Add action buttons and comments after products table
+                    var actionDiv = $('<div class="row mt-3"></div>');
+                    
+                    // Add comments section
+                    var commentsDiv = $('<div class="col-md-8 internal-notes text-left msg"></div>');
+                    var adminComment = e.data.AdminComment ? e.data.AdminComment : 'No comments';
+                    commentsDiv.append('<strong>Comments:</strong> ' + adminComment);
+                    actionDiv.append(commentsDiv);
+                    
+                    // Add action buttons
+                    var buttonsDiv = $('<div class="col-md-4 text-right"></div>');
+                    
+                    // Show appropriate buttons based on shipment status
+                    if (!isShipped) {
+                        // Not shipped yet - show Ship Now button and Send to Reverification button
+                        buttonsDiv.append('<button type="button" class="btn btn-warning send-to-reverification-btn mr-2" ' +
+                            'data-order-id="' + e.data.OrderId + '"><i class="fa fa-undo"></i> Send to Reverification</button>');
+                        buttonsDiv.append('<button type="button" class="btn btn-success ship-btn mr-2" data-shipment-id="' + shipmentId + 
+                            '"><i class="fa fa-truck"></i> Ship Now</button>');
+                    } else if (!isDelivered) {
+                        // Shipped but not delivered - show Send to Reverification button and Delivered button
+                        buttonsDiv.append('<button type="button" class="btn btn-warning send-to-reverification-btn mr-2" ' +
+                            'data-order-id="' + e.data.OrderId + '"><i class="fa fa-undo"></i> Send to Reverification</button>');
+                        buttonsDiv.append('<button type="button" class="btn btn-primary deliver-btn mr-2" data-shipment-id="' + shipmentId + 
+                            '"><i class="fa fa-check"></i> Mark Delivered</button>');
+                    } else {
+                        // Both shipped and delivered - show status
+                        buttonsDiv.append('<span class="badge bg-success p-2"><i class="fa fa-check"></i> Completed</span>');
+                    }
+                    
+                    actionDiv.append(buttonsDiv);
+                    
+                    // Add the action div after the grid
+                    gridElement.after(actionDiv);
+                    
+                    // Wire up event handlers for the buttons
+                    gridElement.parent().find('.ship-btn').on('click', function() {
+                        var shipmentId = $(this).data('shipment-id');
+                        markAsShipped(shipmentId);
+                    });
+                    
+                    gridElement.parent().find('.deliver-btn').on('click', function() {
+                        var shipmentId = $(this).data('shipment-id');
+                        markAsDelivered(shipmentId);
+                    });
+                    
+                    gridElement.parent().find('.send-to-reverification-btn').on('click', function() {
+                        var orderId = $(this).data('order-id');
+                        sendOrderToReverification(orderId);
+                    });
+                }
+            });
+        }
+        
+        // Add global functions for the action buttons
+        window.markAsShipped = function(shipmentId) {
+            // Close all open dropdowns
+            $('#action-dropdown-container .action-dropdown').hide();
+            
+            if (confirm('@Loc["Admin.Orders.Shipments.ShippedDate.ConfirmShipped"]')) {
+                var postData = {
+                    id: shipmentId
+                };
+                addAntiForgeryToken(postData);
+                
+                $.ajax({
+                    url: '@Url.Action("SetAsShipped", "Shipment", new { area = Constants.AreaAdmin })',
+                    type: "POST",
+                    data: postData,
+                    success: function(data) {
+                        // Refresh the shipment tracking grid
+                        $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
+                        
+                        // Refresh the fulfillment queue grid if it exists
+                        if ($("#fulfillment-queue-grid").length > 0) {
+                            setTimeout(function() {
+                                $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                            }, 500);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert(error);
+                    }
+                });
+            }
+        };
+        
+        window.markAsDelivered = function(shipmentId) {
+            // Close all open dropdowns
+            $('#action-dropdown-container .action-dropdown').hide();
+            
+            if (confirm('@Loc["Admin.Orders.Shipments.DeliveryDate.ConfirmDelivered"]')) {
+                var postData = {
+                    id: shipmentId
+                };
+                addAntiForgeryToken(postData);
+                
+                $.ajax({
+                    url: '@Url.Action("SetAsDelivered", "Shipment", new { area = Constants.AreaAdmin })',
+                    type: "POST",
+                    data: postData,
+                    success: function(data) {
+                        // Refresh the shipment tracking grid
+                        $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
+                        
+                        // Refresh the fulfillment queue grid if it exists
+                        if ($("#fulfillment-queue-grid").length > 0) {
+                            setTimeout(function() {
+                                $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                            }, 500);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert(error);
+                    }
+                });
+            }
+        };
+        
+        window.sendOrderToReverification = function(orderId) {
+            if (confirm('Send this order back to reverification? This will allow modifications to products and move it out of the shipment queue.')) {
+                var button = $(".send-to-reverification-btn[data-order-id='" + orderId + "']");
+                
+                // Disable button and show loading state
+                button.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+                
+                var postData = { orderId: orderId };
+                addAntiForgeryToken(postData);
+                
+                $.ajax({
+                    url: '@Url.Action("SendToReverification", "Order", new { area = Constants.AreaAdmin })',
+                    type: "POST",
+                    data: postData,
+                    success: function(response) {
+                        if (response.success) {
+                            // Refresh shipment tracking grid
+                            $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
+                            
+                            // Refresh reverification queue if exists
+                            if ($("#reverification-queue-grid").length > 0) {
+                                setTimeout(function() {
+                                    $("#reverification-queue-grid").data("kendoGrid").dataSource.read();
+                                }, 500);
+                            }
+                        } else {
+                            alert("Error: " + (response.error || response.message || "Unknown error"));
+                            button.prop('disabled', false).html('<i class="fa fa-undo"></i> Send to Reverification');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert("Error sending order to reverification: " + error);
+                        button.prop('disabled', false).html('<i class="fa fa-undo"></i> Send to Reverification');
+                    }
+                });
+            }
+        };
+        
+        // Add a link to Shipment List with filter for all shipments
+        var titleBar = $(".x_title").last();
+        titleBar.append('<div class="pull-right"><a href="@Url.Action("List", "Shipment", new { area = Constants.AreaAdmin })" class="btn btn-info">View All Shipments</a></div>');
+    });
+</script>

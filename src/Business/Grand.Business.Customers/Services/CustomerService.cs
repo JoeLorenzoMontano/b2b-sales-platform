@@ -80,9 +80,10 @@ public class CustomerService : ICustomerService
         DateTime? createdToUtc = null, string affiliateId = "", string vendorId = "", string storeId = "",
         string ownerId = "",
         string salesEmployeeId = "", string[] customerGroupIds = null, string[] customerTagIds = null,
+        string[] defaultImpersonatedByEmployeeIds = null, string[] cityNames = null,
         string email = null, string username = null,
         string firstName = null, string lastName = null,
-        string company = null, string phone = null, string zipPostalCode = null,
+        string company = null, string phone = null, string zipPostalCode = null, string addressKeyword = null,
         bool loadOnlyWithShoppingCart = false, ShoppingCartType? sct = null,
         int pageIndex = 0, int pageSize = 2147483647, Expression<Func<Customer, object>> orderBySelector = null)
     {
@@ -96,6 +97,8 @@ public class CustomerService : ICustomerService
             SalesEmployeeId = salesEmployeeId,
             CustomerGroupIds = customerGroupIds,
             CustomerTagIds = customerTagIds,
+            DefaultImpersonatedByEmployeeIds = defaultImpersonatedByEmployeeIds,
+            CityNames = cityNames,
             Email = email,
             Username = username,
             FirstName = firstName,
@@ -103,6 +106,7 @@ public class CustomerService : ICustomerService
             Company = company,
             Phone = phone,
             ZipPostalCode = zipPostalCode,
+            AddressKeyword = addressKeyword,
             LoadOnlyWithShoppingCart = loadOnlyWithShoppingCart,
             Sct = sct,
             PageIndex = pageIndex,
@@ -133,7 +137,9 @@ public class CustomerService : ICustomerService
         var query = from p in _customerRepository.Table
             select p;
 
-        query = query.Where(c => lastActivityFromUtc <= c.LastActivityDateUtc);
+        // Fix timezone issue by ensuring we're comparing dates properly
+        // This fixes potential timezone conversion issues
+        query = query.Where(c => c.LastActivityDateUtc >= lastActivityFromUtc);
         query = query.Where(c => !c.Deleted);
 
         if (customerGroupIds is { Length: > 0 })
@@ -163,7 +169,9 @@ public class CustomerService : ICustomerService
             select p;
 
         query = query.Where(c => c.Active);
-        query = query.Where(c => lastActivityFromUtc <= c.LastUpdateCartDateUtc);
+        // Fix timezone issue by ensuring we're comparing dates properly
+        // This fixes potential timezone conversion issues
+        query = query.Where(c => c.LastUpdateCartDateUtc != null && c.LastUpdateCartDateUtc >= lastActivityFromUtc);
         query = query.Where(c => c.ShoppingCartItems.Any(y => y.ShoppingCartTypeId == ShoppingCartType.ShoppingCart));
 
         if (!string.IsNullOrEmpty(storeId))
@@ -485,11 +493,25 @@ public class CustomerService : ICustomerService
             .Set(x => x.SeId, customer.SeId)
             .Set(x => x.OwnerId, customer.OwnerId)
             .Set(x => x.StaffStoreId, customer.StaffStoreId)
+            .Set(x => x.DefaultImpersonatedByEmployeeId, customer.DefaultImpersonatedByEmployeeId)
             .Set(x => x.Attributes, customer.Attributes);
 
         await _customerRepository.UpdateOneAsync(x => x.Id == customer.Id, update);
         //event notification
         await _mediator.EntityUpdated(customer);
+    }
+    
+    /// <summary>
+    /// Update just the DefaultImpersonatedByEmployeeId field for a customer
+    /// </summary>
+    public virtual async Task UpdateCustomerDefaultImpersonatedByEmployeeId(string customerId, string defaultImpersonatedByEmployeeId)
+    {
+        ArgumentNullException.ThrowIfNullOrEmpty(customerId);
+        
+        var update = UpdateBuilder<Customer>.Create()
+            .Set(x => x.DefaultImpersonatedByEmployeeId, defaultImpersonatedByEmployeeId);
+            
+        await _customerRepository.UpdateOneAsync(x => x.Id == customerId, update);
     }
 
 

@@ -14,6 +14,16 @@
                 <span>{{warning}}</span>
             </template>
         </div>
+        @* Temporarily commented out - under review for customer exposure
+        <div class="form-group mb-3">
+            <label for="requestedShipmentDate">@Loc["Orders.RequestedShipmentDate"]</label>
+            <input type="date" id="requestedShipmentDate" v-model="vmorder.requestedShipmentDate" class="form-control" />
+        </div>
+        *@
+        <div class="form-group mb-3">
+            <label for="orderNote">@Loc["Orders.OrderNotes.Fields.Note"]</label>
+            <textarea id="orderNote" v-model="vmorder.orderNote" class="form-control" rows="3" placeholder="@Loc["Orders.OrderNotes.Fields.Note.Placeholder"]"></textarea>
+        </div>
     </div>
     @await Component.InvokeAsync("Widget", new { widgetZone = "checkout_confirm_bottom" })
     <div class="confirm-buttons">

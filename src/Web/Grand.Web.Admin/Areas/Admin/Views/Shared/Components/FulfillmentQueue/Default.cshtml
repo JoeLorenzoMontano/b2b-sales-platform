@@ -1,0 +1,716 @@
+@inject AdminAreaSettings adminAreaSettings
+
+<div id="fulfillment-queue-grid"></div>
+
+<style>
+    .fulfillment-details-grid .k-grid-header .k-header {
+        background-color: #3f51b5; /* Match the theme's primary color */
+        color: white !important;
+    }
+    .fulfillment-details-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .select-all-items {
+        accent-color: white; /* Customize the checkbox color */
+        transform: scale(1.3); /* Make it larger */
+    }
+    .fulfillment-actions {
+        white-space: nowrap;
+    }
+    .fulfillment-actions .btn {
+        padding: 2px 6px;
+        font-size: 12px;
+        line-height: 1.2;
+        border-radius: 3px;
+    }
+    .fulfillment-actions .btn:hover {
+        transform: scale(1.05);
+        transition: transform 0.1s ease;
+    }
+    .fulfillment-actions .btn-primary {
+        background-color: #3f51b5;
+        border-color: #3f51b5;
+    }
+    .fulfillment-actions .btn-primary:hover {
+        background-color: #303f9f;
+        border-color: #303f9f;
+    }
+    .fulfillment-actions .btn-info {
+        background-color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    .fulfillment-actions .btn-info:hover {
+        background-color: #138496;
+        border-color: #117a8b;
+    }
+</style>
+
+<script>
+    $(document).ready(function () {
+        $("#fulfillment-queue-grid").kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Html.Raw(Url.Action("FulfillmentOrderList", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            dataType: "json",
+                            data: additionalData
+                        }
+                    },
+                    schema: {
+                        data: "Data",
+                        total: "Total",
+                        errors: "Errors"
+                    },
+                    error: function(e) {
+                        display_kendoui_grid_error(e);
+                        // Cancel the changes
+                        this.cancelChanges();
+                    },
+                    pageSize: 10,
+                    serverPaging: false, // Use client paging since we're filtering server-side
+                    serverFiltering: false,
+                    serverSorting: false
+                },
+                pageable: {
+                    refresh: true,
+                    pageSizes: [10,20,50]
+                },
+                editable: {
+                    confirmation: false,
+                    mode: "inline"
+                },
+                scrollable: false,
+                detailInit: orderItemDetailInit,
+                columns: [
+                    {
+                        field: "OrderNumber",
+                        title: "@Loc["Admin.Orders.Fields.Id"]",
+                        width: 50,
+                        template: '<a class="k-link" href="Admin/Order/Edit/#=Id#">#=OrderNumber#</a>',
+                    },
+                    {
+                        field: "CustomerFullName",
+                        title: "@Loc["Admin.Orders.Fields.Customer"]",
+                        width: 200,
+                      template: function(dataItem) {
+                          var customerDisplay = dataItem.CustomerFullName;
+                          if (dataItem.CustomerCompany) {
+                              customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                          }
+                          return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
+                        }                        
+                    },
+                    {
+                        field: "CustomerGroups",
+                        title: "@Loc["Admin.Orders.Fields.CustomerGroups"]",
+                        width: 150
+                    },
+                    {
+                        field: "Warehouses",
+                        title: "@Loc["Admin.Orders.Fields.Warehouses"]",
+                        width: 150
+                    },
+                    {
+                        field: "OrderTotal",
+                        title: "@Loc["Admin.Orders.Fields.OrderTotal"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "SalesEmployeeName",
+                        title: "@Loc["Admin.Orders.Fields.SalesEmployee"]",
+                        width: 150,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "ShippingAddressString",
+                        title: "@Loc["Admin.Orders.Fields.ShippingAddress.Address1"]",
+                        width: 200,
+                    },
+                    {
+                        field: "RequestedShipmentDate",
+                        title: "@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]",
+                        width: 150,
+                        type: "date",
+                        format: "{0:yyyy-MM-dd}", // Use consistent date format
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                        // Add one day to compensate for timezone conversion issue with business dates
+                        template: function(dataItem) {
+                            if (dataItem.RequestedShipmentDate) {
+                                var date = new Date(dataItem.RequestedShipmentDate);
+                                date.setDate(date.getDate() + 1); // Add one day to fix display
+                                return kendo.toString(date, "yyyy-MM-dd");
+                            }
+                            return "";
+                        },
+                    },
+                    {
+                        field: "CreatedOn",
+                        title: "@Loc["Admin.Orders.Fields.CreatedOn"]",
+                        width: 120,
+                        type: "date",
+                        format: "{0:G}",
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        title: "",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                        template: function(dataItem) {
+                            return '<div class="fulfillment-actions">' +
+                                '<a href="@Html.Raw(Url.Action("PdfInvoice", "Order", new { area = Constants.AreaAdmin }))?orderId=' + dataItem.Id + '" ' +
+                                'class="btn btn-primary btn-sm mr-1" target="_blank" title="Generate PDF Invoice">' +
+                                '<i class="fa fa-file-pdf-o"></i></a>' +
+                                '<button type="button" class="btn btn-info btn-sm view-docs-btn" ' +
+                                'data-order-id="' + dataItem.Id + '" title="View Documents">' +
+                                '<i class="fa fa-folder-open"></i></button>' +
+                                '</div>';
+                        }
+                    }
+                ]
+            });
+
+
+        function additionalData() {
+            var data = {
+                // No date range or other filters - let the server filter by OpenQty
+            };
+            addAntiForgeryToken(data);
+            return data;
+        }
+        
+        // Function to initialize the detail row with order items and fulfillment controls
+        function orderItemDetailInit(e) {
+            var orderId = e.data.Id;
+            
+            // Create a detail grid with order items
+            $("<div class='fulfillment-details-grid'/>").appendTo(e.detailCell).kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Html.Raw(Url.Action("GetOrderItemsForFulfillment", "Order", new { area = Constants.AreaAdmin }))?orderId=" + orderId,
+                            type: "POST",
+                            dataType: "json",
+                            data: function() {
+                                var data = {};
+                                addAntiForgeryToken(data);
+                                return data;
+                            }
+                        }
+                    },
+                    schema: {
+                        data: "Data",
+                        total: "Total",
+                        errors: "Errors"
+                    },
+                    error: function(e) {
+                        display_kendoui_grid_error(e);
+                        this.cancelChanges();
+                    },
+                    serverPaging: false,
+                    serverFiltering: false,
+                    serverSorting: false
+                },
+                scrollable: false,
+                sortable: true,
+                pageable: false,
+                columns: [
+                    {
+                        template: '<input type="checkbox" class="fulfillment-item-check" value="#=Id#" title="Select item for shipment" />',
+                        width: 30,
+                        headerTemplate: '<input type="checkbox" id="select-all-items-#=Id#" class="select-all-items" data-order-id="#=Id#" title="Select all items (required for shipment)" />',
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
+                    },
+                    {
+                        field: "ProductName",
+                        title: "@Loc["Admin.Orders.Products.ProductName"]",
+                        template: '<div><a href="@Url.Action("Edit", "Product", new { area = Constants.AreaAdmin })/#=ProductId#">#:ProductName#</a>' +
+                            '# if(AttributeInfo && AttributeInfo.length > 0) {# <br /><small>#=AttributeInfo#</small> #} #</div>',
+                        width: 350,
+                        headerAttributes: { style: "background-color: #3f51b5; color: white;" }
+                    },
+                    {
+                        field: "Quantity",
+                        title: "Total Ordered",
+                        width: 100,
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
+                    },
+                    {
+                        field: "UnitPriceInclTax",
+                        title: "@Loc["Admin.Orders.Products.UnitPriceInclTax"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center; background-color: #3f51b5; color: white;" }
+                    }
+                ],
+                dataBound: function() {
+                    // After the grid is loaded, add the fulfillment control panel
+                    var grid = this;
+                    var gridElement = $(grid.element);
+                    
+                    // First, remove any existing control panel to prevent duplication
+                    var existingPanel = gridElement.parent().find(".fulfillment-control-panel[data-order-id='" + orderId + "']");
+                    if (existingPanel.length > 0) {
+                        existingPanel.remove();
+                    }
+                    
+                    // Create a new control panel each time
+                    var panel = $('<div class="fulfillment-control-panel row mt-3 mb-3" data-order-id="' + orderId + '"></div>');
+                        
+                    // Create the requested shipment date picker
+                    var dateSection = $('<div class="col-md-6 form-group row"></div>');
+                    dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]:</label>');
+                    dateSection.append('<div class="col-sm-8"><input type="date" id="requestedShipmentDate_' + orderId + '" class="form-control requested-shipment-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
+                    panel.append(dateSection);
+                    
+                    // Create the action buttons
+                    var buttonSection = $('<div class="col-md-6 text-right"></div>');
+                    buttonSection.append('<button type="button" class="btn btn-info create-document-btn mr-2" ' +
+                        'data-order-id="' + orderId + '"><i class="fa fa-file-plus"></i> Create Document</button>');
+                    buttonSection.append('<button type="button" class="btn btn-warning send-to-reverification-btn mr-2" ' +
+                        'data-order-id="' + orderId + '"><i class="fa fa-undo"></i> Send to Reverification</button>');
+                    buttonSection.append('<button type="button" class="btn btn-success create-shipment-btn" ' +
+                        'data-order-id="' + orderId + '" disabled><i class="fa fa-truck"></i> Create Shipment</button>');
+                    panel.append(buttonSection);
+                    
+                    // Add the panel after the grid
+                    gridElement.after(panel);
+                        
+                    // Load existing requested shipment date if available
+                    $.ajax({
+                        url: "@Url.Action("GetRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin })",
+                        type: "GET",
+                        data: { orderId: orderId },
+                        success: function(response) {
+                            if (response && response.success && response.value) {
+                                $("#requestedShipmentDate_" + orderId).val(response.value);
+                            }
+                        }
+                    });
+                        
+                    // Wire up the date picker to save date changes immediately
+                    $("#requestedShipmentDate_" + orderId).off("change").on("change", function() {
+                        var newDate = $(this).val();
+                        // Add anti-forgery token
+                        var data = {
+                            orderId: orderId,
+                            date: newDate
+                        };
+                        addAntiForgeryToken(data);
+                        
+                        $.ajax({
+                            url: "@Html.Raw(Url.Action("SaveRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            data: data,
+                            success: function(response) {
+                                if (response && response.success) {
+                                    // Silent success - no notification needed
+                                    
+                                    // Reload main grid to reflect changes
+                                    setTimeout(function() {
+                                        $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                    }, 500);
+                                } else {
+                                    alert("Failed to save delivery date");
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Save date error:", error);
+                                console.error("Response:", xhr.responseText);
+                                alert("Error saving date: " + error);
+                            }
+                        });
+                    });
+                    
+                    // Function to check if all items are selected and update button state
+                    function updateShipmentButtonState() {
+                        var totalItems = gridElement.find(".fulfillment-item-check").length;
+                        var checkedItems = gridElement.find(".fulfillment-item-check:checked").length;
+                        
+                        // Enable button only if all items are checked
+                        $(".create-shipment-btn[data-order-id='" + orderId + "']").prop("disabled", checkedItems < totalItems);
+                    }
+                    
+                    // Wire up the select all checkbox
+                    gridElement.find(".select-all-items").off("change").on("change", function() {
+                        var checked = $(this).is(":checked");
+                        gridElement.find(".fulfillment-item-check").prop("checked", checked);
+                        updateShipmentButtonState();
+                    });
+                    
+                    // Wire up individual checkboxes
+                    gridElement.find(".fulfillment-item-check").off("change").on("change", function() {
+                        // If unchecking an item, also uncheck the "select all" checkbox
+                        if (!$(this).is(":checked")) {
+                            gridElement.find(".select-all-items").prop("checked", false);
+                        } else {
+                            // Check if all individual items are now checked
+                            var allChecked = gridElement.find(".fulfillment-item-check:not(:checked)").length === 0;
+                            if (allChecked) {
+                                gridElement.find(".select-all-items").prop("checked", true);
+                            }
+                        }
+                        
+                        updateShipmentButtonState();
+                    });
+                        
+                    // Wire up the create shipment button
+                    $(".create-shipment-btn[data-order-id='" + orderId + "']").off("click").on("click", function() {
+                        var selectedItems = [];
+                        var shipQtyMap = {};
+                        
+                        // Get all selected items
+                        gridElement.find(".fulfillment-item-check:checked").each(function() {
+                            var itemId = $(this).val();
+                            selectedItems.push(itemId);
+                            
+                            // Since we're shipping all items, use OpenQty as the ship quantity
+                            var row = $(this).closest("tr");
+                            var dataItem = grid.dataItem(row);
+                            shipQtyMap[itemId] = dataItem.OpenQty.toString();
+                        });
+                        
+                        // This validation should never trigger since the button is disabled unless all items are selected,
+                        // but keeping it as a fallback
+                        if (selectedItems.length === 0) {
+                            alert("Please select all items to create a shipment");
+                            return;
+                        }
+                        
+                        var requestedShipmentDate = $("#requestedShipmentDate_" + orderId).val();
+                        
+                        // Call API to create shipment
+                        var shipmentData = {
+                            orderId: orderId,
+                            orderItemIds: selectedItems.join(','),
+                            quantities: JSON.stringify(shipQtyMap),
+                            requestedShipmentDate: requestedShipmentDate
+                        };
+                        addAntiForgeryToken(shipmentData);
+                        
+                        $.ajax({
+                            url: "@Html.Raw(Url.Action("CreateFulfillmentShipment", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            data: shipmentData,
+                            success: function(response) {
+                                if (response.success) {
+                                    // Use standard notification
+                                    alert("Full shipment created successfully for all order items");
+                                    
+                                    // Refresh the fulfillment queue grid
+                                    $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                    
+                                    // Refresh the shipment tracking grid if it exists
+                                    if ($("#shipment-tracking-grid").length > 0) {
+                                        setTimeout(function() {
+                                            $("#shipment-tracking-grid").data("kendoGrid").dataSource.read();
+                                        }, 500);
+                                    }
+                                } else {
+                                    alert("Error: " + (response.error || "Unknown error"));
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Shipment creation failed:", error);
+                                console.error("Response:", xhr.responseText);
+                                alert("Error creating shipment: " + error);
+                            }
+                        });
+                    });
+                    
+                    // Wire up the send to reverification button
+                    $(".send-to-reverification-btn[data-order-id='" + orderId + "']").off("click").on("click", function() {
+                        if (confirm('Send this order back to reverification? This will allow modifications to products and move it out of the fulfillment queue.')) {
+                            var button = $(this);
+                            
+                            // Disable button and show loading state
+                            button.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+                            
+                            var data = {
+                                orderId: orderId
+                            };
+                            addAntiForgeryToken(data);
+                            
+                            $.ajax({
+                                url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Constants.AreaAdmin }))",
+                                type: "POST",
+                                data: data,
+                                success: function(response) {
+                                    if (response.success) {
+                                        // Refresh the fulfillment queue grid to remove this order
+                                        $("#fulfillment-queue-grid").data("kendoGrid").dataSource.read();
+                                        
+                                        // Refresh the reverification queue grid if it exists
+                                        if ($("#reverification-queue-grid").length > 0) {
+                                            setTimeout(function() {
+                                                $("#reverification-queue-grid").data("kendoGrid").dataSource.read();
+                                            }, 500);
+                                        }
+                                    } else {
+                                        alert("Error: " + (response.error || response.message || "Unknown error"));
+                                        // Re-enable button on failure
+                                        button.prop('disabled', false).html('<i class="fa fa-undo"></i> Send to Reverification');
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    console.error("Send to reverification failed:", error);
+                                    console.error("Response:", xhr.responseText);
+                                    alert("Error sending order to reverification: " + error);
+                                    
+                                    // Re-enable button on error
+                                    button.prop('disabled', false).html('<i class="fa fa-undo"></i> Send to Reverification');
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Add a link to Order List with filter for pending fulfillment
+        var titleBar = $(".x_title").last();
+        titleBar.append('<div class="pull-right"><a href="@Url.Action("List", "Order", new { OrderStatusId = 20, NeedsFulfillment = true, area = Constants.AreaAdmin })" class="btn btn-info">View All Orders Needing Fulfillment</a></div>');
+        
+        // Handle View Docs button clicks
+        $(document).on('click', '.view-docs-btn', function() {
+            var orderId = $(this).data('order-id');
+            var editUrl = "@Html.Raw(Url.Action("Edit", "Order", new { area = Constants.AreaAdmin }))/" + orderId;
+            
+            // Open the order edit page in a new tab
+            var newWindow = window.open(editUrl, '_blank');
+            
+            // Wait for the page to load and then select the Documents tab
+            if (newWindow) {
+                // Add a script to the new window to select the Documents tab once it loads
+                var checkTabStrip = function() {
+                    try {
+                        if (newWindow.$ && newWindow.$("[data-role='tabstrip']").length > 0) {
+                            var tabstrip = newWindow.$("[data-role='tabstrip']").data("kendoTabStrip");
+                            if (tabstrip) {
+                                // Select the Documents tab (index 6)
+                                tabstrip.select(6);
+                            }
+                        } else {
+                            // If TabStrip not ready yet, try again in 100ms
+                            setTimeout(checkTabStrip, 100);
+                        }
+                    } catch (e) {
+                        // Cross-origin restrictions or other errors - ignore
+                        console.log("Could not access new window to select Documents tab");
+                    }
+                };
+                
+                // Start checking after a brief delay to allow page to start loading
+                setTimeout(checkTabStrip, 500);
+            }
+        });
+    
+    // Handle Create Document button clicks
+    $(document).on('click', '.create-document-btn', function() {
+        var orderId = $(this).data('order-id');
+        showCreateDocumentModal(orderId);
+    });
+    
+    });
+
+    // Function to show create document modal
+    function showCreateDocumentModal(orderId) {
+        // Set the orderId in the modal form
+        $('#create-document-modal').data('order-id', orderId);
+        $('#documentObjectId').val(orderId);
+        
+        // Reset form
+        $('#create-document-form')[0].reset();
+        $('#create-document-modal .alert').hide();
+        
+        // Reset upload indicators
+        $('#upload-progress').hide();
+        $('#upload-success').hide();
+        $('#upload-progress .progress-bar').css('width', '0%');
+        
+        // Show modal
+        $('#create-document-modal').modal('show');
+    }
+    
+    // Handle document creation form submission
+    $(document).on('submit', '#create-document-form', function(e) {
+        e.preventDefault();
+        
+        var orderId = $('#create-document-modal').data('order-id');
+        var fileInput = $('#documentFile')[0];
+        var selectedFile = fileInput.files[0];
+        
+        // Show loading state
+        var submitBtn = $('#create-document-submit');
+        var originalText = submitBtn.html();
+        submitBtn.prop('disabled', true);
+        
+        // Hide previous errors/success messages
+        $('#create-document-error').hide();
+        $('#upload-success').hide();
+        
+        // Function to create document (with or without file)
+        function createDocument(downloadId) {
+            // Manually construct data object with form fields
+            var data = {
+                Name: $('#documentName').val(),
+                Description: $('#documentDescription').val(),
+                ObjectId: $('#documentObjectId').val(),
+                ReferenceId: parseInt($('input[name="ReferenceId"]').val()),
+                Published: $('input[name="Published"]').val() === 'true'
+            };
+            
+            // Add downloadId if file was uploaded
+            if (downloadId) {
+                data.DownloadId = downloadId;
+            }
+            
+            // Add anti-forgery token
+            addAntiForgeryToken(data);
+            
+            submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Creating...');
+            
+            $.ajax({
+                url: '@Url.Action("CreateDocumentInline", "Document", new { area = Constants.AreaAdmin })',
+                type: 'POST',
+                data: data,
+                success: function(response) {
+                    if (response.success) {
+                        // Hide modal
+                        $('#create-document-modal').modal('hide');
+                    } else {
+                        // Show error in modal
+                        $('#create-document-error').text(response.error || "An error occurred").show();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#create-document-error').text("An error occurred: " + error).show();
+                },
+                complete: function() {
+                    // Restore button
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
+        
+        // If no file selected, create document directly
+        if (!selectedFile) {
+            createDocument();
+            return;
+        }
+        
+        // Validate file size (10MB limit)
+        if (selectedFile.size > 10 * 1024 * 1024) {
+            $('#create-document-error').text("File size must be less than 10MB").show();
+            submitBtn.prop('disabled', false);
+            return;
+        }
+        
+        // Upload file first
+        submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
+        $('#upload-progress').show();
+        
+        var formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('downloadType', '1'); // DownloadType.Document
+        formData.append('referenceId', orderId);
+        
+        $.ajax({
+            url: '@Url.Action("AsyncUpload", "Download", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            xhr: function() {
+                var xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        var percentComplete = (e.loaded / e.total) * 100;
+                        $('#upload-progress .progress-bar').css('width', percentComplete + '%');
+                    }
+                });
+                return xhr;
+            },
+            success: function(response) {
+                $('#upload-progress').hide();
+                if (response.success) {
+                    $('#upload-success').show();
+                    // Create document with the uploaded file's download ID
+                    createDocument(response.downloadId);
+                } else {
+                    $('#create-document-error').text("File upload failed: " + (response.message || "Unknown error")).show();
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#upload-progress').hide();
+                $('#create-document-error').text("File upload failed: " + error).show();
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+</script>
+
+<!-- Create Document Modal -->
+<div class="modal fade" id="create-document-modal" tabindex="-1" role="dialog" aria-labelledby="createDocumentModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="create-document-form" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="createDocumentModalLabel">
+                        <i class="fa fa-file-plus"></i> Create Document
+                    </h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger" id="create-document-error" style="display: none;"></div>
+                    
+                    <!-- Hidden fields -->
+                    <input type="hidden" name="ObjectId" id="documentObjectId" />
+                    <input type="hidden" name="ReferenceId" value="@((int)Reference.Order)" />
+                    <input type="hidden" name="Published" value="true" />
+                    
+                    <div class="form-group">
+                        <label for="documentName">Document Name *</label>
+                        <input type="text" class="form-control" name="Name" id="documentName" required maxlength="100" placeholder="Enter document name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="documentDescription">Description</label>
+                        <textarea class="form-control" name="Description" id="documentDescription" rows="3" maxlength="500" placeholder="Optional description"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="documentFile">File Attachment (Optional)</label>
+                        <div class="file-upload-container">
+                            <input type="file" class="form-control-file" id="documentFile" name="documentFile" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                            <small class="form-text text-muted">Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG, GIF. Max size: 10MB</small>
+                            <div class="upload-progress" id="upload-progress" style="display: none;">
+                                <div class="progress mt-2">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Uploading...</small>
+                            </div>
+                            <div class="upload-success" id="upload-success" style="display: none;">
+                                <small class="text-success"><i class="fa fa-check"></i> File uploaded successfully</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="create-document-submit">
+                        <i class="fa fa-save"></i> Create Document
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

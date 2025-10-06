@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-16"?>
+<Language Name="English">
+	<Resource Name="Admin.Catalog.Products.Fields.InventoryJournal.Date" Area="Admin">
+		<Value>Date</Value>
+	</Resource>
+	<Resource Name="Admin.Catalog.Products.Fields.InventoryJournal.ObjectType" Area="Admin">
+		<Value>Object Type</Value>
+	</Resource>
+	<Resource Name="Admin.Catalog.Products.Fields.InventoryJournal.InQty" Area="Admin">
+		<Value>In Qty</Value>
+	</Resource>
+	<Resource Name="Admin.Catalog.Products.Fields.InventoryJournal.OutQty" Area="Admin">
+		<Value>Out Qty</Value>
+	</Resource>
+	<Resource Name="Admin.Catalog.Products.Fields.InventoryJournal.Comments" Area="Admin">
+		<Value>Comments</Value>
+	</Resource>
+	<Resource Name="Admin.Catalog.Products.Fields.InventoryJournal.Reference" Area="Admin">
+		<Value>Reference</Value>
+	</Resource>
+</Language>

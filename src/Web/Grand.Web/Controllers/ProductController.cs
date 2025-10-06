@@ -12,6 +12,7 @@ using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Media;
 using Grand.Infrastructure;
+using System.Linq;
 using Grand.Web.Commands.Models.Products;
 using Grand.Web.Common.Controllers;
 using Grand.Web.Common.Extensions;
@@ -341,13 +342,36 @@ public class ProductController : BasePublicController
         if (product == null)
             return new JsonResult("");
 
+        // Get quantity from the request
+        int quantity = 1;
+        if (Request.Form.ContainsKey("EnteredQuantity") && int.TryParse(Request.Form["EnteredQuantity"], out int parsedQuantity))
+        {
+            quantity = parsedQuantity;
+        }
+        // COMMENTED OUT: Get sample pricing preference from the request
+        /*
+        bool enableSamplePricing = true; // Default to true
+        if (Request.Form.ContainsKey("EnableSamplePricing") && bool.TryParse(Request.Form["EnableSamplePricing"], out bool parsedSamplePricing))
+        {
+            enableSamplePricing = parsedSamplePricing;
+        }
+        */
+
         var modelProduct = await _mediator.Send(new GetProductDetailsAttributeChange {
             Currency = _contextAccessor.WorkContext.WorkingCurrency,
             Customer = _contextAccessor.WorkContext.CurrentCustomer,
             Store = _contextAccessor.StoreContext.CurrentStore,
             Model = model,
-            Product = product
+            Product = product,
+            Quantity = quantity,
+            EnableSamplePricing = true // enableSamplePricing
         });
+
+        // Properly serialize SelectListItem objects into simpler JSON objects
+        var allowedQuantitiesArray = modelProduct.AllowedQuantities.Select(x => new {
+            value = x.Value,
+            text = x.Text
+        }).ToArray();
 
         return Json(new {
             gtin = modelProduct.Gtin,
@@ -361,7 +385,10 @@ public class ProductController : BasePublicController
             disabledattributemappingids = modelProduct.DisabledAttributeMappingids.ToArray(),
             notAvailableAttributeMappingids = modelProduct.NotAvailableAttributeMappingids.ToArray(),
             pictureFullSizeUrl = modelProduct.PictureFullSizeUrl,
-            pictureDefaultSizeUrl = modelProduct.PictureDefaultSizeUrl
+            pictureDefaultSizeUrl = modelProduct.PictureDefaultSizeUrl,
+            sampleEnabled = false, // modelProduct.SampleEnabled,
+            allowedQuantities = allowedQuantitiesArray,
+            caseSize = modelProduct.CaseSize
         });
     }
 
@@ -374,7 +401,20 @@ public class ProductController : BasePublicController
         if (product == null)
             return new JsonResult("");
 
-        var stock = stockQuantityService.FormatStockMessage(product, model.WarehouseId, new List<CustomAttribute>());
+        // Check if we have product attributes in request to pass them
+        List<CustomAttribute> attributes = new List<CustomAttribute>();
+        if (model.Attributes != null && model.Attributes.Any())
+        {
+            // Convert the attributes from the model - they are a different type
+            attributes = model.Attributes.Select(attr => new CustomAttribute
+            {
+                Key = attr.Key,
+                Value = attr.Value
+            }).ToList();
+        }
+        
+        // Get stock message with attributes if available
+        var stock = stockQuantityService.FormatStockMessage(product, model.WarehouseId, attributes);
         return Json(new {
             stockAvailability = string.Format(_translationService.GetResource(stock.resource), stock.arg0)
         });

@@ -1,10 +1,13 @@
 @using Grand.Business.Core.Interfaces.Catalog.Products
 @using Grand.Business.Core.Interfaces.Checkout.GiftVouchers
+@using Grand.Business.Core.Interfaces.Checkout.Orders
 @using Grand.Business.Core.Interfaces.Checkout.Payments
 @using Grand.Business.Core.Interfaces.Common.Directory
 @using Grand.Business.Core.Interfaces.Common.Localization
 @using Grand.Business.Core.Interfaces.Common.Stores
 @using Grand.Business.Core.Interfaces.Storage
+@using Grand.Business.Core.Interfaces.Customers
+@using Grand.Domain.Customers
 @using Grand.Domain.Tax
 @model (IList<Order>, string)
 @inject IProductService _productService
@@ -15,6 +18,8 @@
 @inject ITranslationService _translationService
 @inject IPaymentService _paymentService
 @inject IGiftVoucherService _giftVoucherService
+@inject IOrderService _orderService
+@inject ICustomerService _customerService
 @{
     var logoPicture = await _pictureService.GetPictureById(_pdfSettings.LogoPictureId);
     var logoExists = logoPicture != null;
@@ -155,6 +160,37 @@
                         var paymentMethodStr = paymentMethod != null ? paymentMethod.FriendlyName : order.PaymentMethodSystemName;
                         <b>@(string.Format(_translationService.GetResource("PDFInvoice.PaymentMethod", order.CustomerLanguageId), paymentMethodStr))</b>
                         <br/>
+                        
+                        @if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+                        {
+                            var impersonatingCustomer = await _customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+                            if (impersonatingCustomer != null)
+                            {
+                                var salesRepName = impersonatingCustomer.GetFullName();
+                                var salesRepEmail = impersonatingCustomer.Email;
+                                var salesRepDisplay = "";
+                                
+                                if (!string.IsNullOrEmpty(salesRepName) && !string.IsNullOrEmpty(salesRepEmail))
+                                {
+                                    salesRepDisplay = $"{salesRepName} ({salesRepEmail})";
+                                }
+                                else if (!string.IsNullOrEmpty(salesRepName))
+                                {
+                                    salesRepDisplay = salesRepName;
+                                }
+                                else if (!string.IsNullOrEmpty(salesRepEmail))
+                                {
+                                    salesRepDisplay = salesRepEmail;
+                                }
+                                
+                                if (!string.IsNullOrEmpty(salesRepDisplay))
+                                {
+                                    <b>@(string.Format(_translationService.GetResource("pdfinvoice.salesrep", order.CustomerLanguageId), salesRepDisplay))</b>
+                                    <br/>
+                                }
+                            }
+                        }
+                        
                         @await Component.InvokeAsync("Widget", new { widgetZone = "pdf_payment_method_below", additionalData = order.Id })
                     }
                 </td>
@@ -203,13 +239,28 @@
                         }
                     </td>
                     <td>
-                        @if (priceIncludesTax)
+                        @{
+                            var discountAmount = priceIncludesTax ? item.DiscountAmountInclTax : item.DiscountAmountExclTax;
+                            var originalPrice = priceIncludesTax ? item.UnitPriceWithoutDiscInclTax : item.UnitPriceWithoutDiscExclTax;
+                            var currentPrice = priceIncludesTax ? item.UnitPriceInclTax : item.UnitPriceExclTax;
+                            var hasDiscount = discountAmount > 0 || originalPrice != currentPrice;
+                        }
+                        @if (hasDiscount)
                         {
-                            @item.UnitPriceInclTax.ToString("N2")
+                            <span style="text-decoration: line-through; color: #999;">
+                                @originalPrice.ToString("N2")
+                            </span><br/>
+                            <strong>
+                                @currentPrice.ToString("N2")
+                            </strong><br/>
+                            <small style="color: green;">
+                                @(string.Format(_translationService.GetResource("PDFInvoice.YouSaved", order.CustomerLanguageId) ?? "Saved: {0}", 
+                                (originalPrice - currentPrice).ToString("N2")))
+                            </small>
                         }
                         else
                         {
-                            @item.UnitPriceExclTax.ToString("N2")
+                            @currentPrice.ToString("N2")
                         }
                     </td>
                     <td>@item.Quantity</td>
@@ -307,6 +358,23 @@
                     </b>
 
                 </div>
+            </div>
+        }
+
+        var orderNotes = await _orderService.GetOrderNotes(order.Id);
+        var invoiceNotes = orderNotes.Where(n => n.IncludeOnInvoice).OrderBy(n => n.CreatedOnUtc);
+        
+        if (invoiceNotes.Any())
+        {
+            <div class="summary" style="margin-top: 20px;">
+                <h4>@(_translationService.GetResource("PDFInvoice.OrderNotes", order.CustomerLanguageId))</h4>
+                @foreach (var note in invoiceNotes)
+                {
+                    <div style="margin-bottom: 10px;">
+                        <strong>@note.CreatedOnUtc.ToString("yyyy-MM-dd HH:mm"):</strong><br/>
+                        @Html.Raw(note.Note)
+                    </div>
+                }
             </div>
         }
 

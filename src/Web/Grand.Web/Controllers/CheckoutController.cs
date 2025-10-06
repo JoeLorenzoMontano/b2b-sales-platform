@@ -18,13 +18,13 @@ using Grand.Infrastructure;
 using Grand.Infrastructure.Extensions;
 using Grand.SharedKernel.Attributes;
 using Grand.Web.Common.Controllers;
+using Microsoft.AspNetCore.Mvc;
 using Grand.Web.Common.Filters;
 using Grand.Web.Extensions;
 using Grand.Web.Features.Models.Checkout;
 using Grand.Web.Features.Models.Common;
 using Grand.Web.Models.Checkout;
 using MediatR;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Grand.Web.Controllers;
@@ -687,6 +687,33 @@ public class CheckoutController : BasePublicController
     {
         try
         {
+            //Get order note and requested shipment date from request
+            string orderNote = null;
+            DateTime? requestedShipmentDate = null;
+            var contentType = HttpContext.Request.ContentType;
+            
+            if (!string.IsNullOrEmpty(contentType) && contentType.Contains("multipart/form-data"))
+            {
+                var form = await HttpContext.Request.ReadFormAsync();
+                if (form.ContainsKey("orderNote"))
+                {
+                    orderNote = form["orderNote"].ToString();
+                }
+                if (form.ContainsKey("requestedShipmentDate") && DateTime.TryParse(form["requestedShipmentDate"].ToString(), out var parsedDate))
+                {
+                    requestedShipmentDate = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+                }
+            }
+            else if (!string.IsNullOrEmpty(contentType) && contentType.Contains("application/json"))
+            {
+                _logger.LogWarning("Incorrect Content-Type: application/json");
+                return Json(new { error = 1, message = "Invalid content type. Expected multipart/form-data." });
+            }
+            else
+            {
+                // Handle case where no form data is sent (empty FormData becomes application/json)
+                _logger.LogWarning($"Unexpected Content-Type: {contentType}");
+            }
             //validation
             var cart = await _shoppingCartService.GetShoppingCart(_contextAccessor.StoreContext.CurrentStore.Id,
                 ShoppingCartType.ShoppingCart, ShoppingCartType.Auctions);
@@ -701,7 +728,16 @@ public class CheckoutController : BasePublicController
                     error = 1, message = _translationService.GetResource("Checkout.MinOrderPlacementInterval")
                 });
 
-            var placeOrderResult = await _mediator.Send(new PlaceOrderCommand());
+            var placeOrderCommand = new PlaceOrderCommand();
+            if (!string.IsNullOrWhiteSpace(orderNote))
+            {
+                placeOrderCommand.OrderNote = orderNote;
+            }
+            if (requestedShipmentDate.HasValue)
+            {
+                placeOrderCommand.RequestedShipmentDate = requestedShipmentDate;
+            }
+            var placeOrderResult = await _mediator.Send(placeOrderCommand);
             if (placeOrderResult.Success)
             {
                 var paymentMethod =

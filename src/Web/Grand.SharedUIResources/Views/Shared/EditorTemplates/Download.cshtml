@@ -1,7 +1,10 @@
 ﻿@using Grand.Business.Core.Interfaces.Storage
 @using Grand.SharedKernel.Extensions
+@using Grand.Domain.Media
 @model string
 @inject IDownloadService downloadService
+@inject MediaSettings mediaSettings
+@* Updated for ZIP file support - v2.0 *@
 @{
     <link rel="stylesheet" type="text/css" asp-src="@(Grand.SharedUIResources.Constants.WwwRoot)/administration/fineuploader/fineuploader-4.2.2.min.css" />
     <script asp-location="Footer" asp-src="@(Grand.SharedUIResources.Constants.WwwRoot)/administration/fineuploader/jquery.fineuploader-4.2.2.min.js"></script>
@@ -11,6 +14,13 @@
     var download = await downloadService.GetDownloadById(Model);
 
     var disableUrl = Convert.ToBoolean(ViewData["Grand.DownloadEditor.DisableUrl"] ?? false);
+    
+    // Get allowed document file types for validation
+    var allowedDocumentTypes = FileExtensions.GetAllowedDocumentFileTypes(mediaSettings.AllowedDocumentFileTypes);
+    var allowedExtensions = string.Join(",", allowedDocumentTypes.Select(ext => ext.TrimStart('.')));
+    
+    // Debug output - will be visible in browser developer tools
+    var debugInfo = $"AllowedDocumentFileTypes: '{mediaSettings.AllowedDocumentFileTypes}', ProcessedTypes: [{string.Join(", ", allowedDocumentTypes)}]";
 }
 
 <script>
@@ -24,7 +34,7 @@
                 cache: false,
                 type: "POST",
                 url: "@(Url.Action("SaveDownloadUrl", "Download", new { area }))",
-                data: { "downloadUrl": downloadUrl, DownloadType: '@ViewData["DownloadType"]', ReferenceId: '@ViewData["ReferenceId"]' },
+                data: { "downloadUrl": downloadUrl, DownloadType: '@(ViewData["DownloadType"]?.ToString() == "Order" ? "30" : "0")', ReferenceId: '@ViewData["ReferenceId"]' },
                 success: function (data) {
                     if (data.success) {
                         $('#pnlDownloadURLResult@(randomNumber)').fadeIn("slow").delay(1000).fadeOut("slow");
@@ -113,21 +123,79 @@
                     <script>
 
                         $(document).ready(function () {
+                            // Debug output
+                            console.log("Download template debug: @debugInfo");
+                            console.log("FineUploader allowed extensions: [@Html.Raw(string.Join(",", allowedDocumentTypes.Select(ext => "'" + ext.TrimStart('.') + "'")))]");
+                            console.log("ViewData DownloadType raw: '@ViewData["DownloadType"]'");
+                            console.log("ViewData DownloadType explicit: '@(ViewData["DownloadType"]?.ToString() == "Order" ? "30" : "0")'");
+                            console.log("ViewData ReferenceId: '@ViewData["ReferenceId"]'");
+                            
                             $("#@clientId").fineUploader({
                                 request: {
                                     endpoint: '@(Url.Action("AsyncUpload", "Download", new { area }))',
                                     params: {
-                                        DownloadType: '@ViewData["DownloadType"]',
+                                        DownloadType: '@(ViewData["DownloadType"]?.ToString() == "Order" ? "30" : "0")',
                                         ReferenceId: '@ViewData["ReferenceId"]'
                                     },
                                     inputName: "file"
                                 },
+                                validation: {
+                                    allowedExtensions: [@Html.Raw(string.Join(",", allowedDocumentTypes.Select(ext => "'" + ext.TrimStart('.') + "'")))]
+                                },
                                 template: "@(clientId)-qq-template",
                                 multiple: false
                             }).on("complete", function (event, id, name, responseJSON, xhr) {
-                                $("#@(clientId + "downloadurl")").html("<a href='" + responseJSON.downloadUrl + "' class=\"btn purple\">@Loc["Admin.Download.DownloadUploadedFile"]</a>");
-                                $("#@(clientId + "value") input").val(responseJSON.downloadId);
-                                $("#@(clientId + "remove")").show();
+                                console.log("Upload complete response:", responseJSON);
+                                
+                                if (responseJSON.isMultipleFiles && responseJSON.files && responseJSON.files.length > 0) {
+                                    // ZIP file with multiple extracted files
+                                    console.log("Processing ZIP with " + responseJSON.files.length + " files");
+                                    
+                                    // Show summary message
+                                    var summaryHtml = "<div class='alert alert-success'>" + responseJSON.message + "</div>";
+                                    
+                                    // If documents were created automatically on server-side, show them
+                                    if (responseJSON.documentsCreated && responseJSON.documentsCreated > 0) {
+                                        summaryHtml += "<div class='created-documents'>";
+                                        summaryHtml += "<strong>Documents Created:</strong> " + responseJSON.documentsCreated;
+                                        summaryHtml += "</div>";
+                                        
+                                        // Refresh the documents grid if it exists
+                                        setTimeout(function() {
+                                            if (typeof refreshDocumentsGrid === 'function') {
+                                                refreshDocumentsGrid();
+                                            } else if ($("#order-documents-grid").length > 0) {
+                                                $("#order-documents-grid").data("kendoGrid").dataSource.read();
+                                            }
+                                        }, 1000);
+                                    } else {
+                                        // Show extracted files with download links as fallback
+                                        summaryHtml += "<div class='extracted-files'>";
+                                        responseJSON.files.forEach(function(file, index) {
+                                            summaryHtml += "<div class='file-item' style='margin: 5px 0;'>";
+                                            summaryHtml += "<a href='" + file.downloadUrl + "' class='btn btn-sm purple' title='" + file.filename + "'>";
+                                            summaryHtml += "<i class='fa fa-download'></i> " + file.filename;
+                                            summaryHtml += "</a>";
+                                            summaryHtml += "</div>";
+                                        });
+                                        summaryHtml += "</div>";
+                                    }
+                                    
+                                    $("#@(clientId + "downloadurl")").html(summaryHtml);
+                                    
+                                    // For compatibility, store first file's ID in the hidden input
+                                    $("#@(clientId + "value") input").val(responseJSON.downloadId);
+                                    
+                                    $("#@(clientId + "remove")").show();
+                                    
+                                } else if (responseJSON.downloadId) {
+                                    // Single file upload
+                                    $("#@(clientId + "downloadurl")").html("<a href='" + responseJSON.downloadUrl + "' class=\"btn purple\">@Loc["Admin.Download.DownloadUploadedFile"]</a>");
+                                    $("#@(clientId + "value") input").val(responseJSON.downloadId);
+                                    $("#@(clientId + "remove")").show();
+                                } else {
+                                    console.error("Unexpected response format:", responseJSON);
+                                }
                             });
 
 
@@ -137,6 +205,7 @@
                                 $(this).hide();
                             });
                         });
+
 
                     </script>
 

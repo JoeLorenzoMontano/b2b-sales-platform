@@ -1,5 +1,6 @@
 ﻿using Grand.Infrastructure.ModelBinding;
 using Grand.Infrastructure.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Vendor.Models.Report;
 
@@ -14,7 +15,8 @@ public class LowStockProductModel : BaseEntityModel
     public string ManageInventoryMethod { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.StockQuantity")]
-    public int StockQuantity { get; set; }
+    [UIHint("DecimalN2")]
+    public double StockQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.Published")]
     public bool Published { get; set; }

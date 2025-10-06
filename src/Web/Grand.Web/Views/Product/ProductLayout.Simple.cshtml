@@ -111,15 +111,15 @@
                             {
                                 <partial name="Partials/ProductBundles" model="Model"/>
                             }
-                            <!--attributes-->
-                            @if (Model.ProductAttributes.Any())
-                            {
-                                <partial name="Partials/ProductAttributes" model="Model"/>
-                            }
                             <!--warehouses-->
                             @if (Model.AllowToSelectWarehouse)
                             {
                                 <partial name="Partials/Warehouses" model="Model"/>
+                            }
+                            <!--attributes-->
+                            @if (Model.ProductAttributes.Any())
+                            {
+                                <partial name="Partials/ProductAttributes" model="Model"/>
                             }
                             <!--gift voucher-->
                             @if (Model.GiftVoucher.IsGiftVoucher)
@@ -228,4 +228,6 @@
         @await Component.InvokeAsync("ProductEmailAFriend", new { productId = Model.Id })
     }
     <vc:widget widget-zone="productdetails_bottom" additional-data="@Model.Id"></vc:widget>
+    
+    <!-- Sample feature is now integrated into ProductAttributes.cshtml -->
 </div>

@@ -8,7 +8,7 @@ namespace Grand.Business.Catalog.Services.Products;
 
 public class StockQuantityService : IStockQuantityService
 {
-    public virtual int GetTotalStockQuantity(Product product, bool useReservedQuantity = true,
+    public virtual double GetTotalStockQuantity(Product product, bool useReservedQuantity = true,
         string warehouseId = "", bool total = false)
     {
         ArgumentNullException.ThrowIfNull(product);
@@ -39,7 +39,7 @@ public class StockQuantityService : IStockQuantityService
         return 0;
     }
 
-    public virtual int GetTotalStockQuantityForCombination(Product product, ProductAttributeCombination combination,
+    public virtual double GetTotalStockQuantityForCombination(Product product, ProductAttributeCombination combination,
         bool useReservedQuantity = true, string warehouseId = "")
     {
         ArgumentNullException.ThrowIfNull(product);

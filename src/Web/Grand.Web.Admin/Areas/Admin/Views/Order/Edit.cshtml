@@ -25,7 +25,7 @@
                     </div>
                     <div class="actions">
                         <div class="btn-group btn-group-devided util-btn-margin-bottom-5">
-                            <a href="@Url.Action("PdfInvoice", new { orderId = Model.Id, area = Constants.AreaAdmin })" class="btn purple">
+                            <a href="@Url.Action("PdfInvoice", new { orderId = Model.Id, area = Constants.AreaAdmin })" class="btn purple" target="_blank">
                                 <i class="fa fa-file-pdf-o"></i> @Loc["Admin.Orders.PdfInvoice"]
                             </a>
                             <span id="order-delete" class="btn red">
@@ -76,6 +76,7 @@
                                     </content>
                                 </tabstrip-item>
                             }
+                            @* Products tab commented out - all functionality now available in Info tab
                             <tabstrip-item text="@Loc["Admin.Orders.Products"]" tab-index="3">
                                 <content>
                                     <div>
@@ -83,7 +84,18 @@
                                     </div>
                                 </content>
                             </tabstrip-item>
-                            <tabstrip-item text="@Loc["Admin.Orders.OrderNotes"]" tab-index="4">
+                            *@
+                            @if (Model.IsShippable)
+                            {
+                                <tabstrip-item text="@Loc["Admin.Orders.Fulfillment"]" tab-index="4">
+                                    <content>
+                                        <div>
+                                            <partial name="Partials/OrderDetails.Fulfillment" model="Model"/>
+                                        </div>
+                                    </content>
+                                </tabstrip-item>
+                            }
+                            <tabstrip-item text="@Loc["Admin.Orders.OrderNotes"]" tab-index="5">
                                 <content>
                                     <div>
                                         <partial name="Partials/OrderDetails.Notes" model="Model"/>
@@ -92,7 +104,7 @@
                             </tabstrip-item>
                             @if (canManageDocuments)
                             {
-                                <tabstrip-item text="@Loc["Admin.Orders.Documents"]" tab-index="5">
+                                <tabstrip-item text="@Loc["Admin.Orders.Documents"]" tab-index="6">
                                     <content>
                                         <div>
                                             <partial name="Partials/OrderDetails.Documents" model="Model"/>
@@ -100,7 +112,7 @@
                                     </content>
                                 </tabstrip-item>
                             }
-                            <tabstrip-item text="@Loc["Admin.Common.UserFields.Tab"]" tab-index="6">
+                            <tabstrip-item text="@Loc["Admin.Common.UserFields.Tab"]" tab-index="7">
                                 <content>
                                     <div>
                                         <div class="form-actions">
@@ -114,7 +126,7 @@
                             </tabstrip-item>
                             @if (canManageMessageQueue)
                             {
-                                <tabstrip-item text="@Loc["Admin.Orders.Notifications"]" tab-index="7">
+                                <tabstrip-item text="@Loc["Admin.Orders.Notifications"]" tab-index="8">
                                     <content>
                                         <div>
                                             <partial name="Partials/OrderDetails.Notifications" model="Model"/>
@@ -131,3 +143,528 @@
     </div>
 </form>
 <admin-delete-confirmation button-id="order-delete"/>
+
+@* Inline edit styles *@
+<style>
+/* Mobile-specific responsive styles */
+@@media (max-width: 768px) {
+    /* Collapsible header actions */
+    .x_title .actions {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .x_title .actions .btn-group {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .x_title .actions .btn-group .btn {
+        width: 100%;
+        margin-bottom: 0;
+        text-align: left;
+        justify-content: flex-start;
+    }
+    
+    /* Hide table on mobile, show card layout */
+    .order-table table {
+        display: none;
+    }
+    
+    /* Mobile card layout for products */
+    .mobile-product-cards {
+        display: block;
+    }
+    
+    .mobile-product-card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .mobile-product-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .mobile-product-image {
+        width: 60px;
+        height: 60px;
+        margin-right: 15px;
+        border-radius: 4px;
+    }
+    
+    .mobile-product-title {
+        flex: 1;
+        font-weight: 600;
+        color: #333;
+        text-decoration: none;
+    }
+    
+    .mobile-product-details {
+        margin-bottom: 15px;
+    }
+    
+    .mobile-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    
+    .mobile-detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .mobile-detail-label {
+        font-weight: 600;
+        color: #666;
+        min-width: 80px;
+    }
+    
+    .mobile-detail-value {
+        flex: 1;
+        text-align: right;
+        font-weight: normal;
+        color: black;
+    }
+    
+    .mobile-collapsible-details {
+        margin-top: 10px;
+    }
+    
+    .mobile-toggle-details {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 8px 12px;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        font-size: 14px;
+        color: #495057;
+    }
+    
+    .mobile-toggle-details:hover {
+        background: #e9ecef;
+    }
+    
+    .mobile-toggle-details .fa {
+        float: right;
+        transition: transform 0.3s ease;
+    }
+    
+    .mobile-toggle-details.expanded .fa {
+        transform: rotate(180deg);
+    }
+    
+    .mobile-additional-details {
+        display: none;
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    
+    .mobile-additional-details.show {
+        display: block;
+    }
+    
+    .mobile-inline-edit {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .mobile-inline-edit input {
+        max-width: 100px;
+        height: 32px;
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .mobile-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+    
+    .mobile-actions .btn-group {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .mobile-actions .k-button {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 4px;
+    }
+    
+    .mobile-save-status {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    /* Form actions at bottom */
+    .form-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .form-actions .k-button {
+        width: 100%;
+        padding: 12px;
+        text-align: center;
+    }
+}
+
+/* Desktop styles - hide mobile elements */
+@@media (min-width: 769px) {
+    .mobile-product-cards {
+        display: none;
+    }
+}
+
+/* Order Item Inline Edit Styles */
+.inline-edit-field {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.inline-edit-field:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.inline-edit-field:hover:not(:disabled) {
+    border-color: #aaa;
+}
+
+.inline-edit-field:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.inline-edit-field.save-success {
+    border-color: #28a745;
+    background-color: #f8fff9;
+    animation: success-flash 1s ease;
+}
+
+@@keyframes success-flash {
+    0% { background-color: #d4edda; }
+    100% { background-color: #f8fff9; }
+}
+
+.inline-edit-field.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5;
+}
+
+.inline-edit-field.border-danger {
+    border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #dc3545;
+}
+
+.auto-save-status {
+    margin-top: 4px;
+    text-align: center;
+    min-height: 16px;
+}
+
+.auto-save-status .fa-spinner {
+    animation: fa-spin 1s infinite linear;
+}
+
+.auto-save-status .text-success {
+    color: #28a745 !important;
+}
+
+.auto-save-status .text-muted {
+    color: #6c757d !important;
+}
+</style>
+
+@* Mobile collapsible details JavaScript *@
+<script>
+$(document).ready(function() {
+    initializeInlineEditing();
+    initializeMobileCollapsibleDetails();
+});
+
+function initializeMobileCollapsibleDetails() {
+    // Handle mobile collapsible details toggle
+    $(document).on('click', '.mobile-toggle-details', function() {
+        const $button = $(this);
+        const itemId = $button.data('item-id');
+        const $details = $('#mobile-details-' + itemId);
+        const $icon = $button.find('.fa');
+        
+        if ($details.hasClass('show')) {
+            $details.removeClass('show').slideUp(200);
+            $button.removeClass('expanded');
+            $icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        } else {
+            $details.addClass('show').slideDown(200);
+            $button.addClass('expanded');
+            $icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        }
+    });
+}
+
+function initializeInlineEditing() {
+    // Handle blur event for auto-save on price and quantity fields (including mobile inputs)
+    $(document).on('blur', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function() {
+        const $field = $(this);
+        const $row = $field.closest('tr');
+        // Extract index from field name (e.g., "Items[0].UnitPriceExclTaxValue" -> "0")
+        const fieldName = $field.attr('name');
+        const indexMatch = fieldName.match(/Items\[(\d+)\]/);
+        
+        let orderItemId = null;
+        if (indexMatch) {
+            const index = indexMatch[1];
+            // The hidden input is placed before the <tr>, so search in the whole form
+            const $idField = $(`input[name="Items[${index}].Id"]`);
+            orderItemId = $idField.val();
+            
+            // Debug logging
+            console.log('Field name:', fieldName, 'Index:', index);
+            console.log('ID field found:', $idField.length, 'value:', orderItemId);
+            console.log('ID field selector:', `input[name="Items[${index}].Id"]`);
+        }
+        
+        const originalValue = $field.data('original-value') || $field.attr('data-original-value');
+        const newValue = $field.val().trim();
+        
+        // Store original value if not already stored
+        if (!originalValue) {
+            $field.data('original-value', newValue);
+            return;
+        }
+        
+        // Validate we have an order item ID
+        if (!orderItemId) {
+            console.error('No order item ID found for field:', $field.attr('name'));
+            showFieldError($field, 'Unable to identify order item');
+            return;
+        }
+        
+        // Only save if value changed and is valid
+        if (newValue !== originalValue && isValidValue(newValue, getFieldType($field))) {
+            autoSaveOrderItem(orderItemId, $field, newValue);
+        } else if (newValue === originalValue) {
+            clearFieldError($field);
+        } else if (!isValidValue(newValue, getFieldType($field))) {
+            showFieldError($field, getValidationMessage(getFieldType($field)));
+        }
+    });
+
+    // Handle focus event - clear errors and store original value (including mobile inputs)
+    $(document).on('focus', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function() {
+        const $field = $(this);
+        clearFieldError($field);
+        
+        // Store original value if not already stored
+        if (!$field.data('original-value')) {
+            $field.data('original-value', $field.val());
+        }
+    });
+
+    // Prevent form submission when pressing Enter (including mobile inputs)
+    $(document).on('keypress', 'input[name^="Items"][name$="UnitPriceExclTaxValue"], input[name^="Items"][name$="Quantity"], .mobile-price-input, .mobile-qty-input', function(e) {
+        if (e.which === 13) {
+            $(this).blur();
+            return false;
+        }
+    });
+}
+
+function getFieldType($field) {
+    const name = $field.attr('name');
+    if (name.includes('UnitPriceExclTaxValue')) return 'price';
+    if (name.includes('Quantity')) return 'quantity';
+    return 'unknown';
+}
+
+function isValidValue(value, fieldType) {
+    if (!value || value === '') return false;
+    
+    if (fieldType === 'quantity') {
+        const num = parseInt(value);
+        return /^\d+$/.test(value) && num > 0;
+    }
+    
+    if (fieldType === 'price') {
+        const num = parseFloat(value);
+        return /^\d+(\.\d{1,2})?$/.test(value) && num >= 0;
+    }
+    
+    return false;
+}
+
+function getValidationMessage(fieldType) {
+    if (fieldType === 'quantity') {
+        return 'Quantity must be a positive whole number';
+    }
+    if (fieldType === 'price') {
+        return 'Price must be a valid decimal number (e.g., 12.34)';
+    }
+    return 'Invalid value';
+}
+
+function autoSaveOrderItem(orderItemId, $field, newValue) {
+    // Find status div - could be in table row or mobile card
+    const $row = $field.closest('tr');
+    const $mobileCard = $field.closest('.mobile-product-card');
+    const $statusDiv = $row.length ? $row.find('#save-status-' + orderItemId) : $mobileCard.find('#save-status-' + orderItemId);
+    const orderId = $('input[name="Id"]').val();
+    const fieldType = getFieldType($field);
+    
+    // Show loading state
+    $statusDiv.html('<small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small>').show();
+    $field.prop('disabled', true);
+    
+    // Make AJAX call to update the field
+    $.ajax({
+        url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+        type: 'POST',
+        data: addAntiForgeryToken({
+            orderId: orderId,
+            orderItemId: orderItemId,
+            fieldType: fieldType,
+            value: newValue
+        }),
+        success: function(response) {
+            if (response.success) {
+                // Update the original value data attribute
+                $field.data('original-value', newValue);
+
+                // Show success state
+                $statusDiv.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+
+                // Update display values if provided
+                if (response.newSubTotal) {
+                    updateSubTotal(orderItemId, response.newSubTotal);
+                }
+                if (response.displayValue) {
+                    updateDisplayValue(orderItemId, fieldType, response.displayValue);
+                }
+
+                // Update order totals if provided (for Info tab)
+                if (response.orderTotals) {
+                    updateOrderTotals(response.orderTotals);
+                }
+
+                // Clear any existing errors
+                clearFieldError($field);
+            } else {
+                // Show error message
+                showFieldError($field, response.message || 'Save failed');
+                // Revert to original value
+                $field.val($field.data('original-value'));
+            }
+        },
+        error: function(xhr, status, error) {
+            // Show generic error
+            showFieldError($field, 'Network error - please try again');
+            // Revert to original value
+            $field.val($field.data('original-value'));
+        },
+        complete: function() {
+            // Re-enable field
+            $field.prop('disabled', false);
+            
+            // Hide success message after 2 seconds
+            setTimeout(function() {
+                $statusDiv.hide();
+            }, 2000);
+        }
+    });
+}
+
+function showFieldError($field, message) {
+    clearFieldError($field);
+    $field.addClass('is-invalid border-danger');
+    const errorHtml = '<div class="invalid-feedback d-block">' + message + '</div>';
+    $field.after(errorHtml);
+}
+
+function clearFieldError($field) {
+    $field.removeClass('is-invalid border-danger');
+    $field.next('.invalid-feedback').remove();
+}
+
+function updateSubTotal(orderItemId, newSubTotal) {
+    // Find and update the subtotal display for this item
+    const $subtotalElement = $('.subtotal-display[data-order-item-id="' + orderItemId + '"]');
+    if ($subtotalElement.length > 0) {
+        $subtotalElement.text(newSubTotal);
+        console.log('Updated subtotal for item', orderItemId, 'to', newSubTotal);
+    } else {
+        console.log('Could not find subtotal element for item', orderItemId);
+    }
+}
+
+function updateDisplayValue(orderItemId, fieldType, displayValue) {
+    // Update the display value shown below the input field
+    const $field = $('[name^="Items"][name$="Id"][value="' + orderItemId + '"]').closest('tr');
+    if (fieldType === 'price') {
+        $field.find('.text-info span').text('Display: ' + displayValue);
+    }
+}
+
+function updateOrderTotals(totals) {
+    // Update the totals in the Info tab (only if elements exist)
+    if ($('#total-quantity').length) {
+        $('#total-quantity').text(totals.totalQuantity);
+    }
+    if ($('#total-amount').length) {
+        $('#total-amount').text(totals.orderTotal);
+    }
+    if ($('#summary-subtotal').length) {
+        $('#summary-subtotal').text(totals.orderSubtotal);
+    }
+    if ($('#summary-shipping').length) {
+        $('#summary-shipping').text(totals.orderShipping);
+    }
+    if ($('#summary-tax').length) {
+        $('#summary-tax').text(totals.orderTax);
+    }
+    if ($('#summary-total').length) {
+        $('#summary-total').text(totals.orderTotal);
+    }
+}
+</script>

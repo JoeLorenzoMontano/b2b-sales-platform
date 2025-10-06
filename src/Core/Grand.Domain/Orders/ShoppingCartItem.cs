@@ -40,7 +40,7 @@ public class ShoppingCartItem : SubBaseEntity
     /// <summary>
     ///     Gets or sets the quantity
     /// </summary>
-    public int Quantity { get; set; }
+    public double Quantity { get; set; }
 
     /// <summary>
     ///     Gets or sets the rental product start date (null if it's not a rental product)

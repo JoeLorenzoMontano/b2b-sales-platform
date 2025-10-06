@@ -1,0 +1,80 @@
+@model CatalogProductsModel
+@inject IPageHeadBuilder pagebuilder
+@{
+    Layout = "_OneColumn";
+    
+    //title
+    pagebuilder.AddTitleParts(Loc["Catalog.AllProducts"]);
+}
+
+@section Breadcrumb
+{
+    <ol class="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+        <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <a href="@Url.RouteUrl("HomePage")" itemprop="item">
+                <b-icon icon="house-door"></b-icon>
+                <span itemprop="name">@Loc["Products.Breadcrumb.Top"]</span>
+            </a>
+            <meta itemprop="position" content="1" />
+        </li>
+        <li class="breadcrumb-item active" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <strong itemprop="name">@Loc["Catalog.AllProducts"]</strong>
+            <meta itemprop="position" content="2" />
+        </li>
+    </ol>
+}
+
+<div class="page all-products-page">
+    <h1 class="h2 generalTitle">@Loc["Catalog.AllProducts"]</h1>
+    
+    @await Component.InvokeAsync("Widget", new { widgetZone = "all_products_top" })
+
+    <div id="catalog-products">
+        @await Component.InvokeAsync("Widget", new { widgetZone = "allproducts_before_filters" })
+        <partial name="Partials/Selectors"/>
+        <template v-if="catalog.Model.Products.length > 0">
+            <template v-if="catalog.Model.PagingFilteringContext.ViewMode == 'grid'">
+                <div class="col-12 product-grid px-0">
+                    <div class="form-row">
+                        <template v-for="Model in catalog.Model.Products">
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3 product-container mb-2">
+                                <partial name="Partials/CatalogProductGridView"/>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <template v-else>
+                <div class="product-list">
+                    <div class="col-12">
+                        <div class="row">
+                            <template v-for="Model in catalog.Model.Products">
+                                <partial name="Partials/CatalogProductListView"/>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <partial name="Partials/Pagination"/>
+        </template>
+        <template v-else>
+            <div class="alert alert-info my-3">
+                @Loc["Catalog.Products.NoData"]
+            </div>
+        </template>
+        @await Component.InvokeAsync("Widget", new { widgetZone = "allproducts_after_filters" })
+    </div>
+    
+    @await Component.InvokeAsync("Widget", new { widgetZone = "all_products_bottom" })
+</div>
+
+@section filters
+{
+    @*Rendering filtering section*@
+    @if (Model.PagingFilteringContext.SpecificationFilter.Enabled)
+    {
+        <partial name="Partials/Filtering"/>
+    }
+}
+
+<partial name="Partials/ModelScript" model="@Json.Serialize(Model)"/>

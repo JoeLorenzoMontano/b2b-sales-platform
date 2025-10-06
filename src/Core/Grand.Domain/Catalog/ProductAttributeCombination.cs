@@ -18,17 +18,42 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
     /// <summary>
     ///     Gets or sets the stock quantity
     /// </summary>
-    public int StockQuantity { get; set; }
+    public double StockQuantity { get; set; }
 
     /// <summary>
     ///     Gets or sets the reserved quantity (ordered but not shipped yet)
     /// </summary>
-    public int ReservedQuantity { get; set; }
+    public double ReservedQuantity { get; set; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether to allow orders when out of stock
     /// </summary>
     public bool AllowOutOfStockOrders { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets a value indicating whether to allow a sample (quantity of 1) regardless of allowed quantities
+    /// </summary>
+    public bool AllowSample { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets comma-separated sample quantities that should be offered as free samples (e.g., "1,3,5")
+    /// </summary>
+    public string SampleQuantities { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets a value indicating whether this attribute combination is marked as new
+    /// </summary>
+    public bool MarkAsNew { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the start date and time of the new attribute combination (set as "New" from date). Leave empty to ignore
+    /// </summary>
+    public DateTime? MarkAsNewStartDateTimeUtc { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the end date and time of the new attribute combination (set as "New" to date). Leave empty to ignore
+    /// </summary>
+    public DateTime? MarkAsNewEndDateTimeUtc { get; set; }
 
     /// <summary>
     ///     Gets or sets the text
@@ -84,8 +109,47 @@ public class ProductAttributeCombination : SubBaseEntity, ICloneable
         protected set => _tierPrices = value;
     }
 
+    /// <summary>
+    ///     Gets or sets the case size (number of units per case). When greater than 0, case quantities will be displayed to customers.
+    /// </summary>
+    public double CaseSize { get; set; }
+
     public object Clone()
     {
         return MemberwiseClone();
+    }
+    
+    /// <summary>
+    /// Gets the parsed sample quantities as an array of doubles
+    /// </summary>
+    /// <returns>Array of sample quantities, or empty array if none defined</returns>
+    public double[] GetSampleQuantities()
+    {
+        if (string.IsNullOrWhiteSpace(SampleQuantities))
+            return Array.Empty<double>();
+            
+        return SampleQuantities
+            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(x => double.TryParse(x.Trim(), out _))
+            .Select(x => double.Parse(x.Trim()))
+            .ToArray();
+    }
+    
+    /// <summary>
+    /// Checks if the specified quantity is a valid sample quantity
+    /// </summary>
+    /// <param name="quantity">The quantity to check</param>
+    /// <returns>True if it's a valid sample quantity</returns>
+    public bool IsSampleQuantity(double quantity)
+    {
+        // Check new SampleQuantities property first
+        var sampleQuantities = GetSampleQuantities();
+        if (sampleQuantities.Length > 0)
+        {
+            return sampleQuantities.Contains(quantity);
+        }
+        
+        // Fallback to legacy AllowSample behavior for backward compatibility
+        return AllowSample && quantity == 1;
     }
 }

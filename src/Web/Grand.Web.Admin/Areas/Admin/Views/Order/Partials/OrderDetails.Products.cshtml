@@ -2,42 +2,203 @@
 @model OrderModel
 
 <vc:admin-widget widget-zone="order_details_products_top" additional-data="Model"/>
+
+@* Mobile card layout - hidden on desktop *@
+<div class="mobile-product-cards">
+    @for (var j = 0; j < Model.Items.Count; j++)
+    {
+        var item = Model.Items[j];
+        <input asp-for="@Model.Items[j].Id" type="hidden"/>
+        <div class="mobile-product-card">
+            <div class="mobile-product-header">
+                <img src="@item.PictureThumbnailUrl" alt="@item.ProductName" class="mobile-product-image"/>
+                <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })" class="mobile-product-title">
+                    @item.ProductName
+                </a>
+            </div>
+            
+            <div class="mobile-product-details">
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label">Warehouse:</span>
+                    <span class="mobile-detail-value">
+                        @if (!string.IsNullOrEmpty(item.WarehouseName))
+                        {
+                            @item.WarehouseName
+                        }
+                        else
+                        {
+                            <span class="text-muted">N/A</span>
+                        }
+                    </span>
+                </div>
+                
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label">Price:</span>
+                    <span class="mobile-detail-value mobile-inline-edit">
+                        @{
+                            var showTaxLabels = item.UnitPriceExclTax != item.UnitPriceInclTax;
+                        }
+                        @if (showTaxLabels)
+                        {
+                            <small class="text-muted">Excl Tax:</small>
+                        }
+                        <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field mobile-price-input"/>
+                    </span>
+                </div>
+                
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label">Quantity:</span>
+                    <span class="mobile-detail-value mobile-inline-edit">
+                        <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control inline-edit-field mobile-qty-input" min="1"/>
+                        @if (item.OpenQty > 0 || item.CancelQty > 0)
+                        {
+                            <div style="font-size: 11px; margin-top: 2px;">
+                                @if (item.OpenQty > 0) { <span>Open: @item.OpenQty</span> }
+                                @if (item.CancelQty > 0) { <span>Canceled: @item.CancelQty</span> }
+                            </div>
+                        }
+                    </span>
+                </div>
+                
+                @if (Model.Items.Sum(x => x.DiscountInclTaxValue) > 0)
+                {
+                    <div class="mobile-detail-row">
+                        <span class="mobile-detail-label">Discount:</span>
+                        <span class="mobile-detail-value">
+                            @switch (Model.TaxDisplayType)
+                            {
+                                case TaxDisplayType.ExcludingTax:
+                                {
+                                    @item.DiscountExclTax
+                                }
+                                    break;
+                                case TaxDisplayType.IncludingTax:
+                                {
+                                    @item.DiscountInclTax
+                                }
+                                    break;
+                            }
+                        </span>
+                    </div>
+                }
+                
+                @if (Model.Items.Sum(x => x.CommissionValue) > 0)
+                {
+                    <div class="mobile-detail-row">
+                        <span class="mobile-detail-label">Commission:</span>
+                        <span class="mobile-detail-value">@item.Commission</span>
+                    </div>
+                }
+                
+                <div class="mobile-detail-row">
+                    <span class="mobile-detail-label"><strong>Total:</strong></span>
+                    <span class="mobile-detail-value"><strong>
+                        <span class="subtotal-display" data-order-item-id="@item.Id">
+                            @switch (Model.TaxDisplayType)
+                            {
+                                case TaxDisplayType.ExcludingTax:
+                                {
+                                    @item.SubTotalExclTax
+                                }
+                                    break;
+                                case TaxDisplayType.IncludingTax:
+                                {
+                                    @item.SubTotalInclTax
+                                }
+                                    break;
+                            }
+                        </span>
+                    </strong></span>
+                </div>
+            </div>
+            
+            @* Collapsible additional details *@
+            @if (!string.IsNullOrEmpty(item.AttributeInfo) || !string.IsNullOrEmpty(item.Sku) || !string.IsNullOrEmpty(item.VendorName) || item.MerchandiseReturnIds.Count > 0 || item.PurchasedGiftVoucherIds.Count > 0 || (Model.HasDownloadableProducts && item.IsDownload))
+            {
+                <div class="mobile-collapsible-details">
+                    <button type="button" class="mobile-toggle-details" data-item-id="@item.Id">
+                        Additional Details <i class="fa fa-chevron-down"></i>
+                    </button>
+                    <div class="mobile-additional-details" id="mobile-details-@item.Id">
+                        @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                        {
+                            <div><strong>Attributes:</strong> @Html.Raw(item.AttributeInfo)</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.Sku))
+                        {
+                            <div><strong>SKU:</strong> @item.Sku</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.VendorName))
+                        {
+                            <div><strong>Vendor:</strong> @item.VendorName</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.RecurringInfo))
+                        {
+                            <div><strong>Recurring:</strong> @Html.Raw(item.RecurringInfo)</div>
+                        }
+                        @if (!string.IsNullOrEmpty(item.RentalInfo))
+                        {
+                            <div><strong>Rental:</strong> @Html.Raw(item.RentalInfo)</div>
+                        }
+                        @if (item.MerchandiseReturnIds.Count > 0)
+                        {
+                            <div>
+                                <strong>Returns:</strong>
+                                @for (var i = 0; i < item.MerchandiseReturnIds.Count; i++)
+                                {
+                                    <a href="@Url.Action("Edit", "MerchandiseReturn", new { id = item.MerchandiseReturnIds[i], area = Constants.AreaAdmin })" class="btn btn-sm btn-outline-primary">View</a>
+                                }
+                            </div>
+                        }
+                        @if (item.PurchasedGiftVoucherIds.Count > 0)
+                        {
+                            <div>
+                                <strong>Gift Vouchers:</strong>
+                                @for (var i = 0; i < item.PurchasedGiftVoucherIds.Count; i++)
+                                {
+                                    <a href="@Url.Action("Edit", "GiftVoucher", new { id = item.PurchasedGiftVoucherIds[i], area = Constants.AreaAdmin })" class="btn btn-sm btn-outline-primary">View</a>
+                                }
+                            </div>
+                        }
+                        @if (Model.HasDownloadableProducts && item.IsDownload)
+                        {
+                            <div>
+                                <strong>Download Count:</strong> @item.DownloadCount
+                                @if (item.DownloadActivationType == DownloadActivationType.Manually)
+                                {
+                                    <br><strong>Status:</strong> @(item.IsDownloadActivated ? "Active" : "Inactive")
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            
+            <div class="mobile-actions">
+                <div class="mobile-save-status" id="save-status-@item.Id" style="display:none;">
+                    <small class="text-muted">
+                        <i class="fa fa-spinner fa-spin"></i> Saving...
+                    </small>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');" class="k-button btn-sm" title="@Loc["Admin.Common.Delete"]">
+                        <span class="k-icon k-i-delete"></span>
+                    </button>
+                    <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]');" class="k-button btn-sm" title="@Loc["Admin.Common.Cancel"]">
+                        <span class="k-icon k-i-cancel"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
 <div class="table-responsive order-table">
     <table class="table table-bordered table-striped table-hover">
         <tr>
             <td>
-                @foreach (var item in Model.Items)
-                {
-                    <script>
-                    $(document).ready(function() {
-                        toggleOrderItemEdit@(item.Id)(false);
-                        });
-                    </script>
-
-                    <script>
-                    function toggleOrderItemEdit@(item.Id) (editMode) {
-                        if (editMode) {
-                                $('#pnlEditPvUnitPrice@(item.Id)').show();
-                                $('#pnlEditPvQuantity@(item.Id)').show();
-                                $('#btnEditOrderItem@(item.Id)').hide();
-                                $('#btnDeleteOrderItem@(item.Id)').hide();
-                                $('#btnSaveOrderItem@(item.Id)').show();
-                                $('#btnCancel@(item.Id)').show();
-                                $('#btnCancelOrderItem@(item.Id)').hide();
-                            }
-                            else {
-                                $('#pnlEditPvUnitPrice@(item.Id)').hide();
-                                $('#pnlEditPvQuantity@(item.Id)').hide();
-                                $('#btnEditOrderItem@(item.Id)').show();
-                                $('#btnDeleteOrderItem@(item.Id)').show();
-                                $('#btnSaveOrderItem@(item.Id)').hide();
-                                $('#btnCancel@(item.Id)').hide();
-                                $('#btnCancelOrderItem@(item.Id)').show();
-                            }
-                        }
-                    </script>
-                }
                 <table class="table table-bordered table-striped table-hover">
+                    <col/>
                     <col/>
                     <col/>
                     @if (Model.HasDownloadableProducts)
@@ -56,6 +217,9 @@
                         </th>
                         <th>
                             @Loc["Admin.Orders.Products.ProductName"]
+                        </th>
+                        <th>
+                            @Loc["Admin.Orders.Fields.Warehouses"]
                         </th>
                         <th>
                             @Loc["Admin.Orders.Products.Price"]
@@ -215,49 +379,53 @@
                                 </div>
                             </td>
                             <td>
-                                @switch (Model.TaxDisplayType)
-                                {
-                                    case TaxDisplayType.ExcludingTax:
+                                <div>
+                                    @if (!string.IsNullOrEmpty(item.WarehouseName))
                                     {
-                                        @item.UnitPriceExclTax
+                                        @item.WarehouseName
                                     }
-                                        break;
-                                    case TaxDisplayType.IncludingTax:
+                                    else
                                     {
-                                        @item.UnitPriceInclTax
+                                        <span class="text-muted">N/A</span>
                                     }
-                                        break;
-                                }
-
-                                <div id="pnlEditPvUnitPrice@(item.Id)">
-                                    <table class="order-edit">
-                                        <tr>
-                                            <td>
-                                                @Loc["Admin.Orders.Products.Edit.ExclTax"]
-                                            </td>
-                                            <td>
-                                                @*
-                                                    <input name="pvUnitPriceExclTax@(item.Id)" type="text" value="@item.UnitPriceExclTaxValue" id="pvUnitPriceExclTax@(item.Id)" class="adminInput" style="width:80px;" />
-                                                    *@
-                                                <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="adminInput" style="width:40px;"/>
-                                            </td>
-                                        </tr>
-                                    </table>
                                 </div>
                             </td>
                             <td>
-                                @item.Quantity
-                                <div id="pnlEditPvQuantity@(item.Id)">
-                                    <table class="order-edit">
-                                        <tr>
-                                            <td colspan="2">
-                                                @*
-                                                    <input name="pvQuantity@(item.Id)" type="text" value="@item.Quantity" id="pvQuantity@(item.Id)" class="adminInput" style="width:40px;" />
-                                                    *@
-                                                <input asp-for="@Model.Items[j].Quantity" class="adminInput" style="width:40px;"/>
-                                            </td>
-                                        </tr>
-                                    </table>
+                                @{
+                                    // Only show tax-specific labels if tax is applicable
+                                    var showTaxLabels = item.UnitPriceExclTax != item.UnitPriceInclTax;
+                                }
+                                <div>
+                                    @if (showTaxLabels)
+                                    {
+                                        <small class="text-muted">@Loc["Admin.Orders.Products.Edit.ExclTax"]</small><br/>
+                                    }
+                                    <input asp-for="@Model.Items[j].UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;"/>
+                                </div>
+                                @if (showTaxLabels)
+                                {
+                                    <div class="mt-1">
+                                        <small class="text-info">
+                                            @switch (Model.TaxDisplayType)
+                                            {
+                                                case TaxDisplayType.ExcludingTax:
+                                                {
+                                                    <span>Display: @item.UnitPriceExclTax</span>
+                                                }
+                                                    break;
+                                                case TaxDisplayType.IncludingTax:
+                                                {
+                                                    <span>Display: @item.UnitPriceInclTax</span>
+                                                }
+                                                    break;
+                                            }
+                                        </small>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <div>
+                                    <input asp-for="@Model.Items[j].Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px;" min="1"/>
                                 </div>
                                 @if (item.OpenQty > 0)
                                 {
@@ -298,39 +466,40 @@
                                 </td>
                             }
                             <td>
-
-                                @switch (Model.TaxDisplayType)
-                                {
-                                    case TaxDisplayType.ExcludingTax:
+                                <span class="subtotal-display" data-order-item-id="@item.Id">
+                                    @switch (Model.TaxDisplayType)
                                     {
-                                        @item.SubTotalExclTax
+                                        case TaxDisplayType.ExcludingTax:
+                                        {
+                                            @item.SubTotalExclTax
+                                        }
+                                            break;
+                                        case TaxDisplayType.IncludingTax:
+                                        {
+                                            @item.SubTotalInclTax
+                                        }
+                                            break;
                                     }
-                                        break;
-                                    case TaxDisplayType.IncludingTax:
-                                    {
-                                        @item.SubTotalInclTax
-                                    }
-                                        break;
-                                }
-
+                                </span>
                             </td>
 
                             <td align="center">
                                 <div class="btn-group">
-                                    <button type="submit" name="btnEditOrderItem@(item.Id)" id="btnEditOrderItem@(item.Id)" onclick="toggleOrderItemEdit@(item.Id)(true);return false; " class="k-button" title="@Loc["Admin.Common.Edit"]">
-                                        <span class="k-icon k-i-edit"></span>
-                                    </button>
-                                    <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-orderItemId="@(item.Id)" id="btnDeleteOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Delete"]">
+                                    <button type="submit" name="btnDeleteOrderItem@(item.Id)" asp-action="DeleteOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" id="btnDeleteOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Delete"]">
                                         <span class="k-icon k-i-delete"></span>
                                     </button>
-                                    <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-orderItemId="@(item.Id)" id="btnCancelOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Cancel"]">
+                                    <button type="submit" name="btnCancelOrderItem@(item.Id)" asp-action="CancelOrderItem" asp-route-id="@(Model.Id)" asp-route-orderItemId="@(item.Id)" id="btnCancelOrderItem@(item.Id)" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Cancel"]">
                                         <span class="k-icon k-i-cancel"></span>
                                     </button>
-                                    <button type="submit" name="btnSaveOrderItem@(item.Id)" asp-action="SaveOrderItem" asp-route-orderItemId="@(item.Id)" id="btnSaveOrderItem@(item.Id)" style="display:none;" onclick="return confirm('@Loc["Admin.Common.AreYouSure"]'); " class="k-button" title="@Loc["Admin.Common.Save"]">
+                                </div>
+                                @* Auto-save status indicator *@
+                                <div class="auto-save-status" id="save-status-@item.Id" style="display:none;">
+                                    <small class="text-muted">
+                                        <i class="fa fa-spinner fa-spin"></i> Saving...
+                                    </small>
+                                    @* Hidden save button that gets triggered on blur *@
+                                    <button type="submit" name="btnSaveOrderItem@(item.Id)" asp-action="SaveOrderItem" asp-route-orderItemId="@(item.Id)" id="btnSaveOrderItem@(item.Id)" style="display:none;" class="k-button">
                                         <span class="k-icon k-i-save"></span>
-                                    </button>
-                                    <button type="submit" name="btnCancel@(item.Id)" id="btnCancel@(item.Id)" onclick="toggleOrderItemEdit@(item.Id)    (false);return false; " class="k-button">
-                                        <span class="k-icon k-i-cancel" title="@Loc["Admin.Common.Cancel"]"></span>
                                     </button>
                                 </div>
                             </td>
@@ -350,6 +519,195 @@
         @Html.Raw(Model.CheckoutAttributeInfo)
     </div>
 }
-<div class="form-actions">
-    <button type="submit" id="btnAddNewProduct" name="btnAddNewProduct" onclick=" javascript:setLocation('@(Url.Action("AddProductToOrder", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin }))'); return false; " class="k-button"><i class="fa fa-plus"></i>&nbsp;@Loc["Admin.Orders.Products.AddNew"]</button>
+<!-- Add Products Section -->
+<div class="add-products-section mt-4">
+    <div class="x_panel light form-fit">
+        <div class="x_title">
+            <div class="caption">
+                <i class="fa fa-plus"></i>
+                Add Products to Order
+            </div>
+        </div>
+        <div class="x_content form">
+            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.Id, orderId = Model.Id, contextType = "order" })
+        </div>
+    </div>
 </div>
+
+<style>
+/* ProductSearchAdd component integration with Order Edit page - Transparent styling */
+.add-products-section {
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-products-section .x_panel {
+    margin-bottom: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.add-products-section .x_title {
+    background: transparent;
+    padding: 10px 15px;
+    margin-bottom: 0;
+}
+
+.add-products-section .x_title .caption {
+    color: white;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.add-products-section .x_content {
+    padding: 10px;
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure Bootstrap grid stays within bounds */
+.add-products-section .row {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+}
+
+.add-products-section [class*="col-"] {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Ensure form controls don't overflow */
+.add-products-section .form-control,
+.add-products-section .form-group {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Minimal spacing when positioned at bottom */
+.table-responsive + .add-products-section,
+.mobile-product-cards + .add-products-section {
+    margin-top: 3px;
+}
+</style>
+
+<script>
+// Function expected by the ProductSearchAdd component
+function refreshCurrentProductsGrid() {
+    // Products tab is index 3 in the order edit tabstrip (Info=0, Addresses=1, Shipments=2, Products=3)
+    var productsTabIndex = 3;
+    
+    // Set URL hash to preserve Products tab state after reload
+    if (window.location.hash !== '#tab-' + productsTabIndex) {
+        window.location.hash = '#tab-' + productsTabIndex;
+    }
+    
+    // Reload page with hash preserved - admin-tabstrip will restore the active tab
+    window.location.reload();
+}
+
+// Check for existing shipments and hide ProductSearchAdd if shipments exist or order is in fulfillment
+var isCheckingShipments = false; // Flag to prevent multiple simultaneous calls
+
+function checkShipments() {
+    // Prevent multiple simultaneous executions
+    if (isCheckingShipments) {
+        return;
+    }
+    isCheckingShipments = true;
+    
+    var isVerifiedOrder = @Json.Serialize(Model.IsVerifiedOrder);
+    
+    if (isVerifiedOrder) {
+        // Remove any existing warnings first, then hide ProductSearchAdd section for verified orders (in fulfillment queue)
+        $('.shipment-warning').remove();
+        $('.add-products-section').hide();
+        $('.add-products-section').after(
+            '<div class="shipment-warning alert alert-warning mt-3">' +
+            '<i class="fa fa-warning"></i> ' +
+            'Cannot add products to orders in fulfillment queue. ' +
+            '<button type="button" class="btn btn-primary btn-sm ml-2" onclick="sendToReverificationFromProducts(\'@Model.Id\')">' +
+            '<i class="fa fa-undo"></i> Send to Reverification' +
+            '</button>' +
+            '</div>'
+        );
+        isCheckingShipments = false; // Reset flag
+        return;
+    }
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action("ShipmentsByOrder", "Shipment", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: { __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+        dataType: "json",
+        success: function(data) {
+            if (data && data.Total > 0) {
+                // Remove any existing warnings first, then hide ProductSearchAdd section and show warning
+                $('.shipment-warning').remove();
+                $('.add-products-section').hide();
+                $('.add-products-section').after(
+                    '<div class="shipment-warning alert alert-warning mt-3">' +
+                    '<i class="fa fa-warning"></i> ' +
+                    'Cannot add products when shipments exist. Please delete existing shipments first to add new products.' +
+                    '</div>'
+                );
+            } else {
+                // Show ProductSearchAdd section if no shipments and not verified
+                $('.add-products-section').show();
+                $('.shipment-warning').remove();
+            }
+            isCheckingShipments = false; // Reset flag on success
+        },
+        error: function() {
+            // On error, show ProductSearchAdd (fail safe) only if not verified
+            if (!isVerifiedOrder) {
+                $('.add-products-section').show();
+            }
+            isCheckingShipments = false; // Reset flag on error
+        }
+    });
+}
+
+// Ensure Products tab is activated if hash indicates it (fallback for page loads)
+$(document).ready(function() {
+    // Check shipments on page load
+    checkShipments();
+    
+    if (window.location.hash === '#tab-3') {
+        // Small delay to ensure tabstrip is initialized
+        setTimeout(function() {
+            var tabstrip = $('#order-edit').data('kendoTabStrip');
+            if (tabstrip) {
+                tabstrip.activateTab(tabstrip.tabGroup.children().eq(3));
+            }
+        }, 100);
+    }
+});
+
+function sendToReverificationFromProducts(orderId) {
+    if (!confirm('Are you sure you want to send this order back to reverification? This will delete any existing shipments.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action("SendToReverification", "Order", new { area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: addAntiForgeryToken({ orderId: orderId }),
+        dataType: "json",
+        success: function(result) {
+            if (result.success) {
+                // Refresh the page to update the UI state
+                window.location.reload();
+            } else {
+                alert('Error: ' + (result.message || 'Failed to send order to reverification'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while sending order to reverification.');
+        }
+    });
+}
+</script>

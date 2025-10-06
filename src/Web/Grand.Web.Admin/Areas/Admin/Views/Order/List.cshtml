@@ -29,11 +29,22 @@
                                 <li>
                                     <input type="button" id="exportexcel-selected" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.Selected"]"/>
                                 </li>
+                                <li>
+                                    <input type="submit" name="exportcsv-all" asp-action="ExportCsvAll" class="btn default" style="width: 100%;" value="Export to CSV (all)"/>
+                                </li>
+                                <li>
+                                    <input type="button" id="exportcsv-selected" class="btn default" style="width: 100%;" value="Export to CSV (selected)"/>
+                                </li>
+                                <!-- QuickBooks Export Button (Hidden)
+                                <li>
+                                    <input type="submit" name="exportcsv-all" asp-action="ExportCsv" class="btn default" style="width: 100%;" value="Export to CSV for QuickBooks"/>
+                                </li>
+                                -->
                             </ul>
                             <vc:admin-widget widget-zone="order_list_buttons" additional-data="null"/>
                         </div>
 
-                        <button type="submit" name="pdf-invoice-all" asp-action="PdfInvoiceAll" class="btn green">
+                        <button type="submit" name="pdf-invoice-all" asp-action="PdfInvoiceAll" class="btn green" formtarget="_blank">
                             <i class="fa fa-file-pdf-o"></i>
                             @Loc["Admin.Orders.PdfInvoice.All"]
                         </button>
@@ -56,8 +67,8 @@
                                     <div class="row">
                                         <div class="col-md-6 col-sm-12 col-12">
                                             <div class="form-group mb-0">
-                                                <admin-label asp-for="BillingEmail" class="control-label"/>
-                                                <admin-input asp-for="BillingEmail"/>
+                                                <admin-label asp-for="SearchCustomerIds" class="control-label"/>
+                                                <admin-input asp-for="SearchCustomerIds" asp-template="MultiSelect" asp-selectitem="Model.AvailableCustomers"/>
                                             </div>
                                         </div>
                                         <div class="col-md-6 col-sm-12 col-12">
@@ -145,6 +156,12 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
+                                    <admin-label asp-for="BillingEmail" class="col-sm-3 control-label"/>
+                                    <div class="col-md-9 col-sm-9">
+                                        <admin-input asp-for="BillingEmail"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
                                     <admin-label asp-for="BillingLastName" class="col-sm-3 control-label"/>
                                     <div class="col-md-9 col-sm-9">
                                         <admin-input asp-for="BillingLastName"/>
@@ -196,6 +213,12 @@
                                     <admin-label asp-for="OrderTag" class="col-sm-3 control-label"/>
                                     <div class="col-md-9 col-sm-9">
                                         <admin-select asp-for="OrderTag" asp-items="Model.AvailableOrderTags"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <admin-label asp-for="ImpersonatedByEmployeeId" class="col-sm-3 control-label"/>
+                                    <div class="col-md-9 col-sm-9">
+                                        <admin-select asp-for="ImpersonatedByEmployeeId" asp-items="Model.AvailableEmployees"/>
                                     </div>
                                 </div>
                             </div>
@@ -314,7 +337,11 @@
                         title: "@Loc["Admin.Orders.Fields.Customer"]",
                         width: 220,
                         template: function(dataItem) {
-                                    return "<a class=\"k-link\" href='@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/" + dataItem.CustomerId + "'>" + kendo.htmlEncode(dataItem.CustomerFullName) + " (" + dataItem.CustomerEmail + ")</a>";
+                            var customerDisplay = kendo.htmlEncode(dataItem.CustomerFullName);
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + kendo.htmlEncode(dataItem.CustomerCompany) + '</small>';
+                            }
+                            return "<a class=\"k-link\" href='@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/" + dataItem.CustomerId + "'>" + customerDisplay + "</a>";
                         }
                     },
                     @if (!adminAreaSettings.HideStoreColumn)
@@ -414,6 +441,25 @@
                 }
             });
 
+            $("#@Html.IdFor(model => model.SearchCustomerIds)").keydown(function (event) {
+                if (event.keyCode == 13) {
+                    $("#search-orders").click();
+                    return false;
+                }
+            });
+
+            $("#@Html.IdFor(model => model.SearchCustomerIds)").data().kendoMultiSelect.input.on('keydown',function(e){
+                if (event.keyCode == 13) {
+                    $("#search-orders").click();
+                    return false;
+                }
+            });
+
+            // Auto-search when customers are selected/deselected
+            $("#@Html.IdFor(model => model.SearchCustomerIds)").data("kendoMultiSelect").bind("change", function() {
+                $("#search-orders").click();
+            });
+
             $('#delete-selected').click(function(e) {
                 if (confirm('@Loc["Admin.Common.AreYouSure"]')) {
 
@@ -468,6 +514,11 @@
         });
 
         function additionalData() {
+            var searchCustomerIds = [];
+            if($('#@Html.IdFor(model => model.SearchCustomerIds)').val()!=null){
+                searchCustomerIds = $('#@Html.IdFor(model => model.SearchCustomerIds)').val();
+            }
+
             var data = {
                 StartDate: $('#@Html.IdFor(model => model.StartDate)').val(),
                 EndDate: $('#@Html.IdFor(model => model.EndDate)').val(),
@@ -477,6 +528,7 @@
                 StoreId: $('#@Html.IdFor(model => model.StoreId)').val(),
                 VendorId: $('#@Html.IdFor(model => model.VendorId)').val(),
                 WarehouseId: $('#@Html.IdFor(model => model.WarehouseId)').val(),
+                SearchCustomerIds: searchCustomerIds,
                 BillingEmail: $('#@Html.IdFor(model => model.BillingEmail)').val(),
                 BillingLastName: $('#@Html.IdFor(model => model.BillingLastName)').val(),
                 BillingCountryId: $('#@Html.IdFor(model => model.BillingCountryId)').val(),
@@ -485,6 +537,7 @@
                 OrderGuid: $('#@Html.IdFor(model => model.OrderGuid)').val(),
                 GoDirectlyToNumber: $('#@Html.IdFor(model => model.GoDirectlyToNumber)').val(),
                 OrderTag: $('#@Html.IdFor(model => model.OrderTag)').val(),
+                ImpersonatedByEmployeeId: $('#@Html.IdFor(model => model.ImpersonatedByEmployeeId)').val(),
             };
             addAntiForgeryToken(data);
             return data;
@@ -527,6 +580,10 @@
 
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>
+<form asp-area="@Constants.AreaAdmin" asp-controller="Order" asp-action="ExportCsvSelected" method="post" id="export-csv-selected-form">
+
+    <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
+</form>
 <script>
 
     $(document).ready(function () {
@@ -537,10 +594,18 @@
             $('#export-excel-selected-form').submit();
             return false;
         });
+        
+        $('#exportcsv-selected').click(function (e) {
+            e.preventDefault();
+            var ids = selectedIds.join(",");
+            $('#export-csv-selected-form #selectedIds').val(ids);
+            $('#export-csv-selected-form').submit();
+            return false;
+        });
     });
 
 </script>
-<form asp-area="@Constants.AreaAdmin" asp-controller="Order" asp-action="PdfInvoiceSelected" method="post" id="pdf-invoice-selected-form">
+<form asp-area="@Constants.AreaAdmin" asp-controller="Order" asp-action="PdfInvoiceSelected" method="post" id="pdf-invoice-selected-form" target="_blank">
 
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>

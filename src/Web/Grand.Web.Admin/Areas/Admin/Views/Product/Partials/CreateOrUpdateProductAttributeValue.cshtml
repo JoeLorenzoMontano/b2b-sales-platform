@@ -37,11 +37,25 @@
             $('#group-quantity').hide();
             $('#group-weight-adjustment').show();
             $('#group-cost').show();
+            $('#group-overridden-price').hide();
+            $("#quantity-hint").hide();
+            $("label[for='@Html.IdFor(model => model.Quantity)']").text("@Loc["Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity"]");
         } else if (selectedProductTypeId == @(((int)AttributeValueType.AssociatedToProduct).ToString())) {
             $('#group-associated-product').show();
             $('#group-quantity').show();
             $('#group-weight-adjustment').hide();
             $('#group-cost').hide();
+            $('#group-overridden-price').hide();
+            $("#quantity-hint").hide();
+            $("label[for='@Html.IdFor(model => model.Quantity)']").text("@Loc["Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity"]");
+        } else if (selectedProductTypeId == @(((int)AttributeValueType.WeightBasedConversion).ToString())) {
+            $('#group-associated-product').hide();
+            $('#group-quantity').show();
+            $('#group-weight-adjustment').show();
+            $('#group-cost').hide();
+            $('#group-overridden-price').show();
+            $("#quantity-hint").show();
+            $("label[for='@Html.IdFor(model => model.Quantity)']").text("Conversion Ratio:");
         }
     }
 </script>
@@ -86,6 +100,11 @@
             <div class="col-md-9 col-sm-9">
                 <admin-input asp-for="Quantity"/>
                 <span asp-validation-for="Quantity"></span>
+                <div id="quantity-hint" class="small mt-1" style="display:none;">
+                    Enter the conversion ratio (e.g., 453.59 for pounds to grams).
+                    Decimal values with up to 2 decimal places are supported (e.g., 1.25, 0.75).
+                    When a customer orders 1 unit, inventory will be decremented by this amount.
+                </div>
             </div>
         </div>
     </div>
@@ -154,6 +173,18 @@
                 <span asp-validation-for="Cost"></span>
             </div>
         </div>
+        <div class="form-group" id="group-overridden-price">
+            <admin-label asp-for="OverriddenPrice" class="col-sm-3 control-label"/>
+            <div class="col-md-9 col-sm-9">
+                <admin-input asp-for="OverriddenPrice"/> [@Model.PrimaryStoreCurrencyCode]
+                <span asp-validation-for="OverriddenPrice"></span>
+                <div class="small mt-1">
+                    If set, this price will completely replace the product price.
+                </div>
+            </div>
+        </div>
+        <!-- AllowSample option removed - only use the one in Product Attribute Combination -->
+        <input type="hidden" asp-for="AllowSample" value="false" />
         <div class="form-group">
             <admin-label asp-for="IsPreSelected" class="col-sm-3 control-label"/>
             <div class="col-md-9 col-sm-9">

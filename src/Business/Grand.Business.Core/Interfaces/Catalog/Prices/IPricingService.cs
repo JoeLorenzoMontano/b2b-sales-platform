@@ -32,7 +32,7 @@ public interface IPricingService
             Currency currency,
             double additionalCharge = 0,
             bool includeDiscounts = true,
-            int quantity = 1);
+            double quantity = 1);
 
     /// <summary>
     ///     Gets the final price
@@ -54,7 +54,7 @@ public interface IPricingService
             Currency currency,
             double additionalCharge,
             bool includeDiscounts,
-            int quantity,
+            double quantity,
             DateTime? rentalStartDate,
             DateTime? rentalEndDate);
 
@@ -91,7 +91,7 @@ public interface IPricingService
         Store store,
         Currency currency,
         ShoppingCartType shoppingCartType,
-        int quantity,
+        double quantity,
         IList<CustomAttribute> attributes,
         double? customerEnteredPrice,
         DateTime? rentalStartDate, DateTime? rentalEndDate,
@@ -121,6 +121,7 @@ public interface IPricingService
     ///     Get a price adjustment of a product attribute value
     /// </summary>
     /// <param name="value">Product attribute value</param>
+    /// <param name="product">Product (optional, used for price override calculations)</param>
     /// <returns>Price adjustment</returns>
-    Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value);
+    Task<double> GetProductAttributeValuePriceAdjustment(ProductAttributeValue value, Product product = null);
 }

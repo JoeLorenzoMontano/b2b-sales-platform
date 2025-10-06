@@ -128,9 +128,14 @@ public class GetProductOverviewHandler : IRequestHandler<GetProductOverview, IEn
     private async Task<ProductOverviewModel> PrepareProductOverviewModel(Product product)
     {
         var sename = product.GetSeName(_contextAccessor.WorkContext.WorkingLanguage.Id);
+        var nowUtc = DateTime.UtcNow;
+        
+        // Just get the product name without any attribute info, as the view will handle that
+        string name = product.GetTranslation(x => x.Name, _contextAccessor.WorkContext.WorkingLanguage.Id);
+        
         var model = new ProductOverviewModel {
             Id = product.Id,
-            Name = product.GetTranslation(x => x.Name, _contextAccessor.WorkContext.WorkingLanguage.Id),
+            Name = name,
             ShortDescription = product.GetTranslation(x => x.ShortDescription, _contextAccessor.WorkContext.WorkingLanguage.Id),
             FullDescription = product.GetTranslation(x => x.FullDescription, _contextAccessor.WorkContext.WorkingLanguage.Id),
             SeName = sename,
@@ -158,9 +163,9 @@ public class GetProductOverviewHandler : IRequestHandler<GetProductOverview, IEn
             UserFields = product.UserFields,
             MarkAsNew = product.MarkAsNew &&
                         (!product.MarkAsNewStartDateTimeUtc.HasValue ||
-                         product.MarkAsNewStartDateTimeUtc.Value < DateTime.UtcNow) &&
+                         product.MarkAsNewStartDateTimeUtc.Value < nowUtc) &&
                         (!product.MarkAsNewEndDateTimeUtc.HasValue ||
-                         product.MarkAsNewEndDateTimeUtc.Value > DateTime.UtcNow)
+                         product.MarkAsNewEndDateTimeUtc.Value > nowUtc)
         };
         return model;
     }

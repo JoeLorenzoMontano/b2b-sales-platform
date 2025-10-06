@@ -1,5 +1,6 @@
 ﻿using Grand.Infrastructure.ModelBinding;
 using Grand.Infrastructure.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Vendor.Models.Catalog;
 
@@ -26,7 +27,8 @@ public class BulkEditProductModel : BaseEntityModel
 
 
     [GrandResourceDisplayName("Vendor.Catalog.BulkEdit.Fields.StockQuantity")]
-    public int StockQuantity { get; set; }
+    [UIHint("DecimalN2")]
+    public double StockQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.BulkEdit.Fields.Published")]
     public bool Published { get; set; }

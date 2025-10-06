@@ -264,6 +264,16 @@ public class Order : BaseEntity
     public bool IsRecurring { get; set; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether the order has been verified by an employee
+    /// </summary>
+    public bool IsVerifiedOrder { get; set; }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the order needs reverification due to modifications
+    /// </summary>
+    public bool NeedsReverification { get; set; }
+
+    /// <summary>
     ///     Gets or sets the cycle length
     /// </summary>
     public int RecurringCycleLength { get; set; }
@@ -292,6 +302,21 @@ public class Order : BaseEntity
     ///     Gets or sets the Shipping Option (developer friendly string)
     /// </summary>
     public string ShippingOptionAttribute { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the target delivery date
+    /// </summary>
+    public DateTime? TargetDeliveryDate { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the requested shipment date
+    /// </summary>
+    public DateTime? RequestedShipmentDate { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the ID of the employee who created this order via impersonation
+    /// </summary>
+    public string ImpersonatedByEmployeeId { get; set; }
 
     #endregion
 

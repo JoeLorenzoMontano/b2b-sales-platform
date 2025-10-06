@@ -1,0 +1,784 @@
+@using Grand.Web.Admin.Models.Components
+@model ProductSearchAddModel
+@{
+    // Use predictable componentId pattern for refresh callback compatibility
+    var contextId = Model.ContextId ?? "default";
+    var componentId = "product-search-" + contextId.Replace("-", "_").Replace(" ", "_");
+}
+
+<!-- Search/Filter Section -->
+<div class="form-section">
+    <!-- Autocomplete layout: Product Name + Brand filter + Category filter -->
+    <div class="form-group">
+        <div class="row">
+            <div class="col-12">
+                <admin-label asp-for="SearchProductName"/>
+                <input id="product-autocomplete-@componentId" class="form-control" placeholder="Type to search products..." />
+            </div>
+            <div class="col-12">
+                <admin-label asp-for="SearchBrandId"/>
+                <admin-select asp-for="SearchBrandId" asp-items="Model.AvailableBrands" id="SearchBrandId-@componentId"/>
+            </div>
+            <div class="col-12">
+                <admin-label asp-for="SearchCategoryId"/>
+                <admin-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories" id="SearchCategoryId-@componentId"/>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Selected Product Form -->
+<div id="selected-product-form-@componentId" style="display: none;">
+    <div class="form-group">
+        <div class="col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h5 id="selected-product-title-@componentId"></h5>
+
+                    <!-- Attribute Selection Section -->
+                    <div id="attribute-selection-@componentId" style="display: none;">
+                        <!-- Weight-based attributes: Dropdown + Quantity input -->
+                        <div class="col-12" id="weight-attributes-@componentId" style="display: none;">
+                            <div class="form-group">
+                                <label>Select Size/Weight</label>
+                                <select id="attribute-dropdown-@componentId" class="form-control">
+                                    <option value="">Select...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label id="weight-quantity-label-@componentId">Quantity</label>
+                                <input type="number"
+                                       id="weight-quantity-@componentId"
+                                       class="form-control"
+                                       value="1"
+                                       min="0.01"
+                                       step="0.01" />
+                                <small class="text-muted" id="weight-quantity-info-@componentId"></small>
+                            </div>
+                        </div>
+
+                        <!-- Combination attributes: Unit/Case selector -->
+                        <div class="col-12" id="combo-attributes-@componentId" style="display: none;">
+                            <div class="form-group">
+                                <label>Quantity</label>
+                            </div>
+                            <div class="quantity-unit-case-wrapper">
+                                <div class="d-flex align-items-center">
+                                    <input type="number"
+                                           id="combo-quantity-display-@componentId"
+                                           class="form-control"
+                                           value="1"
+                                           min="1"
+                                           style="width: 100px; margin-right: 5px;"/>
+                                    <select id="combo-unit-selector-@componentId" class="form-control" style="width: 100px;">
+                                        <option value="unit">Unit</option>
+                                        <option value="case">Case</option>
+                                    </select>
+                                </div>
+                                <small class="text-muted d-block mt-1" id="combo-case-info-@componentId"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12" id="standard-quantity-@componentId">
+                            <div class="form-group">
+                                <label>Quantity</label>
+                                <input type="number" id="selected-quantity-@componentId" class="form-control" value="1" min="1" />
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label>Unit Price</label>
+                                <input type="number" id="selected-price-@componentId" class="form-control" step="0.01" min="0" />
+                            </div>
+                        </div>
+                        <div class="col-12" id="warehouse-container-@componentId">
+                            <div class="form-group">
+                                <label>Warehouse</label>
+                                <select id="selected-warehouse-@componentId" class="form-control">
+                                    <option value="">Select Warehouse...</option>
+                                </select>
+                                <div id="warehouse-inventory-info-@componentId" class="mt-1" style="font-size: 0.85em; color: #666;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons in separate row to prevent horizontal overflow -->
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <button type="button" class="btn btn-success" id="add-selected-product-@componentId">
+                                    Add to @Model.ContextType
+                                </button>
+                                <button type="button" class="btn btn-default" id="cancel-selection-@componentId">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Autocomplete dropdown styling - scoped to this component instance */
+    #product-autocomplete-@(componentId).k-autocomplete .k-dropdown-wrap {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    #product-autocomplete-@(componentId).k-autocomplete .k-input {
+        padding: 8px 12px;
+    }
+    
+    /* Selected product form styling - slim design */
+    #selected-product-form-@componentId .panel {
+        border: 1px solid #28a745;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    
+    #selected-product-form-@componentId .panel-body {
+        padding: 12px 15px;
+        background-color: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+    }
+    
+    #selected-product-form-@componentId h5 {
+        margin: 0 0 10px 0;
+        color: #333;
+        font-size: 1.1em;
+        font-weight: 500;
+    }
+    
+    #selected-product-form-@componentId .selected-product-name {
+        color: #333;
+        font-weight: 500; /* Medium weight, not bold */
+    }
+    
+    /* Brand badge styling for autocomplete dropdown - scoped to this component */
+    #product-autocomplete-@(componentId) + .k-animation-container .brand-badge,
+    #selected-product-form-@componentId .brand-badge {
+        display: inline-block;
+        background-color: #17a2b8;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7em;
+        font-weight: 500;
+        margin-left: 5px;
+    }
+    
+    /* Autocomplete item template styling - scoped to this component's dropdown */
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item {
+        padding: 6px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9em;
+        line-height: 1.3;
+    }
+
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item:hover {
+        background-color: #e9ecef;
+    }
+
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item .product-name {
+        color: #333;
+        font-weight: normal; /* Regular weight, not bold */
+    }
+
+    #product-autocomplete-@(componentId) + .k-animation-container .k-list-container .k-item .text-muted {
+        color: #6c757d;
+        font-size: 0.8em;
+    }
+    
+    /* Success feedback styling - scoped to this component */
+    #product-autocomplete-@(componentId).autocomplete-success {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    /* Form styling improvements - compact design */
+    #selected-product-form-@componentId .form-group {
+        margin-bottom: 10px;
+    }
+    
+    #selected-product-form-@componentId .form-group label {
+        font-weight: 500;
+        margin-bottom: 4px;
+        color: #333;
+        font-size: 0.9em;
+    }
+    
+    #selected-product-form-@componentId .form-control {
+        padding: 6px 10px;
+        font-size: 0.9em;
+        height: auto;
+    }
+    
+    #selected-product-form-@componentId .btn {
+        margin-right: 8px;
+        padding: 6px 12px;
+        font-size: 0.9em;
+    }
+    
+    #selected-product-form-@componentId .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    #selected-product-form-@componentId .col-12 {
+        padding-left: 0;
+        padding-right: 0;
+    }
+</style>
+
+<script>
+$(document).ready(function() {
+    initializeProductAutocomplete@(componentId.Replace("-", "_"))();
+});
+
+var selectedProduct@(componentId.Replace("-", "_")) = null;
+var currentInventory@(componentId.Replace("-", "_")) = 0;
+
+// Filter state management functions
+function saveFilterState@(componentId.Replace("-", "_"))() {
+    try {
+        var filterState = {
+            brandId: $('#SearchBrandId-@componentId').val(),
+            categoryId: $('#SearchCategoryId-@componentId').val(),
+            contextId: '@Model.ContextId',
+            timestamp: Date.now()
+        };
+        sessionStorage.setItem('ProductSearchAdd_Filters_@Model.ContextId', JSON.stringify(filterState));
+    } catch (e) {
+        console.warn('ProductSearchAdd: Could not save filter state:', e);
+    }
+}
+
+function restoreFilterState@(componentId.Replace("-", "_"))() {
+    try {
+        // ALWAYS clear filters first to override server-rendered selected values
+        $('#SearchBrandId-@componentId').val('').trigger('change');
+        $('#SearchCategoryId-@componentId').val('').trigger('change');
+        
+        // Check if this is a component reload (not a fresh page load)
+        var isComponentReload = sessionStorage.getItem('ProductSearchAdd_ComponentReload_@Model.ContextId') === 'true';
+        
+        if (isComponentReload) {
+            var saved = sessionStorage.getItem('ProductSearchAdd_Filters_@Model.ContextId');
+            if (saved) {
+                var filterState = JSON.parse(saved);
+                // Only restore if saved within last 4 hours (to avoid stale state)
+                if (filterState.timestamp && (Date.now() - filterState.timestamp) < (4 * 60 * 60 * 1000)) {
+                    if (filterState.brandId) {
+                        $('#SearchBrandId-@componentId').val(filterState.brandId);
+                    }
+                    if (filterState.categoryId) {
+                        $('#SearchCategoryId-@componentId').val(filterState.categoryId);
+                    }
+                }
+            }
+        }
+        
+        // Clear the component reload flag after use
+        sessionStorage.removeItem('ProductSearchAdd_ComponentReload_@Model.ContextId');
+    } catch (e) {
+        console.warn('ProductSearchAdd: Could not restore filter state:', e);
+    }
+}
+
+function clearOtherContextFilters@(componentId.Replace("-", "_"))() {
+    try {
+        var currentContextId = '@Model.ContextId';
+        // Get all sessionStorage keys
+        for (var i = 0; i < sessionStorage.length; i++) {
+            var key = sessionStorage.key(i);
+            if (key && key.startsWith('ProductSearchAdd_Filters_') && !key.endsWith(currentContextId)) {
+                sessionStorage.removeItem(key);
+            }
+        }
+    } catch (e) {
+        console.warn('ProductSearchAdd: Could not clear other context filters:', e);
+    }
+}
+
+function initializeProductAutocomplete@(componentId.Replace("-", "_"))() {
+    // Skip aggressive filter clearing - unique contextIds provide isolation
+    // clearOtherContextFilters@(componentId.Replace("-", "_"))();
+
+    // Restore saved filter values for this context
+    restoreFilterState@(componentId.Replace("-", "_"))();
+    
+    // Initialize Kendo AutoComplete
+    $('#product-autocomplete-@componentId').kendoAutoComplete({
+        minLength: 0,
+        delay: 300,
+        suggest: false,
+        dataSource: {
+            transport: {
+                read: {
+                    url: "@Html.Raw(Url.Action(Model.SearchEndpoint, "Order", new { area = Constants.AreaAdmin }))",
+                    type: "POST",
+                    dataType: "json",
+                    data: function() {
+                        var searchData = {
+                            SearchProductName: $('#product-autocomplete-@componentId').val(),
+                            SearchBrandId: $('#SearchBrandId-@componentId').val(),
+                            SearchCategoryId: $('#SearchCategoryId-@componentId').val(),
+                            page: 1,
+                            pageSize: 50
+                        };
+                        addAntiForgeryToken(searchData);
+                        return searchData;
+                    }
+                }
+            },
+            schema: {
+                data: function(response) {
+                    if (response.success) {
+                        // Filter to only show published products
+                        return response.data.filter(function(item) {
+                            return item.published === true;
+                        });
+                    }
+                    return [];
+                }
+            },
+            serverFiltering: true
+        },
+        dataTextField: "name",
+        template: function(dataItem) {
+            var brandDisplay = dataItem.brandName ? ` <span class="brand-badge">${dataItem.brandName}</span>` : '';
+            var attributeDisplay = dataItem.attributeInfo ? `<br/><small class="text-muted">${dataItem.attributeInfo}</small>` : '';
+            return `<div><span class="product-name">${dataItem.name}${brandDisplay}</span>${attributeDisplay}</div>`;
+        },
+        select: function(e) {
+            var dataItem = e.dataItem;
+            selectProduct@(componentId.Replace("-", "_"))(dataItem);
+        },
+        focus: function(e) {
+            // Trigger natural search on focus for minLength: 0 behavior
+            var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
+            if (autocomplete) {
+                // Use current input value (empty string for initial focus)
+                autocomplete.search(autocomplete.value() || "");
+            }
+        },
+        open: function(e) {
+            // Let Kendo handle data loading naturally - no manual interference
+        }
+    });
+    
+    // Enhanced click handler - reliably show results on first click
+    $('#product-autocomplete-@componentId').click(function() {
+        var autocomplete = $(this).data('kendoAutoComplete');
+        if (autocomplete) {
+            // Focus first to initialize
+            $(this).focus();
+            // Then explicitly search to show results with slight delay
+            setTimeout(function() {
+                autocomplete.search("");
+            }, 50);
+        }
+    });
+    
+    // Brand filter change should refresh autocomplete data source
+    $('#SearchBrandId-@componentId').change(function() {
+        // Save filter state to localStorage
+        saveFilterState@(componentId.Replace("-", "_"))();
+        
+        var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
+        if (autocomplete) {
+            // Only reload data if the input has content or was previously focused
+            if ($('#product-autocomplete-@componentId').val() || $('#product-autocomplete-@componentId').is(':focus')) {
+                autocomplete.dataSource.read();
+            }
+        }
+    });
+    
+    // Category filter change should refresh autocomplete data source
+    $('#SearchCategoryId-@componentId').change(function() {
+        // Save filter state to localStorage
+        saveFilterState@(componentId.Replace("-", "_"))();
+        
+        var autocomplete = $('#product-autocomplete-@componentId').data('kendoAutoComplete');
+        if (autocomplete) {
+            // Only reload data if the input has content or was previously focused
+            if ($('#product-autocomplete-@componentId').val() || $('#product-autocomplete-@componentId').is(':focus')) {
+                autocomplete.dataSource.read();
+            }
+        }
+    });
+    
+    // Cancel selection button
+    $('#cancel-selection-@componentId').click(function() {
+        clearProductSelection@(componentId.Replace("-", "_"))();
+    });
+    
+    // Add selected product button
+    $('#add-selected-product-@componentId').click(function() {
+        addSelectedProductToContext@(componentId.Replace("-", "_"))();
+    });
+}
+
+function selectProduct@(componentId.Replace("-", "_"))(product) {
+    selectedProduct@(componentId.Replace("-", "_")) = product;
+
+    // Show form
+    $('#selected-product-form-@componentId').show();
+
+    // Set title
+    var brandDisplay = product.brandName ? ` <span class="brand-badge">${product.brandName}</span>` : '';
+    $('#selected-product-title-@componentId').html(`Selected: <span class="selected-product-name">${product.name}${brandDisplay}</span>`);
+
+    // Reset UI
+    $('#attribute-selection-@componentId').hide();
+    $('#weight-attributes-@componentId').hide();
+    $('#combo-attributes-@componentId').hide();
+    $('#standard-quantity-@componentId').show();
+
+    // Handle by attribute type
+    if (product.hasWeightBasedAttributes && product.attributeOptions && product.attributeOptions.length > 0) {
+        handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product);
+    } else if (product.hasCombinationAttributes && product.caseSize > 0) {
+        handleCombinationAttributes@(componentId.Replace("-", "_"))(product);
+    } else {
+        // Standard product
+        $('#selected-quantity-@componentId').val(1);
+        $('#selected-price-@componentId').val(product.price || 0);
+    }
+    
+    // Handle warehouses with inventory information
+    var warehouseSelect = $('#selected-warehouse-@componentId');
+    warehouseSelect.empty();
+    warehouseSelect.append(`<option value="">Select Warehouse...</option>`);
+    
+    if (product.warehouses && product.warehouses.length > 0) {
+        product.warehouses.forEach(function(warehouse) {
+            warehouseSelect.append(`<option value="${warehouse.id}" data-inventory="0">${warehouse.name}</option>`);
+        });
+        
+        // Set up real-time inventory loading on warehouse change - similar to existing warehouse refresh pattern
+        warehouseSelect.off('change.inventory').on('change.inventory', function() {
+            var warehouseId = $(this).val();
+            var infoDiv = $('#warehouse-inventory-info-@componentId');
+            
+            if (warehouseId) {
+                // Show loading indicator
+                infoDiv.html('<span style="color: #6c757d;">⟳ Loading inventory...</span>');
+                
+                // Call dedicated warehouse refresh endpoint
+                var requestData = {
+                    productId: selectedProduct@(componentId.Replace("-", "_")).id,
+                    warehouseId: warehouseId,
+                    attributeCombinationId: selectedProduct@(componentId.Replace("-", "_")).combinationId || ''
+                };
+                addAntiForgeryToken(requestData);
+                
+                $.ajax({
+                    url: "@Html.Raw(Url.Action("ProductSearchWarehouseChange", "Order", new { area = Constants.AreaAdmin }))",
+                    type: "POST",
+                    data: requestData,
+                    success: function(response) {
+                        if (response.success) {
+                            var inventory = response.inventory;
+                            // Store current inventory for validation
+                            currentInventory@(componentId.Replace("-", "_")) = inventory;
+                            
+                            var stockStatus = inventory > 0 ? 
+                                `<span style="color: #28a745;">✓ ${inventory} in stock</span>` : 
+                                `<span style="color: #dc3545;">⚠ Out of stock</span>`;
+                            infoDiv.html(stockStatus);
+                            
+                            // Update the option text to show inventory
+                            var selectedOption = $('#selected-warehouse-@componentId option:selected');
+                            var warehouseName = selectedOption.text().split(' (Stock:')[0].split(' - ')[0];
+                            selectedOption.text(`${warehouseName} - Stock: ${inventory}`);
+                        } else {
+                            currentInventory@(componentId.Replace("-", "_")) = 0;
+                            infoDiv.html('<span style="color: #dc3545;">⚠ Error loading inventory</span>');
+                        }
+                    },
+                    error: function() {
+                        currentInventory@(componentId.Replace("-", "_")) = 0;
+                        infoDiv.html('<span style="color: #dc3545;">⚠ Error loading inventory</span>');
+                    }
+                });
+            } else {
+                infoDiv.html('');
+            }
+        });
+    } else {
+        warehouseSelect.append(`<option value="">No warehouses available</option>`);
+    }
+    
+    // Initial warehouse load - wait a moment to ensure all product data is initialized
+    if (product.warehouses && product.warehouses.length > 0) {
+        setTimeout(function() {
+            // Trigger warehouse change for the first warehouse if available
+            if (warehouseSelect.find('option[value!=""]').length > 0) {
+                var firstWarehouseId = warehouseSelect.find('option[value!=""]').first().val();
+                if (firstWarehouseId) {
+                    warehouseSelect.val(firstWarehouseId).trigger('change.inventory');
+                }
+            }
+        }, 100);
+    }
+    
+    // Clear the autocomplete
+    $('#product-autocomplete-@componentId').val('');
+}
+
+function handleWeightBasedAttributes@(componentId.Replace("-", "_"))(product) {
+    // Show attribute section and weight dropdown (replaces quantity input)
+    $('#attribute-selection-@componentId').show();
+    $('#weight-attributes-@componentId').show();
+    $('#standard-quantity-@componentId').hide();  // Hide standard quantity
+
+    // Populate dropdown
+    var dropdown = $('#attribute-dropdown-@componentId');
+    dropdown.empty();
+    dropdown.append('<option value="">Select size/weight...</option>');
+
+    product.attributeOptions.forEach(function(option) {
+        // Handle both combination-based and non-combination weight attributes
+        var optionValue = option.combinationId || option.attributeValueId;
+        var optionData = {
+            price: option.price,
+            sku: option.sku,
+            mappingId: option.mappingId || '',
+            attributeValueId: option.attributeValueId || '',
+            conversionRatio: option.conversionRatio || 1
+        };
+
+        var optionEl = $('<option></option>')
+            .val(optionValue)
+            .text(option.name)
+            .data('price', optionData.price)
+            .data('sku', optionData.sku)
+            .data('mapping-id', optionData.mappingId)
+            .data('attribute-value-id', optionData.attributeValueId)
+            .data('conversion-ratio', optionData.conversionRatio);
+
+        dropdown.append(optionEl);
+    });
+
+    // Set default price and quantity
+    $('#selected-price-@componentId').val(product.price || 0);
+    $('#weight-quantity-@componentId').val(1);
+
+    // Handle selection change
+    dropdown.off('change.attribute').on('change.attribute', function() {
+        var selectedOption = $(this).find('option:selected');
+        var optionValue = selectedOption.val();
+
+        if (optionValue) {
+            var price = selectedOption.data('price');
+            var mappingId = selectedOption.data('mapping-id');
+            var attributeValueId = selectedOption.data('attribute-value-id');
+            var conversionRatio = selectedOption.data('conversion-ratio');
+            var optionName = selectedOption.text();
+
+            $('#selected-price-@componentId').val(price || 0);
+
+            // Update quantity label to show selected unit
+            $('#weight-quantity-label-@componentId').text('Quantity (' + optionName + ')');
+            $('#weight-quantity-info-@componentId').text('Conversion ratio: ' + conversionRatio + ' per unit');
+
+            // Store both types of IDs
+            if (attributeValueId) {
+                // Non-combination weight attribute
+                selectedProduct@(componentId.Replace("-", "_")).attributeValueId = attributeValueId;
+                selectedProduct@(componentId.Replace("-", "_")).mappingId = mappingId;
+                selectedProduct@(componentId.Replace("-", "_")).conversionRatio = conversionRatio;
+                selectedProduct@(componentId.Replace("-", "_")).combinationId = null;
+            } else {
+                // Combination-based weight attribute
+                selectedProduct@(componentId.Replace("-", "_")).combinationId = optionValue;
+                selectedProduct@(componentId.Replace("-", "_")).attributeValueId = null;
+            }
+        } else {
+            $('#selected-price-@componentId').val(product.price || 0);
+            $('#weight-quantity-label-@componentId').text('Quantity');
+            $('#weight-quantity-info-@componentId').text('');
+            selectedProduct@(componentId.Replace("-", "_")).combinationId = null;
+            selectedProduct@(componentId.Replace("-", "_")).attributeValueId = null;
+        }
+    });
+
+    // Auto-select first option
+    if (product.attributeOptions.length > 0) {
+        var firstValue = product.attributeOptions[0].combinationId || product.attributeOptions[0].attributeValueId;
+        dropdown.val(firstValue).trigger('change.attribute');
+    }
+}
+
+function handleCombinationAttributes@(componentId.Replace("-", "_"))(product) {
+    // Show attribute section and unit/case selector
+    $('#attribute-selection-@componentId').show();
+    $('#combo-attributes-@componentId').show();
+    $('#standard-quantity-@componentId').hide();
+
+    var caseSize = product.caseSize || 0;
+
+    if (caseSize === 0) {
+        // Fallback to standard
+        $('#combo-attributes-@componentId').hide();
+        $('#standard-quantity-@componentId').show();
+        $('#selected-quantity-@componentId').val(1);
+        $('#selected-price-@componentId').val(product.price || 0);
+        return;
+    }
+
+    // Store data
+    selectedProduct@(componentId.Replace("-", "_")).combinationId = product.combinationId;
+    selectedProduct@(componentId.Replace("-", "_")).caseSize = caseSize;
+
+    // Set up UI
+    $('#combo-quantity-display-@componentId').val(1);
+    $('#combo-unit-selector-@componentId').val('unit');
+    $('#combo-case-info-@componentId').text(`${caseSize} units per case`);
+    $('#selected-price-@componentId').val(product.price || 0);
+}
+
+function clearProductSelection@(componentId.Replace("-", "_"))() {
+    selectedProduct@(componentId.Replace("-", "_")) = null;
+    currentInventory@(componentId.Replace("-", "_")) = 0;
+    $('#selected-product-form-@componentId').hide();
+    $('#product-autocomplete-@componentId').val('');
+    
+    // Reset warehouse selection and info
+    $('#selected-warehouse-@componentId').val('');
+    $('#warehouse-inventory-info-@componentId').html('');
+}
+
+function addSelectedProductToContext@(componentId.Replace("-", "_"))() {
+    if (!selectedProduct@(componentId.Replace("-", "_"))) {
+        alert('No product selected');
+        return;
+    }
+
+    var quantity = 1;
+    var product = selectedProduct@(componentId.Replace("-", "_"));
+
+    // Calculate quantity based on attribute type
+    if (product.hasWeightBasedAttributes) {
+        // For weight-based, use the quantity directly without conversion
+        var weightQty = parseFloat($('#weight-quantity-@componentId').val());
+        if (!weightQty || weightQty <= 0) {
+            alert('Please enter a valid quantity.');
+            return;
+        }
+
+        // Use weight quantity directly (no conversion)
+        quantity = Math.round(weightQty);
+
+        // Ensure a weight option is selected
+        if (!product.combinationId && !product.attributeValueId) {
+            alert('Please select a size/weight option.');
+            return;
+        }
+    } else if (product.hasCombinationAttributes && product.caseSize) {
+        // For combination attributes with case size, calculate actual quantity
+        var displayQty = parseFloat($('#combo-quantity-display-@componentId').val()) || 1;
+        var unitType = $('#combo-unit-selector-@componentId').val();
+
+        if (unitType === 'case') {
+            quantity = Math.round(displayQty * product.caseSize);
+        } else {
+            quantity = Math.round(displayQty);
+        }
+    } else {
+        // Standard quantity input
+        quantity = parseInt($('#selected-quantity-@componentId').val());
+    }
+
+    var unitPrice = parseFloat($('#selected-price-@componentId').val());
+    var warehouseId = $('#selected-warehouse-@componentId').val() || '';
+
+    if (!quantity || quantity < 1) {
+        alert('Please enter a valid quantity.');
+        return;
+    }
+
+    if (unitPrice < 0) {
+        alert('Please enter a valid price.');
+        return;
+    }
+    
+    // Validate warehouse selection if warehouses are available
+    if (selectedProduct@(componentId.Replace("-", "_")).warehouses && selectedProduct@(componentId.Replace("-", "_")).warehouses.length > 0 && !warehouseId) {
+        alert('Please select a warehouse.');
+        return;
+    }
+    
+    // Check inventory if warehouse is selected - use real-time inventory data
+    if (warehouseId) {
+        var inventory = currentInventory@(componentId.Replace("-", "_"));
+        
+        if (inventory === 0) {
+            if (!confirm('Selected warehouse is out of stock. Continue anyway?')) {
+                return;
+            }
+        } else if (quantity > inventory) {
+            if (!confirm(`Requested quantity (${quantity}) exceeds available stock (${inventory}). Continue anyway?`)) {
+                return;
+            }
+        }
+    }
+    
+    var data = {
+        orderId: '@Model.OrderId',
+        productId: selectedProduct@(componentId.Replace("-", "_")).id,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        warehouseId: warehouseId,
+        attributeCombinationId: selectedProduct@(componentId.Replace("-", "_")).combinationId || '',
+        attributeValueId: selectedProduct@(componentId.Replace("-", "_")).attributeValueId || '',
+        mappingId: selectedProduct@(componentId.Replace("-", "_")).mappingId || ''
+    };
+    
+    addAntiForgeryToken(data);
+    
+    $.ajax({
+        url: "@Html.Raw(Url.Action(Model.AddEndpoint, "Order", new { area = Constants.AreaAdmin }))",
+        type: "POST",
+        data: data,
+        success: function(response) {
+            if (response.success) {
+                // Save filter state and mark as component reload before potential component reload
+                saveFilterState@(componentId.Replace("-", "_"))();
+                try {
+                    sessionStorage.setItem('ProductSearchAdd_ComponentReload_@Model.ContextId', 'true');
+                } catch (e) {
+                    console.warn('ProductSearchAdd: Could not set component reload flag:', e);
+                }
+                
+                // Call instance-specific refresh callback instead of global events
+                var callbackName = 'refreshCallback_@(componentId.Replace("-", "_"))';
+                if (typeof window[callbackName] === 'function') {
+                    window[callbackName]();
+                }
+                // Clear the selection and show success
+                clearProductSelection@(componentId.Replace("-", "_"))();
+                
+                // Optional: Show brief success message
+                var autocomplete = $('#product-autocomplete-@componentId');
+                autocomplete.attr('placeholder', 'Product added successfully! Type to search more...');
+                setTimeout(function() {
+                    autocomplete.attr('placeholder', 'Type to search products...');
+                }, 2000);
+            } else {
+                alert('Error adding product: ' + (response.message || 'Unknown error'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while adding product.');
+        }
+    });
+}
+</script>

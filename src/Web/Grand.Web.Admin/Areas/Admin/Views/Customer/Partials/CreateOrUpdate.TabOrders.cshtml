@@ -4,6 +4,14 @@
     <div class="panel panel-default">
         <vc:admin-widget widget-zone="customer_details_orders_top" additional-data="Model"/>
         <div class="panel-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <button type="button" class="btn btn-primary" onclick="startOrder('@Model.Id')">
+                        <i class="fa fa-plus"></i> @Loc["Admin.Customers.Customers.Orders.StartOrder"]
+                    </button>
+                </div>
+            </div>
+            <br />
             <div id="order-grid"></div>
         </div>
         <vc:admin-widget widget-zone="customer_details_orders_bottom" additional-data="Model"/>
@@ -153,6 +161,157 @@
                         width: 200
                     }
                 ]
+            });
+        }
+
+        function showNotification(message, type, timeout) {
+            timeout = timeout || 5000;
+            
+            // Try displayGrandeNotification first (if available)
+            if (typeof displayGrandeNotification === 'function') {
+                displayGrandeNotification(message, type, timeout);
+                return;
+            }
+            
+            // Fallback to alert for errors and warnings
+            if (type === 'error' || type === 'warning') {
+                alert(message);
+                return;
+            }
+            
+            // For success messages, create a simple toast
+            if (type === 'success') {
+                var toast = $('<div class="alert alert-success" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;">' +
+                             '<button type="button" class="close" onclick="$(this).parent().fadeOut(function(){ $(this).remove(); })">&times;</button>' +
+                             '<strong>Success!</strong> ' + message + '</div>');
+                $('body').append(toast);
+                
+                setTimeout(function() {
+                    toast.fadeOut(function() {
+                        toast.remove();
+                    });
+                }, timeout);
+            }
+        }
+
+        function startOrder(customerId) {
+            // First fetch customer addresses
+            $.ajax({
+                url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
+                type: "POST",
+                data: addAntiForgeryToken({
+                    customerId: customerId
+                }),
+                dataType: "json",
+                success: function(addressData) {
+                    if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
+                        showAddressSelectionModal(customerId, addressData.addresses);
+                    } else {
+                        showNotification("Customer must have saved addresses before creating an order", "error", 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showNotification("Error loading customer addresses", "error", 5000);
+                }
+            });
+        }
+
+        function showAddressSelectionModal(customerId, addresses) {
+            var modalHtml = `
+                <div class="modal fade" id="addressSelectionModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h4 class="modal-title">@Loc["Admin.Customers.Customers.Orders.StartOrder.SelectAddresses"]</h4>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="billingAddressSelect">@Loc["Admin.Customers.Customers.Orders.StartOrder.BillingAddress"]</label>
+                                    <select id="billingAddressSelect" class="form-control">
+                                        <option value="">@Loc["Admin.Customers.Customers.Orders.StartOrder.SelectAddress"]</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="shippingAddressSelect">@Loc["Admin.Customers.Customers.Orders.StartOrder.ShippingAddress"]</label>
+                                    <select id="shippingAddressSelect" class="form-control">
+                                        <option value="">@Loc["Admin.Customers.Customers.Orders.StartOrder.SelectAddress"]</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">@Loc["Admin.Common.Cancel"]</button>
+                                <button type="button" class="btn btn-primary" onclick="createOrderWithAddresses('${customerId}')">@Loc["Admin.Customers.Customers.Orders.StartOrder.Create"]</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            $('#addressSelectionModal').remove();
+            
+            // Add modal to page
+            $('body').append(modalHtml);
+            
+            // Populate address dropdowns
+            addresses.forEach(function(address) {
+                var addressText = address.firstName + ' ' + address.lastName;
+                if (address.company) {
+                    addressText += ' (' + address.company + ')';
+                }
+                if (address.address1) {
+                    addressText += ', ' + address.address1;
+                }
+                if (address.city) {
+                    addressText += ', ' + address.city;
+                }
+                
+                var option = '<option value="' + address.id + '">' + addressText + '</option>';
+                $('#billingAddressSelect').append(option);
+                $('#shippingAddressSelect').append(option);
+            });
+            
+            // Show modal
+            $('#addressSelectionModal').modal('show');
+        }
+
+        function createOrderWithAddresses(customerId) {
+            var billingAddressId = $('#billingAddressSelect').val();
+            var shippingAddressId = $('#shippingAddressSelect').val();
+            
+            if (!billingAddressId || !shippingAddressId) {
+                showNotification("Please select both billing and shipping addresses", "error", 5000);
+                return;
+            }
+            
+            $('#addressSelectionModal').modal('hide');
+            
+            $.ajax({
+                url: "@Html.Raw(Url.Action("StartOrder", "Customer", new { area = Constants.AreaAdmin }))",
+                type: "POST",
+                data: addAntiForgeryToken({
+                    customerId: customerId,
+                    billingAddressId: billingAddressId,
+                    shippingAddressId: shippingAddressId
+                }),
+                dataType: "json",
+                success: function(data) {
+                    if (data.success) {
+                        $("#order-grid").data("kendoGrid").dataSource.read();
+                        showNotification("Order created successfully", "success", 5000);
+                        if (data.orderId) {
+                            window.open("@Url.Action("Edit", "Order", new { area = Constants.AreaAdmin })/" + data.orderId, '_blank');
+                        }
+                    } else {
+                        showNotification(data.message || "Error creating order", "error", 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showNotification("Error creating order", "error", 5000);
+                }
             });
         }
 </script>}

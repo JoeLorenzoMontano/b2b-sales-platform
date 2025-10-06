@@ -1,0 +1,647 @@
+@model BulkAddProductsToOrderModel
+@inject AdminAreaSettings adminAreaSettings
+@{
+    ViewBag.Title = string.Format(Loc["Admin.Orders.Products.AddMultiple.Title"], Model.OrderNumber);
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="x_panel light form-fit">
+            <div class="x_title">
+                <div class="caption">
+                    <i class="fa fa-list"></i>
+                    @string.Format(Loc["Admin.Orders.Products.AddMultiple.Title"], Model.OrderNumber)
+                    <small>
+                        <i class="fa fa-arrow-circle-left"></i>
+                        @Html.ActionLink(Loc["Admin.Orders.Products.AddNew.BackToOrder"], "Edit", new { id = Model.OrderId })
+                    </small>
+                </div>
+            </div>
+            <div class="x_content form">
+                <form asp-action="BulkAddProductsToOrder" method="post">
+                    <input type="hidden" asp-for="OrderId" />
+                    
+                    <!-- Existing Order Items Section -->
+                    <div class="mb-4">
+                        <h4>@Loc["Admin.Orders.Products.Current"] (@Model.OrderNumber)</h4>
+                        <div id="existing-order-items-grid" style="max-height: 1200px; overflow-y: auto; border: 1px solid #e4e5e7; border-radius: 4px;"></div>
+                    </div>
+                    
+                    <!-- Selected Products Configuration -->
+                    <div id="selected-products-section" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">@Loc["Admin.Orders.Products.SelectedProducts"] <span class="badge badge-primary" id="selected-count">0</span></h4>
+                            <button type="submit" class="btn btn-primary" id="add-selected-products" disabled>
+                                <i class="fa fa-plus"></i> @Loc["Admin.Orders.Products.AddSelected"]
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="selected-products-table">
+                                <thead>
+                                    <tr>
+                                        <th>@Loc["Admin.Catalog.Products.Fields.Name"]</th>
+                                        <th>@Loc["Admin.Orders.Products.Quantity"]</th>
+                                        <th class="warehouse-header" style="display:none;">@Loc["Admin.Orders.Products.Warehouse"]</th>
+                                        <th class="attributes-header" style="display:none;">@Loc["Admin.Catalog.Products.ProductAttributes"]</th>
+                                        <th>@Loc["Admin.Orders.Products.UnitPrice"]</th>
+                                        <th>@Loc["Admin.Common.Actions"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selected-products-tbody">
+                                    <!-- Dynamic content populated via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <hr />
+                    </div>
+
+                    <!-- Product Search and Add Component -->
+                    @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.OrderId, orderId = Model.OrderId, contextType = "order" })
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Function expected by the ProductSearchAdd component
+    function refreshCurrentProductsGrid() {
+        var grid = $('#existing-order-items-grid').data('kendoGrid');
+        if (grid && grid.dataSource) {
+            grid.dataSource.read();
+        } else {
+            console.warn('Grid or dataSource not available for refresh');
+        }
+    }
+</script>
+
+<style>
+    .product-search-item {
+        border: 1px solid #e4e5e7;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        padding: 15px;
+        background-color: #fff;
+    }
+    
+    .product-search-item:hover {
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .product-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .product-sku {
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+    }
+    
+    .product-controls {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .inline-field {
+        display: flex;
+        flex-direction: column;
+        min-width: 120px;
+    }
+    
+    .inline-field label {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 3px;
+        font-weight: 500;
+    }
+    
+    .inline-field input, .inline-field select {
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 5px 8px;
+        font-size: 0.9em;
+    }
+    
+    .add-product-btn {
+        background-color: #28a745;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        margin-top: 20px;
+    }
+    
+    .add-product-btn:hover {
+        background-color: #218838;
+    }
+    
+    .add-product-btn:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+    }
+    
+    .search-pagination {
+        text-align: center;
+        margin-top: 20px;
+    }
+    
+    .search-pagination button {
+        margin: 0 5px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+    }
+    
+    .search-pagination button.active {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .brand-badge {
+        background-color: #6c757d;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+</style>
+
+<script>
+    $(function() {
+        console.log('BulkAddProductsToOrder.cshtml - DOM ready, initializing...');
+        initializeExistingOrderItemsGrid();
+        initializeSingleProductSearch();
+        
+        // Initialize filter toggle
+        $('.filter-extend-button').click(function() {
+            $('.extend-collapse').toggle();
+        });
+    });
+
+    var selectedProducts = {};
+
+    function initializeExistingOrderItemsGrid() {
+        // Initialize Kendo Grid for existing order items
+        $("#existing-order-items-grid").kendoGrid({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "@Html.Raw(Url.Action("GetOrderItemsForIncoming", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        dataType: "json",
+                        data: function() {
+                            return addAntiForgeryToken({
+                                orderId: '@Model.OrderId'
+                            });
+                        }
+                    }
+                },
+                schema: {
+                    data: "Data",
+                    total: "Total",
+                    errors: "Errors"
+                },
+                error: function(e) {
+                    console.log('Existing order items grid error:', e.errors);
+                }
+            },
+            scrollable: false,
+            sortable: false,
+            pageable: false,
+            columns: [
+                {
+                    field: "ProductName",
+                    title: "@Loc["Admin.Catalog.Products.Fields.Name"]",
+                    width: 250,
+                    template: function(dataItem) {
+                        return dataItem.ProductName + (dataItem.AttributeInfo ? '<br><small>' + dataItem.AttributeInfo + '</small>' : '');
+                    },
+                    encoded: false
+                },
+                {
+                    field: "WarehouseName",
+                    title: "Warehouse",
+                    width: 120,
+                    template: function(dataItem) {
+                        return dataItem.WarehouseName || 'Default';
+                    }
+                },
+                {
+                    field: "UnitPriceInclTax",
+                    title: "@Loc["Admin.Orders.Products.UnitPrice"]",
+                    width: 110,
+                    template: function(dataItem) {
+                        if (dataItem.CanEdit) {
+                            return `<input type="number" class="form-control form-control-sm price-input" 
+                                    value="${parseFloat(dataItem.UnitPriceInclTax).toFixed(2)}" step="0.01" min="0" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onblur="updateOrderItemPrice('${dataItem.Id}', this.value)" 
+                                    style="width: 90px;" />`;
+                        } else {
+                            return `<span>${dataItem.UnitPriceFormatted}</span>`;
+                        }
+                    }
+                },
+                {
+                    field: "Quantity",
+                    title: "@Loc["Admin.Orders.Products.Quantity"]",
+                    width: 120,
+                    template: function(dataItem) {
+                        if (dataItem.CanEdit) {
+                            var quantityInput = `<input type="number" class="form-control form-control-sm quantity-input" 
+                                    value="${dataItem.Quantity}" min="1" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onblur="updateOrderItemQuantity('${dataItem.Id}', this.value)" 
+                                    style="width: 80px;" />`;
+                            
+                            // Show open/ship/cancel info as context like Order Edit does
+                            var additionalInfo = '';
+                            if (dataItem.OpenQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            }
+                            if (dataItem.ShipQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666;">Shipped: ${dataItem.ShipQty}</div>`;
+                            }
+                            if (dataItem.CancelQty > 0) {
+                                additionalInfo += `<div style="font-size: 11px; color: #666;">Canceled: ${dataItem.CancelQty}</div>`;
+                            }
+                            
+                            return quantityInput + additionalInfo;
+                        } else {
+                            var displayText = `<span>${dataItem.Quantity}</span>`;
+                            // Show open/ship/cancel info for read-only items too  
+                            if (dataItem.OpenQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666;">Open: ${dataItem.OpenQty}</div>`;
+                            }
+                            if (dataItem.ShipQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666;">Shipped: ${dataItem.ShipQty}</div>`;
+                            }
+                            if (dataItem.CancelQty > 0) {
+                                displayText += `<div style="font-size: 11px; color: #666;">Canceled: ${dataItem.CancelQty}</div>`;
+                            }
+                            return displayText;
+                        }
+                    }
+                },
+                {
+                    field: "SubTotal",
+                    title: "@Loc["Admin.Orders.Products.SubTotal"]",
+                    width: 100,
+                    template: function(dataItem) {
+                        return `<span id="subtotal_${dataItem.Id}">${dataItem.SubTotal}</span>`;
+                    }
+                },
+                {
+                    title: "Actions",
+                    width: 80,
+                    template: function(dataItem) {
+                        if (dataItem.CanEdit) {
+                            return `<button type="button" class="btn btn-sm btn-danger delete-order-item" 
+                                    data-order-item-id="${dataItem.Id}" 
+                                    onclick="deleteOrderItem('${dataItem.Id}')" 
+                                    title="Delete">
+                                    <i class="fa fa-trash"></i>
+                                    </button>`;
+                        } else {
+                            return `<span>-</span>`;
+                        }
+                    }
+                }
+            ]
+        });
+    }
+
+    var currentSearchData = {};
+    var currentPage = 1;
+    var totalPages = 1;
+
+    function initializeSingleProductSearch() {
+        // Search button click
+        $('#search-products').click(function() {
+            performProductSearch(1);
+            return false;
+        });
+        
+        // Search on Enter key
+        $('#@Html.IdFor(model => model.SearchProductName)').keydown(function(event) {
+            if (event.keyCode == 13) {
+                performProductSearch(1);
+                return false;
+            }
+        });
+    }
+
+    function performProductSearch(page = 1) {
+        currentPage = page;
+        currentSearchData = {
+            SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
+            SearchCategoryId: $('#@Html.IdFor(model => model.SearchCategoryId)').val(),
+            SearchBrandId: $('#@Html.IdFor(model => model.SearchBrandId)').val(),
+            SearchCollectionId: $('#@Html.IdFor(model => model.SearchCollectionId)').val(),
+            SearchProductTypeId: $('#@Html.IdFor(model => model.SearchProductTypeId)').val(),
+            page: page,
+            pageSize: 10
+        };
+        
+        addAntiForgeryToken(currentSearchData);
+        
+        $.ajax({
+            url: "@Html.Raw(Url.Action("SearchProductsInline", "Order", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            dataType: "json",
+            data: currentSearchData,
+            success: function(response) {
+                if (response.success) {
+                    displaySearchResults(response.data, response.totalCount);
+                } else {
+                    $('#product-search-results').html('<div class="alert alert-warning">No products found matching your search criteria.</div>');
+                }
+            },
+            error: function() {
+                $('#product-search-results').html('<div class="alert alert-danger">Error occurred while searching products.</div>');
+            }
+        });
+    }
+
+    function displaySearchResults(products, totalCount) {
+        var html = '';
+        totalPages = Math.ceil(totalCount / 10);
+        
+        if (products && products.length > 0) {
+            products.forEach(function(product) {
+                html += buildProductRow(product);
+            });
+            
+            // Add pagination if needed
+            if (totalPages > 1) {
+                html += buildPagination();
+            }
+        } else {
+            html = '<div class="alert alert-info">No products found. Try adjusting your search criteria.</div>';
+        }
+        
+        $('#product-search-results').html(html);
+    }
+
+    function buildProductRow(product) {
+        var uniqueId = product.combinationId ? `${product.id}_${product.combinationId}` : product.id;
+        var brandDisplay = product.brandName ? ` <span class="brand-badge">${product.brandName}</span>` : '';
+        
+        return `
+            <div class="product-search-item" data-product-id="${product.id}" data-combination-id="${product.combinationId || ''}" data-unique-id="${uniqueId}">
+                <div class="product-name">${product.name}${brandDisplay}</div>
+                <div class="product-controls">
+                    <div class="inline-field">
+                        <label>@Loc["Admin.Orders.Products.Quantity"]</label>
+                        <input type="number" id="quantity_${uniqueId}" value="1" min="1" />
+                    </div>
+                    <div class="inline-field">
+                        <label>@Loc["Admin.Orders.Products.UnitPrice"]</label>
+                        <input type="number" id="price_${uniqueId}" value="${product.price || '0.00'}" step="0.01" min="0" />
+                    </div>
+                    <div class="inline-field" id="warehouse_container_${uniqueId}" style="display:none;">
+                        <label>@Loc["Admin.Orders.Products.Warehouse"]</label>
+                        <select id="warehouse_${uniqueId}">
+                            <option value="">Select Warehouse</option>
+                        </select>
+                    </div>
+                    <button type="button" class="add-product-btn" onclick="addSingleProductToOrder('${uniqueId}')">
+                        <i class="fa fa-plus"></i> Add to Order
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function buildPagination() {
+        var paginationHtml = '<div class="search-pagination">';
+        
+        // Previous button
+        if (currentPage > 1) {
+            paginationHtml += `<button onclick="performProductSearch(${currentPage - 1})">Previous</button>`;
+        }
+        
+        // Page numbers
+        var startPage = Math.max(1, currentPage - 2);
+        var endPage = Math.min(totalPages, currentPage + 2);
+        
+        for (var i = startPage; i <= endPage; i++) {
+            var activeClass = i === currentPage ? 'active' : '';
+            paginationHtml += `<button class="${activeClass}" onclick="performProductSearch(${i})">${i}</button>`;
+        }
+        
+        // Next button
+        if (currentPage < totalPages) {
+            paginationHtml += `<button onclick="performProductSearch(${currentPage + 1})">Next</button>`;
+        }
+        
+        paginationHtml += '</div>';
+        return paginationHtml;
+    }
+
+    function addSingleProductToOrder(uniqueId) {
+        // Find the product item using the unique ID
+        var productItem = $(`[data-unique-id="${uniqueId}"]`);
+        var productId = productItem.data('product-id');
+        var combinationId = productItem.data('combination-id');
+        
+        var quantity = $('#quantity_' + uniqueId).val();
+        var price = $('#price_' + uniqueId).val();
+        var warehouseId = $('#warehouse_' + uniqueId).val();
+        
+        if (!quantity || quantity < 1) {
+            alert('Please enter a valid quantity.');
+            return;
+        }
+        
+        if (!price || price < 0) {
+            alert('Please enter a valid price.');
+            return;
+        }
+        
+        var data = {
+            orderId: '@Model.OrderId',
+            productId: productId,
+            quantity: parseInt(quantity),
+            unitPrice: parseFloat(price),
+            warehouseId: warehouseId,
+            attributeCombinationId: combinationId || ''
+        };
+        
+        addAntiForgeryToken(data);
+        
+        // Disable the add button
+        var addButton = $(`[data-unique-id="${uniqueId}"] .add-product-btn`);
+        addButton.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Adding...');
+        
+        $.ajax({
+            url: "@Html.Raw(Url.Action("AddProductToOrderInline", "Order", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // Refresh the existing order items grid
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    if (grid) {
+                        grid.dataSource.read();
+                    }
+                    
+                    // Product added successfully (no popup needed)
+                    
+                    // Reset the form values
+                    $('#quantity_' + uniqueId).val('1');
+                    $('#price_' + uniqueId).val(response.originalPrice || '0.00');
+                    $('#warehouse_' + uniqueId).val('');
+                } else {
+                    alert('Error adding product: ' + (response.message || 'Unknown error'));
+                }
+            },
+            error: function() {
+                alert('Error occurred while adding product to order.');
+            },
+            complete: function() {
+                // Re-enable the add button
+                addButton.prop('disabled', false).html('<i class="fa fa-plus"></i> Add to Order');
+            }
+        });
+    }
+
+    // Order item management functions
+    function updateOrderItemQuantity(orderItemId, newQuantity) {
+        if (!newQuantity || newQuantity < 1) {
+            alert('Please enter a valid quantity.');
+            // Reset to original value
+            var grid = $('#existing-order-items-grid').data('kendoGrid');
+            grid.dataSource.read();
+            return;
+        }
+
+        // Use same approach as Order Edit Products tab
+        updateOrderItemField(orderItemId, 'quantity', newQuantity);
+    }
+
+    function updateOrderItemPrice(orderItemId, newPrice) {
+        if (!newPrice || newPrice < 0) {
+            alert('Please enter a valid price.');
+            // Reset to original value
+            var grid = $('#existing-order-items-grid').data('kendoGrid');
+            grid.dataSource.read();
+            return;
+        }
+
+        // Use same approach as Order Edit Products tab  
+        updateOrderItemField(orderItemId, 'price', newPrice);
+    }
+
+    function updateOrderItem(orderItemId, updateData) {
+        var data = {
+            orderId: '@Model.OrderId',
+            orderItemId: orderItemId,
+            ...updateData
+        };
+        
+        addAntiForgeryToken(data);
+
+        $.ajax({
+            url: "@Html.Raw(Url.Action("UpdateOrderItem", "Order", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // Refresh the grid to show updated values
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    grid.dataSource.read();
+                } else {
+                    alert('Error updating order item: ' + (response.message || 'Unknown error'));
+                    // Reset to original value
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    grid.dataSource.read();
+                }
+            },
+            error: function() {
+                alert('Error occurred while updating order item.');
+                // Reset to original value
+                var grid = $('#existing-order-items-grid').data('kendoGrid');
+                grid.dataSource.read();
+            }
+        });
+    }
+
+    function updateOrderItemField(orderItemId, fieldType, value) {
+        var data = {
+            orderId: '@Model.OrderId',
+            orderItemId: orderItemId,
+            fieldType: fieldType,
+            value: value
+        };
+        
+        addAntiForgeryToken(data);
+
+        $.ajax({
+            url: "@Html.Raw(Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // Refresh the grid to show updated values
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    grid.dataSource.read();
+                } else {
+                    alert('Error updating order item: ' + (response.message || 'Unknown error'));
+                    // Reset to original value
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    grid.dataSource.read();
+                }
+            },
+            error: function() {
+                alert('Network error occurred while updating order item');
+                // Reset to original value
+                var grid = $('#existing-order-items-grid').data('kendoGrid');
+                grid.dataSource.read();
+            }
+        });
+    }
+
+    function deleteOrderItem(orderItemId) {
+        if (!confirm('Are you sure you want to delete this order item?')) {
+            return;
+        }
+
+        var data = {
+            orderId: '@Model.OrderId',
+            orderItemId: orderItemId
+        };
+        
+        addAntiForgeryToken(data);
+
+        $.ajax({
+            url: "@Html.Raw(Url.Action("DeleteOrderItemInline", "Order", new { area = Constants.AreaAdmin }))",
+            type: "POST", 
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // Refresh the grid to remove deleted item
+                    var grid = $('#existing-order-items-grid').data('kendoGrid');
+                    grid.dataSource.read();
+                } else {
+                    alert('Error deleting order item: ' + (response.message || 'Unknown error'));
+                }
+            },
+            error: function() {
+                alert('Error occurred while deleting order item.');
+            }
+        });
+    }
+</script>

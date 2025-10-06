@@ -5,12 +5,14 @@ using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
+using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Storage;
 using Grand.Domain.Catalog;
 using Grand.Domain.Directory;
 using Grand.Domain.Orders;
 using Grand.Domain.Shipping;
 using Grand.Infrastructure;
+using Grand.SharedKernel.Extensions;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Orders;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -34,6 +36,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
     private readonly ITranslationService _translationService;
     private readonly IWarehouseService _warehouseService;
     private readonly IContextAccessor _contextAccessor;
+    private readonly ISalesEmployeeService _salesEmployeeService;
 
     public ShipmentViewModelService(
         IOrderService orderService,
@@ -48,6 +51,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
         IDownloadService downloadService,
         IShippingService shippingService,
         IStockQuantityService stockQuantityService,
+        ISalesEmployeeService salesEmployeeService,
         MeasureSettings measureSettings,
         ShippingSettings shippingSettings,
         ShippingProviderSettings shippingProviderSettings)
@@ -64,6 +68,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
         _downloadService = downloadService;
         _shippingService = shippingService;
         _stockQuantityService = stockQuantityService;
+        _salesEmployeeService = salesEmployeeService;
         _measureSettings = measureSettings;
         _shippingSettings = shippingSettings;
         _shippingProviderSettings = shippingProviderSettings;
@@ -85,6 +90,16 @@ public class ShipmentViewModelService : IShipmentViewModelService
             OrderId = shipment.OrderId,
             OrderNumber = order?.OrderNumber ?? 0,
             OrderCode = order != null ? order.Code : "",
+            CustomerId = order?.CustomerId ?? "",
+            CustomerEmail = order?.CustomerEmail ?? "",
+            CustomerFullName = order != null ? $"{order.BillingAddress?.FirstName} {order.BillingAddress?.LastName}" : "",
+            CustomerCompany = order?.BillingAddress?.Company ?? "",
+            OrderTotal = order != null ? (decimal)order.OrderTotal : 0,
+            SalesEmployeeName = "",
+            ShippingAddressString = order?.ShippingAddress != null ? 
+                $"{order.ShippingAddress.Address1}, {order.ShippingAddress.ZipPostalCode}" : "",
+            ShippingCity = order?.ShippingAddress?.City ?? "",
+            ShippingStateProvince = await GetStateProvinceName(order?.ShippingAddress?.CountryId, order?.ShippingAddress?.StateProvinceId) ?? "",
             TrackingNumber = shipment.TrackingNumber,
             TotalWeight = shipment.TotalWeight.HasValue ? $"{shipment.TotalWeight:F2} [{baseWeightIn}]" : "",
             ShippedDate = shipment.ShippedDateUtc.HasValue
@@ -98,8 +113,42 @@ public class ShipmentViewModelService : IShipmentViewModelService
             DeliveryDateUtc = shipment.DeliveryDateUtc,
             CanDeliver = shipment.ShippedDateUtc.HasValue && !shipment.DeliveryDateUtc.HasValue,
             AdminComment = shipment.AdminComment,
-            UserFields = shipment.UserFields
+            UserFields = shipment.UserFields,
+            // Explicitly set date fields for grid
+            CreatedOn = shipment.CreatedOnUtc,
+            UpdatedOn = shipment.UpdatedOnUtc
         };
+        
+        // Get sales employee name
+        if (order != null && !string.IsNullOrEmpty(order.SeId))
+        {
+            var salesEmployee = await _salesEmployeeService.GetSalesEmployeeById(order.SeId);
+            if (salesEmployee != null)
+            {
+                model.SalesEmployeeName = salesEmployee.Name;
+            }
+        }
+
+        // Get distinct warehouses from shipment items
+        var warehouseIds = shipment.ShipmentItems
+            .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+            .Select(item => item.WarehouseId)
+            .Distinct()
+            .ToList();
+            
+        if (warehouseIds.Any())
+        {
+            var warehouses = new List<string>();
+            foreach (var warehouseId in warehouseIds)
+            {
+                var warehouse = await _warehouseService.GetWarehouseById(warehouseId);
+                if (warehouse != null)
+                {
+                    warehouses.Add(warehouse.Name);
+                }
+            }
+            model.Warehouses = string.Join(", ", warehouses);
+        }
 
         if (prepareProducts)
             foreach (var shipmentItem in shipment.ShipmentItems)
@@ -134,7 +183,9 @@ public class ShipmentViewModelService : IShipmentViewModelService
                         QuantityOrdered = qtyOrdered,
                         QuantityInThisShipment = qtyInThisShipment,
                         QuantityInAllShipments = qtyInAllShipments,
-                        QuantityToAdd = maxQtyToAdd
+                        QuantityToAdd = maxQtyToAdd,
+                        UnitPrice = (decimal)orderItem.UnitPriceInclTax,
+                        ProductTotal = (decimal)orderItem.UnitPriceInclTax * (decimal)qtyInThisShipment
                     };
 
                     model.Items.Add(shipmentItemModel);
@@ -178,9 +229,9 @@ public class ShipmentViewModelService : IShipmentViewModelService
     }
 
 
-    public virtual async Task<int> GetStockQty(Product product, string warehouseId)
+    public virtual async Task<double> GetStockQty(Product product, string warehouseId)
     {
-        var _qty = new List<int>();
+        var _qty = new List<double>();
         foreach (var item in product.BundleProducts)
         {
             var p1 = await _productService.GetProductById(item.ProductId);
@@ -198,9 +249,9 @@ public class ShipmentViewModelService : IShipmentViewModelService
         return _qty.Count > 0 ? _qty.Min() : 0;
     }
 
-    public virtual async Task<int> GetReservedQty(Product product, string warehouseId)
+    public virtual async Task<double> GetReservedQty(Product product, string warehouseId)
     {
-        var _qty = new List<int>();
+        var _qty = new List<double>();
         foreach (var item in product.BundleProducts)
         {
             var p1 = await _productService.GetProductById(item.ProductId);
@@ -482,9 +533,18 @@ public class ShipmentViewModelService : IShipmentViewModelService
 
     public virtual async Task<(bool valid, string message)> ValidStockShipment(Shipment shipment)
     {
+        if (shipment == null || shipment.ShipmentItems == null)
+            return (false, "Shipment or shipment items are null");
+
         foreach (var item in shipment.ShipmentItems)
         {
+            if (string.IsNullOrEmpty(item.ProductId))
+                continue;
+
             var product = await _productService.GetProductById(item.ProductId);
+            if (product == null)
+                continue;
+
             switch (product.ManageInventoryMethodId)
             {
                 case ManageInventoryMethod.ManageStock:
@@ -497,6 +557,12 @@ public class ShipmentViewModelService : IShipmentViewModelService
                 }
                 case ManageInventoryMethod.ManageStockByAttributes:
                 {
+                    // Safely check if attributes exist
+                    if (item.Attributes == null)
+                    {
+                        return (false, $"Attributes missing for product {product.Name}");
+                    }
+
                     var combination = product.FindProductAttributeCombination(item.Attributes);
                     if (combination == null)
                         return (false, $"Can't find combination for product {product.Name}");
@@ -507,10 +573,71 @@ public class ShipmentViewModelService : IShipmentViewModelService
                         return (false, $"Out of stock for product {product.Name}");
                     break;
                 }
+                case ManageInventoryMethod.ManageStockByBundleProducts:
+                {
+                    // For bundle products, we need to check stock of each bundle item
+                    if (product.BundleProducts == null || !product.BundleProducts.Any())
+                    {
+                        // No bundle products defined, can't validate stock
+                        break;
+                    }
+
+                    foreach (var bundleItem in product.BundleProducts)
+                    {
+                        var bundleProduct = await _productService.GetProductById(bundleItem.ProductId);
+                        if (bundleProduct == null)
+                            continue;
+
+                        // Skip bundle items that don't use inventory tracking
+                        if (bundleProduct.ManageInventoryMethodId == ManageInventoryMethod.DontManageStock)
+                            continue;
+
+                        double requiredQuantity = bundleItem.Quantity * item.Quantity;
+
+                        if (bundleProduct.UseMultipleWarehouses)
+                        {
+                            // Check stock in the specific warehouse
+                            var warehouseInventory = bundleProduct.ProductWarehouseInventory
+                                .FirstOrDefault(x => x.WarehouseId == item.WarehouseId);
+
+                            if (warehouseInventory != null)
+                            {
+                                if (warehouseInventory.StockQuantity - warehouseInventory.ReservedQuantity - requiredQuantity < 0)
+                                    return (false, $"Out of stock for bundle item {bundleProduct.Name} in product {product.Name}");
+                            }
+                            else
+                            {
+                                // Warehouse not found for this bundle item
+                                return (false, $"Warehouse not found for bundle item {bundleProduct.Name} in product {product.Name}");
+                            }
+                        }
+                        else
+                        {
+                            // Check the main stock
+                            if (bundleProduct.StockQuantity - requiredQuantity < 0)
+                                return (false, $"Out of stock for bundle item {bundleProduct.Name} in product {product.Name}");
+                        }
+                    }
+                    break;
+                }
             }
         }
 
         return (true, string.Empty);
+    }
+
+    // Helper method to get state province name from IDs
+    private async Task<string> GetStateProvinceName(string countryId, string stateProvinceId)
+    {
+        if (string.IsNullOrEmpty(countryId) || string.IsNullOrEmpty(stateProvinceId))
+            return "";
+        
+        var country = await _countryService.GetCountryById(countryId);
+        if (country == null)
+            return stateProvinceId; // Fallback to ID if country not found
+        
+        var stateProvince = country.StateProvinces.FirstOrDefault(sp => sp.Id == stateProvinceId);
+        return stateProvince?.Name ?? stateProvinceId; // Return name or ID as fallback
     }
 
     public virtual async Task<(Shipment shipment, double? totalWeight)> PrepareShipment(Order order,
@@ -549,7 +676,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
             if (shipmentItemModel.QuantityToAdd <= 0)
                 continue;
             if (shipmentItemModel.QuantityToAdd > orderItem.OpenQty)
-                shipmentItemModel.QuantityToAdd = orderItem.OpenQty;
+                shipmentItemModel.QuantityToAdd = orderItem.OpenQty.ToInt();
 
             //ok. we have at least one item. create a shipment (if it does not exist)
             var orderItemTotalWeight = orderItem.ItemWeight * shipmentItemModel.QuantityToAdd;

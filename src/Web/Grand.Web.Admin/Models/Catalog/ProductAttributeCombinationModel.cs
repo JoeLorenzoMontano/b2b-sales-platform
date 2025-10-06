@@ -13,14 +13,33 @@ public class ProductAttributeCombinationModel : BaseModel
     public string Id { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.StockQuantity")]
-    public int StockQuantity { get; set; }
+    public double StockQuantity { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.ReservedQuantity")]
-    public int ReservedQuantity { get; set; }
+    public double ReservedQuantity { get; set; }
 
     [GrandResourceDisplayName(
         "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowOutOfStockOrders")]
     public bool AllowOutOfStockOrders { get; set; }
+    
+    [GrandResourceDisplayName(
+        "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowSample")]
+    public bool AllowSample { get; set; }
+    
+    [GrandResourceDisplayName(
+        "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.SampleQuantities")]
+    public string SampleQuantities { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNew")]
+    public bool MarkAsNew { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewStartDate")]
+    [UIHint("DateTimeNullable")]
+    public DateTime? MarkAsNewStartDateTimeUtc { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewEndDate")]
+    [UIHint("DateTimeNullable")]
+    public DateTime? MarkAsNewEndDateTimeUtc { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.Text")]
     public string Text { get; set; }
@@ -42,7 +61,7 @@ public class ProductAttributeCombinationModel : BaseModel
 
     [GrandResourceDisplayName(
         "Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.NotifyAdminForQuantityBelow")]
-    public int NotifyAdminForQuantityBelow { get; set; }
+    public double NotifyAdminForQuantityBelow { get; set; }
 
     [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.Picture")]
     public string PictureId { get; set; }
@@ -65,6 +84,9 @@ public class ProductAttributeCombinationModel : BaseModel
     public bool UseMultipleWarehouses { get; set; }
 
     public IList<WarehouseInventoryModel> WarehouseInventoryModels { get; set; } = new List<WarehouseInventoryModel>();
+
+    [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.CaseSize")]
+    public double CaseSize { get; set; }
 
     #region Nested classes
 
@@ -99,11 +121,11 @@ public class ProductAttributeCombinationModel : BaseModel
 
         [GrandResourceDisplayName(
             "Admin.Catalog.Products.ProductAttributes.AttributeCombination.WarehouseInventory.Fields.StockQuantity")]
-        public int StockQuantity { get; set; }
+        public double StockQuantity { get; set; }
 
         [GrandResourceDisplayName(
             "Admin.Catalog.Products.ProductAttributes.AttributeCombination.WarehouseInventory.Fields.ReservedQuantity")]
-        public int ReservedQuantity { get; set; }
+        public double ReservedQuantity { get; set; }
     }
 
     #endregion

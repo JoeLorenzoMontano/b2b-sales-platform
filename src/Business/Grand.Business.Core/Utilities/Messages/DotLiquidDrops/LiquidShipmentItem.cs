@@ -60,7 +60,7 @@ public class LiquidShipmentItem : Drop
 
     public string ProductId => _shipmentItem.ProductId;
 
-    public int Quantity => _shipmentItem.Quantity;
+    public double Quantity => _shipmentItem.Quantity;
 
     public string WarehouseId => _shipmentItem.WarehouseId;
 

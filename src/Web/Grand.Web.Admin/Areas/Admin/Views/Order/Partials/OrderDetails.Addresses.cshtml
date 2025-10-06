@@ -139,11 +139,29 @@
                 }
                 @if (!string.IsNullOrEmpty(Model.BillingAddress.FormattedCustomAddressAttributes))
                 {
-                    <tr class="custom-attributes-view">
-                        <td colspan="2">
-                            @Html.Raw(Model.BillingAddress.FormattedCustomAddressAttributes)
-                        </td>
-                    </tr>
+                    @foreach (var item in Model.BillingAddress.FormattedCustomAddressAttributes.Split(new[] { "<br />" }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var parts = item.Split(new[] { ": " }, 2, StringSplitOptions.None);
+                        if (parts.Length == 2)
+                        {
+                            <tr>
+                                <td style="width:25%">
+                                    @Html.Raw(parts[0]):
+                                </td>
+                                <td>
+                                    @Html.Raw(parts[1])
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="2">
+                                    @Html.Raw(item)
+                                </td>
+                            </tr>
+                        }
+                    }
                 }
 
                 <tr>
@@ -290,11 +308,29 @@
                         }
                         @if (!string.IsNullOrEmpty(Model.ShippingAddress.FormattedCustomAddressAttributes))
                         {
-                            <tr class="custom-attributes-view">
-                                <td colspan="2">
-                                    @Html.Raw(Model.ShippingAddress.FormattedCustomAddressAttributes)
-                                </td>
-                            </tr>
+                            @foreach (var item in Model.ShippingAddress.FormattedCustomAddressAttributes.Split(new[] { "<br />" }, StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                var parts = item.Split(new[] { ": " }, 2, StringSplitOptions.None);
+                                if (parts.Length == 2)
+                                {
+                                    <tr>
+                                        <td>
+                                            @Html.Raw(parts[0]):
+                                        </td>
+                                        <td>
+                                            @Html.Raw(parts[1])
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="2">
+                                            @Html.Raw(item)
+                                        </td>
+                                    </tr>
+                                }
+                            }
                         }
 
                         <tr>
@@ -435,3 +471,83 @@ else
 }
 
 <vc:admin-widget widget-zone="order_details_address_bottom" additional-data="Model"/>
+
+<style>
+/* Light mode styles for billing and shipping address tables */
+.table.table-bordered.table-striped.table-hover td,
+.table.table-bordered.table-striped.table-hover th {
+    color: #333 !important;
+}
+
+[data-theme="light"] .table.table-bordered.table-striped.table-hover td,
+[data-theme="light"] .table.table-bordered.table-striped.table-hover th {
+    color: #333 !important;
+}
+
+/* Ensure light mode text is dark for all address table elements */
+.card .table.table-bordered.table-striped.table-hover td,
+.card .table.table-bordered.table-striped.table-hover th {
+    color: #333 !important;
+}
+
+/* Dark theme styles for billing and shipping address tables */
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover td,
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover th {
+    color: #fff !important;
+    background-color: #212529 !important;
+    border-color: #6c757d !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover tbody tr:nth-child(odd) td {
+    background-color: #2c3034 !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover tbody tr:nth-child(even) td {
+    background-color: #212529 !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover a {
+    color: #79aecb !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover .k-button {
+    background-color: #495057 !important;
+    border-color: #6c757d !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .table.table-bordered.table-striped.table-hover .k-button:hover {
+    background-color: #5a6268 !important;
+    border-color: #6c757d !important;
+}
+
+/* Dark theme styles for card elements containing the tables */
+[data-theme="dark"] .card .card-title {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .card .card-body {
+    background-color: #343a40 !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .card {
+    background-color: #343a40 !important;
+    border-color: #6c757d !important;
+}
+
+/* Labels and form controls within shipping method section */
+[data-theme="dark"] .form-horizontal .control-label {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .form-horizontal label {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .note.note-info {
+    background-color: #17a2b8 !important;
+    color: #fff !important;
+    border-color: #138496 !important;
+}
+</style>

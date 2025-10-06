@@ -12,14 +12,14 @@ public class AddToCartModel : BaseModel
     public string AttributeDescription { get; set; }
     public string ReservationInfo { get; set; }
     public PictureModel Picture { get; set; } = new();
-    public int Quantity { get; set; }
-    public int ItemQuantity { get; set; }
+    public double Quantity { get; set; }
+    public double ItemQuantity { get; set; }
     public string Price { get; set; }
     public double DecimalPrice { get; set; }
     public string TotalPrice { get; set; }
     public ShoppingCartType CartType { get; set; }
 
-    public int TotalItems { get; set; }
+    public double TotalItems { get; set; }
     public string SubTotal { get; set; }
     public bool SubTotalIncludingTax { get; set; }
     public string SubTotalDiscount { get; set; }

@@ -1,4 +1,5 @@
-﻿using Grand.Business.Core.Interfaces.Catalog.Products;
+﻿using Grand.Business.Core.Commands.Messages.Common;
+using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
@@ -8,10 +9,14 @@ using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Interfaces.Messages;
 using Grand.Domain.Permissions;
+using MediatR;
 using Grand.Business.Core.Utilities.Customers;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
+using Grand.Domain.Orders;
+using Grand.Domain.Payments;
+using Grand.Domain.Shipping;
 using Grand.Domain.Tax;
 using Grand.Infrastructure;
 using Grand.SharedKernel;
@@ -25,7 +30,9 @@ using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Filters;
 using Grand.Web.Common.Models;
 using Grand.Web.Common.Security.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Grand.Business.Customers.Dto;
 
 namespace Grand.Web.Admin.Controllers;
 
@@ -219,13 +226,14 @@ public class CustomerController : BaseAdminController
 
     [PermissionAuthorizeAction(PermissionActionName.List)]
     [HttpPost]
+
     public async Task<IActionResult> CustomerList(DataSourceRequest command, CustomerListModel model,
-        string[] searchCustomerGroupIds, string[] searchCustomerTagIds)
+        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, string[] searchDefaultRepIds, string[] searchCityNames)
     {
         var (customerModelList, totalCount) = await _customerViewModelService.PrepareCustomerList(model,
-            searchCustomerGroupIds, searchCustomerTagIds, command.Page, command.PageSize);
+            searchCustomerGroupIds, searchCustomerTagIds, searchDefaultRepIds, searchCityNames, command.Page, command.PageSize);
         var gridModel = new DataSourceResult {
-            Data = customerModelList.ToList(),
+            Data = customerModelList.ToList().OrderBy(x => x.FullName),
             Total = totalCount
         };
 
@@ -297,12 +305,44 @@ public class CustomerController : BaseAdminController
 
         if (!customer.GetUserFieldFromEntity<bool>(SystemCustomerFieldNames.TwoFactorEnabled) && model.TwoFactorEnabled)
             Warning(_translationService.GetResource("Admin.Customers.Customers.CannotTwoFactorEnabled"));
+            
+        // Debug - log all form values
+        System.Diagnostics.Debug.WriteLine("Form values:");
+        foreach (var key in Request.Form.Keys)
+        {
+            System.Diagnostics.Debug.WriteLine($"{key}: {Request.Form[key]}");
+        }
+        
+        // Get DefaultImpersonatedByEmployeeId from form directly
+        string defaultImpersonatedByEmployeeId = Request.Form["DefaultImpersonatedByEmployeeId"];
+        System.Diagnostics.Debug.WriteLine($"DefaultImpersonatedByEmployeeId from form: {defaultImpersonatedByEmployeeId}");
+        
+        // Apply it directly to the model in case it's not binding properly
+        model.DefaultImpersonatedByEmployeeId = defaultImpersonatedByEmployeeId;
+        
+        // Check if DefaultImpersonatedByEmployeeId is in the model
+        System.Diagnostics.Debug.WriteLine($"DefaultImpersonatedByEmployeeId in model after manual setting: {model.DefaultImpersonatedByEmployeeId}");
 
         if (ModelState.IsValid)
             try
             {
                 model.Attributes = await ParseCustomCustomerAttributes(model.SelectedAttributes);
+                
+                // Debug - before update
+                System.Diagnostics.Debug.WriteLine($"Before update - Customer DefaultImpersonatedByEmployeeId: {customer.DefaultImpersonatedByEmployeeId}");
+                System.Diagnostics.Debug.WriteLine($"Before update - Model DefaultImpersonatedByEmployeeId: {model.DefaultImpersonatedByEmployeeId}");
+                
                 customer = await _customerViewModelService.UpdateCustomerModel(customer, model);
+                
+                // Direct update of the DefaultImpersonatedByEmployeeId field to ensure it gets saved
+                await _customerService.UpdateCustomerDefaultImpersonatedByEmployeeId(customer.Id, model.DefaultImpersonatedByEmployeeId);
+                
+                // Update the customer object for consistency
+                customer.DefaultImpersonatedByEmployeeId = model.DefaultImpersonatedByEmployeeId;
+                
+                // Debug - after update
+                System.Diagnostics.Debug.WriteLine($"After update - Customer DefaultImpersonatedByEmployeeId: {customer.DefaultImpersonatedByEmployeeId}");
+                
                 //change password
                 if (!string.IsNullOrWhiteSpace(model.Password))
                 {
@@ -325,6 +365,8 @@ public class CustomerController : BaseAdminController
             catch (Exception exc)
             {
                 Error(exc.Message);
+                // Debug - log exception details
+                System.Diagnostics.Debug.WriteLine($"Exception when updating customer: {exc}");
             }
 
         //If we got this far, something failed, redisplay form
@@ -694,13 +736,48 @@ public class CustomerController : BaseAdminController
             });
 
         var model = new OrderListModel {
-            CustomerId = customerId
+            SearchCustomerIds = new List<string> { customerId }
         };
         if (await _groupService.IsStaff(_contextAccessor.WorkContext.CurrentCustomer))
             model.StoreId = _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
 
         var (orderModels, totalCount) =
             await orderViewModelService.PrepareOrderModel(model, command.Page, command.PageSize);
+        var gridModel = new DataSourceResult {
+            Data = orderModels.ToList(),
+            Total = totalCount
+        };
+        return Json(gridModel);
+    }
+    
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> ImpersonatedOrderList(string customerId, DataSourceRequest command,
+        [FromServices] IOrderViewModelService orderViewModelService, [FromServices] IOrderService orderService)
+    {
+        System.Diagnostics.Debug.WriteLine($"ImpersonatedOrderList called for customerId: {customerId}");
+        
+        if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
+            return Json(new DataSourceResult {
+                Data = null,
+                Total = 0
+            });
+
+        var model = new OrderListModel();
+        if (await _groupService.IsStaff(_contextAccessor.WorkContext.CurrentCustomer))
+            model.StoreId = _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId;
+
+        // Set the impersonatedByEmployeeId to the current customer ID to search orders created by them
+        model.ImpersonatedByEmployeeId = customerId;
+        
+        // Clear other filters that might interfere with our search
+        model.SearchCustomerIds = new List<string>(); // Don't filter by customer ID since we want all orders created by this employee
+
+        var (orderModels, totalCount) =
+            await orderViewModelService.PrepareOrderModel(model, command.Page, command.PageSize);
+            
+        System.Diagnostics.Debug.WriteLine($"Found {totalCount} impersonated orders for customer ID {customerId}");
+        
         var gridModel = new DataSourceResult {
             Data = orderModels.ToList(),
             Total = totalCount
@@ -738,6 +815,147 @@ public class CustomerController : BaseAdminController
         };
 
         return Json(gridModel);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    [HttpPost]
+    public async Task<IActionResult> GetCustomerAddresses(string customerId)
+    {
+        try
+        {
+            var customer = await _customerService.GetCustomerById(customerId);
+            if (customer == null)
+                return Json(new { success = false, message = "Customer not found" });
+
+            var addresses = customer.Addresses.Select(a => new
+            {
+                id = a.Id,
+                firstName = a.FirstName,
+                lastName = a.LastName,
+                company = a.Company,
+                address1 = a.Address1,
+                address2 = a.Address2,
+                city = a.City,
+                zipPostalCode = a.ZipPostalCode
+            }).ToList();
+
+            return Json(new { success = true, addresses = addresses });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    public async Task<IActionResult> StartOrder(string customerId, string billingAddressId, string shippingAddressId, [FromServices] IOrderService orderService, [FromServices] IMediator mediator)
+    {
+        try
+        {
+            if (!await _permissionService.Authorize(StandardPermission.ManageOrders))
+                return Json(new { success = false, message = "Access denied" });
+
+            var customer = await _customerService.GetCustomerById(customerId);
+            if (customer == null)
+                return Json(new { success = false, message = "Customer not found" });
+
+            // Find the selected addresses
+            var billingAddress = customer.Addresses.FirstOrDefault(a => a.Id == billingAddressId);
+            var shippingAddress = customer.Addresses.FirstOrDefault(a => a.Id == shippingAddressId);
+
+            if (billingAddress == null)
+                return Json(new { success = false, message = "Selected billing address not found" });
+
+            if (shippingAddress == null)
+                return Json(new { success = false, message = "Selected shipping address not found" });
+
+            // Create a new order with minimal data, copying the address information
+            var storeId = await _groupService.IsStaff(_contextAccessor.WorkContext.CurrentCustomer)
+                ? _contextAccessor.WorkContext.CurrentCustomer.StaffStoreId
+                : _contextAccessor.StoreContext.CurrentStore.Id;
+            
+            var order = new Order
+            {
+                OrderGuid = Guid.NewGuid(),
+                StoreId = storeId,
+                CustomerId = customerId,
+                CustomerEmail = customer.Email,
+                CustomerIp = _contextAccessor.WorkContext.CurrentCustomer.LastIpAddress ?? "",
+                OrderStatusId = 10, // Pending
+                PaymentStatusId = PaymentStatus.Pending,
+                ShippingStatusId = ShippingStatus.Pending,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                OrderTotal = 0,
+                OrderSubtotalInclTax = 0,
+                OrderSubtotalExclTax = 0,
+                OrderSubTotalDiscountInclTax = 0,
+                OrderSubTotalDiscountExclTax = 0,
+                OrderShippingInclTax = 0,
+                OrderShippingExclTax = 0,
+                PaymentMethodAdditionalFeeInclTax = 0,
+                PaymentMethodAdditionalFeeExclTax = 0,
+                OrderTax = 0,
+                OrderDiscount = 0,
+                CustomerCurrencyCode = _contextAccessor.WorkContext.WorkingCurrency.CurrencyCode,
+                CurrencyRate = _contextAccessor.WorkContext.WorkingCurrency.Rate,
+                CustomerLanguageId = _contextAccessor.WorkContext.WorkingLanguage.Id,
+                ImpersonatedByEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.Id,
+                BillingAddress = new Address
+                {
+                    FirstName = billingAddress.FirstName,
+                    LastName = billingAddress.LastName,
+                    Email = billingAddress.Email,
+                    Company = billingAddress.Company,
+                    CountryId = billingAddress.CountryId,
+                    StateProvinceId = billingAddress.StateProvinceId,
+                    City = billingAddress.City,
+                    Address1 = billingAddress.Address1,
+                    Address2 = billingAddress.Address2,
+                    ZipPostalCode = billingAddress.ZipPostalCode,
+                    PhoneNumber = billingAddress.PhoneNumber,
+                    FaxNumber = billingAddress.FaxNumber,
+                    VatNumber = billingAddress.VatNumber,
+                    Note = billingAddress.Note,
+                    Attributes = billingAddress.Attributes
+                },
+                ShippingAddress = new Address
+                {
+                    FirstName = shippingAddress.FirstName,
+                    LastName = shippingAddress.LastName,
+                    Email = shippingAddress.Email,
+                    Company = shippingAddress.Company,
+                    CountryId = shippingAddress.CountryId,
+                    StateProvinceId = shippingAddress.StateProvinceId,
+                    City = shippingAddress.City,
+                    Address1 = shippingAddress.Address1,
+                    Address2 = shippingAddress.Address2,
+                    ZipPostalCode = shippingAddress.ZipPostalCode,
+                    PhoneNumber = shippingAddress.PhoneNumber,
+                    FaxNumber = shippingAddress.FaxNumber,
+                    VatNumber = shippingAddress.VatNumber,
+                    Note = shippingAddress.Note,
+                    Attributes = shippingAddress.Attributes
+                }
+            };
+
+            await orderService.InsertOrder(order);
+
+            // Send order notification emails (to customer, store owner, and vendors)
+            await mediator.Send(new OrderNotificationCommand
+            {
+                Order = order,
+                WorkContext = _contextAccessor.WorkContext,
+                OrderNote = null
+            });
+
+            return Json(new { success = true, orderId = order.Id });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
     }
 
     #endregion
@@ -1010,6 +1228,246 @@ public class CustomerController : BaseAdminController
 
         var bytes = await _exportManager.Export(customers);
         return File(bytes, "text/xls", "customers.xlsx");
+    }
+
+    #endregion
+    
+    #region Import
+
+    [PermissionAuthorizeAction(PermissionActionName.Import)]
+    [HttpPost]
+    public async Task<IActionResult> ImportFromCsv(IFormFile importcsvfile, [FromServices] IImportManager<CustomerImportDto> importManager)
+    {
+        if (importcsvfile == null || importcsvfile.Length == 0)
+        {
+            Error(_translationService.GetResource("Admin.Common.UploadFile"));
+            return RedirectToAction("List");
+        }
+
+        try
+        {
+            using (var stream = importcsvfile.OpenReadStream())
+            {
+                await importManager.Import(stream);
+            }
+            Success(_translationService.GetResource("Admin.Customers.Customers.Imported"));
+        }
+        catch (Exception exc)
+        {
+            Error(exc);
+        }
+
+        return RedirectToAction("List");
+    }
+
+    #endregion
+
+    #region Customer Search Autocomplete
+
+    private class AddressMatch
+    {
+        public Customer Customer { get; set; }
+        public Address MatchedAddress { get; set; }
+        public string MatchType { get; set; } // "customer" or "address"
+        public string MatchedEmail { get; set; }
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Preview)]
+    public async Task<IActionResult> CustomerSearchAutoComplete(string term)
+    {
+        System.Diagnostics.Debug.WriteLine($"CustomerSearchAutoComplete called with term: '{term}'");
+        
+        const int searchTermMinimumLength = 1;
+        
+        if (string.IsNullOrWhiteSpace(term) || term.Length < searchTermMinimumLength)
+            return Json(new List<object>());
+
+        var allMatches = new List<AddressMatch>();
+        
+        // Customer-level property matching temporarily commented out - only showing address-specific results
+        /*
+        // First, search by customer primary fields (email, firstName, lastName)
+        System.Diagnostics.Debug.WriteLine("Searching customers by primary fields...");
+        
+        // Search by email
+        var emailCustomers = await _customerService.GetAllCustomers(email: term, pageSize: 10);
+        foreach (var customer in emailCustomers)
+        {
+            allMatches.Add(new AddressMatch
+            {
+                Customer = customer,
+                MatchType = "customer",
+                MatchedEmail = customer.Email,
+                MatchedAddress = null
+            });
+        }
+        
+        // Search by firstName
+        var firstNameCustomers = await _customerService.GetAllCustomers(firstName: term, pageSize: 10);
+        foreach (var customer in firstNameCustomers)
+        {
+            allMatches.Add(new AddressMatch
+            {
+                Customer = customer,
+                MatchType = "customer",
+                MatchedEmail = customer.Email,
+                MatchedAddress = null
+            });
+        }
+        
+        // Search by lastName
+        var lastNameCustomers = await _customerService.GetAllCustomers(lastName: term, pageSize: 10);
+        foreach (var customer in lastNameCustomers)
+        {
+            allMatches.Add(new AddressMatch
+            {
+                Customer = customer,
+                MatchType = "customer", 
+                MatchedEmail = customer.Email,
+                MatchedAddress = null
+            });
+        }
+        */
+        
+        // Then, search by address fields for address-specific matches
+        System.Diagnostics.Debug.WriteLine("Searching customers by address fields...");
+        var addressCustomers = await _customerService.GetAllCustomers(addressKeyword: term, pageSize: 10);
+        
+        foreach (var customer in addressCustomers)
+        {
+            System.Diagnostics.Debug.WriteLine($"Processing address search for customer {customer.Id} with {customer.Addresses?.Count ?? 0} addresses");
+            
+            // Find ALL matching addresses for this customer
+            var matchingAddresses = customer.Addresses?.Where(addr => 
+                (addr.Email != null && addr.Email.ToLower().Contains(term.ToLower())) ||
+                (addr.FirstName != null && addr.FirstName.ToLower().Contains(term.ToLower())) ||
+                (addr.LastName != null && addr.LastName.ToLower().Contains(term.ToLower())) ||
+                (addr.Company != null && addr.Company.ToLower().Contains(term.ToLower())) ||
+                (addr.Address1 != null && addr.Address1.ToLower().Contains(term.ToLower())) ||
+                (addr.City != null && addr.City.ToLower().Contains(term.ToLower())) ||
+                (addr.ZipPostalCode != null && addr.ZipPostalCode.ToLower().Contains(term.ToLower()))
+            ).ToList() ?? new List<Address>();
+            
+            System.Diagnostics.Debug.WriteLine($"Found {matchingAddresses.Count} matching addresses for customer {customer.Id}");
+            
+            // Add separate result for each matching address
+            foreach (var address in matchingAddresses)
+            {
+                // Determine what field in the address matched
+                var matchedEmail = !string.IsNullOrEmpty(address.Email) ? address.Email : customer.Email;
+                
+                // Address matches are always "address" type since they came from address search
+                allMatches.Add(new AddressMatch
+                {
+                    Customer = customer,
+                    MatchType = "address",
+                    MatchedEmail = matchedEmail,
+                    MatchedAddress = address
+                });
+                
+                System.Diagnostics.Debug.WriteLine($"Added address match: {matchedEmail} - {address.Company ?? "No Company"}, {address.City ?? "No City"}");
+            }
+        }
+        
+        // Remove duplicates while preserving separate customer vs address matches
+        var uniqueMatches = allMatches
+            .GroupBy(m => new { 
+                CustomerId = m.Customer.Id, 
+                AddressId = m.MatchedAddress?.Id ?? "", 
+                MatchType = m.MatchType,
+                MatchedEmail = m.MatchedEmail 
+            })
+            .Select(g => g.First())
+            .Take(15)
+            .ToList();
+            
+        System.Diagnostics.Debug.WriteLine($"Found {uniqueMatches.Count} unique matches total");
+        
+        var result = uniqueMatches.Select(match => new
+        {
+            id = match.Customer.Id,
+            addressId = match.MatchedAddress?.Id,
+            label = FormatCustomerLabelWithAddress(match),
+            matchType = match.MatchType
+        }).ToList();
+        
+        System.Diagnostics.Debug.WriteLine($"Returning {result.Count} search results");
+        return Json(result);
+    }
+    
+    private string FormatCustomerLabelWithAddress(AddressMatch match)
+    {
+        var customer = match.Customer;
+        var address = match.MatchedAddress;
+        
+        // Base format: email - customer name
+        var emailDisplay = match.MatchType == "address" ? $"{match.MatchedEmail} (Address)" : match.MatchedEmail;
+        var label = $"{emailDisplay} - {customer.GetFullName()}";
+        
+        // Add location information if we have a specific address
+        if (match.MatchType == "address" && address != null)
+        {
+            var locationParts = new List<string>();
+            
+            // Add company name if available
+            if (!string.IsNullOrEmpty(address.Company))
+                locationParts.Add(address.Company);
+            
+            // Add city and state
+            var cityState = new List<string>();
+            if (!string.IsNullOrEmpty(address.City))
+                cityState.Add(address.City);
+            if (!string.IsNullOrEmpty(address.StateProvinceId))
+                cityState.Add("OR"); // You might want to resolve this from StateProvinceId
+                
+            if (cityState.Any())
+                locationParts.Add(string.Join(", ", cityState));
+            
+            // Add location info to label
+            if (locationParts.Any())
+                label += $" | 📍 {string.Join(", ", locationParts)}";
+        }
+        
+        return label;
+    }
+    
+    private string FormatCustomerLabel(Customer customer, bool includeAddressInfo, string matchedAddressEmail = null)
+    {
+        // Use matched address email if available, otherwise use primary email
+        var displayEmail = !string.IsNullOrEmpty(matchedAddressEmail) ? $"{matchedAddressEmail} (Address)" : customer.Email;
+        var label = $"{displayEmail} - {customer.GetFullName()}";
+        
+        if (includeAddressInfo && customer.Addresses.Any())
+        {
+            var primaryAddress = customer.Addresses.FirstOrDefault();
+            if (primaryAddress != null)
+            {
+                var addressParts = new List<string>();
+                
+                // Add company name if available
+                if (!string.IsNullOrEmpty(primaryAddress.Company))
+                    addressParts.Add($"🏢 {primaryAddress.Company}");
+                
+                // Add street address if available
+                if (!string.IsNullOrEmpty(primaryAddress.Address1))
+                    addressParts.Add(primaryAddress.Address1);
+                
+                // Add city
+                if (!string.IsNullOrEmpty(primaryAddress.City))
+                    addressParts.Add(primaryAddress.City);
+                
+                // Add state if available (skip StateProvinceId as it's a GUID - not user friendly)
+                
+                // Add zip code if available
+                if (!string.IsNullOrEmpty(primaryAddress.ZipPostalCode))
+                    addressParts.Add(primaryAddress.ZipPostalCode);
+                    
+                if (addressParts.Any())
+                    label += $" | 📍 {string.Join(", ", addressParts)}";
+            }
+        }
+        
+        return label;
     }
 
     #endregion

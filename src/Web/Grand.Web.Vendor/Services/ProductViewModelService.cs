@@ -498,9 +498,11 @@ public class ProductViewModelService : IProductViewModelService
             }
         }
 
+        var prevStockQuantity = product.StockQuantity;
         product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
         product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
-        await _inventoryManageService.UpdateStockProduct(product, false);
+        var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+        await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId, null);
     }
 
     public virtual async Task PrepareProductReviewModel(ProductReviewModel model,
@@ -720,7 +722,20 @@ public class ProductViewModelService : IProductViewModelService
         product.Locales = await _seNameService.TranslationSeNameProperties(model.Locales, product, x => x.Name);
         product.SeName = await _seNameService.ValidateSeName(product, model.SeName, product.Name, true);
 
-        await _productService.UpdateProduct(product);
+        // Get current user ID for tracking
+        var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+        
+        // Track stock changes if inventory is managed
+        if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock && 
+            !product.UseMultipleWarehouses && 
+            prevStockQuantity != product.StockQuantity)
+        {
+            await _inventoryManageService.UpdateStockProduct(product, true, true, prevStockQuantity, null, userId, null);
+        }
+        else
+        {
+            await _productService.UpdateProduct(product);
+        }
 
         //search engine name
         await _seNameService.SaveSeName(product);
@@ -732,7 +747,7 @@ public class ProductViewModelService : IProductViewModelService
         await UpdatePictureSeoNames(product);
 
         //out of stock notifications
-        await OutOfStockNotifications(product, prevStockQuantity, prevMultiWarehouseStock);
+        await OutOfStockNotifications(product, prevStockQuantity.ToInt(), prevMultiWarehouseStock);
 
         return product;
     }
@@ -1793,7 +1808,8 @@ public class ProductViewModelService : IProductViewModelService
                 Mpn = x.Mpn,
                 Gtin = x.Gtin,
                 OverriddenPrice = x.OverriddenPrice,
-                NotifyAdminForQuantityBelow = x.NotifyAdminForQuantityBelow
+                NotifyAdminForQuantityBelow = x.NotifyAdminForQuantityBelow,
+                CaseSize = x.CaseSize
             };
             items.Add(pacModel);
         }
@@ -1841,8 +1857,8 @@ public class ProductViewModelService : IProductViewModelService
                         {
                             warehouseInventoryModel.WarehouseUsed = true;
                             warehouseInventoryModel.Id = winv.Id;
-                            warehouseInventoryModel.StockQuantity = winv.StockQuantity;
-                            warehouseInventoryModel.ReservedQuantity = winv.ReservedQuantity;
+                            warehouseInventoryModel.StockQuantity = winv.StockQuantity.ToInt();
+                            warehouseInventoryModel.ReservedQuantity = winv.ReservedQuantity.ToInt();
                         }
                     }
             }
@@ -1992,7 +2008,8 @@ public class ProductViewModelService : IProductViewModelService
                     Gtin = model.Gtin,
                     OverriddenPrice = model.OverriddenPrice,
                     NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow,
-                    PictureId = model.PictureId
+                    PictureId = model.PictureId,
+                    CaseSize = model.CaseSize
                 };
 
                 if (product.UseMultipleWarehouses)
@@ -2006,9 +2023,11 @@ public class ProductViewModelService : IProductViewModelService
 
                 if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
                 {
+                    var prevStockQuantity = product.StockQuantity;
                     product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                     product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                    await _inventoryManageService.UpdateStockProduct(product, false);
+                    var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+                    await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId, customAttributes);
                 }
             }
         }
@@ -2016,7 +2035,10 @@ public class ProductViewModelService : IProductViewModelService
         {
             var combination = product.ProductAttributeCombinations.FirstOrDefault(x => x.Id == model.Id);
             var prevCombination = (ProductAttributeCombination)combination!.Clone();
-
+            
+            // Store previous stock quantity for this specific combination before changing it
+            var prevStockQuantity = combination.StockQuantity;
+            
             combination.StockQuantity = model.StockQuantity;
             combination.ReservedQuantity = model.ReservedQuantity;
             combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
@@ -2027,6 +2049,7 @@ public class ProductViewModelService : IProductViewModelService
             combination.OverriddenPrice = model.OverriddenPrice;
             combination.NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow;
             combination.PictureId = model.PictureId;
+            combination.CaseSize = model.CaseSize;
 
             if (product.UseMultipleWarehouses)
             {
@@ -2043,9 +2066,14 @@ public class ProductViewModelService : IProductViewModelService
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
                 var pr = await _productService.GetProductById(model.ProductId);
+                
+                // Update the product's overall stock quantity (sum of all combinations)
                 pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
                 pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-                await _inventoryManageService.UpdateStockProduct(pr, false);
+                
+                // For journal entry, use the specific combination's previous value
+                var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+                await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId, combination.Attributes);
             }
         }
 
@@ -2086,9 +2114,14 @@ public class ProductViewModelService : IProductViewModelService
 
         if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
         {
+            var prevStockQuantity = product.StockQuantity;
             product.StockQuantity = product.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             product.ReservedQuantity = product.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            await _inventoryManageService.UpdateStockProduct(product, false);
+            var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+            
+            // Just update the product's stock totals without creating a journal entry
+            // We don't want to log when generating combinations since no actual inventory change occurred
+            await _inventoryManageService.UpdateStockProduct(product, false, false, null, null, userId, null);
         }
     }
 
@@ -2126,7 +2159,7 @@ public class ProductViewModelService : IProductViewModelService
         {
             var pctp = new ProductCombinationTierPrices {
                 Price = model.Price,
-                Quantity = model.Quantity
+                Quantity = model.Quantity.ToInt()
             };
             productAttributeCombination.TierPrices.Add(pctp);
             await _productAttributeService.UpdateProductAttributeCombination(productAttributeCombination,
@@ -2144,7 +2177,7 @@ public class ProductViewModelService : IProductViewModelService
             if (tierPrice != null)
             {
                 tierPrice.Price = model.Price;
-                tierPrice.Quantity = model.Quantity;
+                tierPrice.Quantity = model.Quantity.ToInt();
                 await _productAttributeService.UpdateProductAttributeCombination(productAttributeCombination,
                     product.Id);
             }

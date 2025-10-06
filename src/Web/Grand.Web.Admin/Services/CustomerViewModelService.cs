@@ -134,6 +134,53 @@ public class CustomerViewModelService : ICustomerViewModelService
     {
         var registered = await _groupService.GetCustomerGroupBySystemName(SystemCustomerGroupNames.Registered);
         var customerGroups = await _groupService.GetAllCustomerGroups(showHidden: true);
+        // Get staff customers for Default Rep dropdown (same as DefaultImpersonatedByEmployeeId)
+        var availableDefaultReps = new List<SelectListItem>();
+        var staffGroup = await _groupService.GetCustomerGroupBySystemName(SystemCustomerGroupNames.Staff);
+        if (staffGroup != null)
+        {
+            var staffCustomers = await _customerService.GetAllCustomers(
+                customerGroupIds: new[] { staffGroup.Id });
+                
+            foreach (var employee in staffCustomers)
+            {
+                var firstName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.FirstName);
+                var lastName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.LastName);
+                var employeeName = $"{firstName} {lastName}";
+                
+                if (string.IsNullOrWhiteSpace(employeeName.Trim()))
+                    employeeName = employee.Email;
+                    
+                availableDefaultReps.Add(new SelectListItem {
+                    Text = employeeName,
+                    Value = employee.Id
+                });
+            }
+        }
+
+        // Get distinct cities from customer addresses
+        var allCustomers = await _customerService.GetAllCustomers();
+        var availableCities = new List<SelectListItem>();
+        var uniqueCities = new HashSet<string>();
+        
+        foreach (var customer in allCustomers)
+        {
+            foreach (var address in customer.Addresses)
+            {
+                if (!string.IsNullOrWhiteSpace(address.City) && !uniqueCities.Contains(address.City))
+                {
+                    uniqueCities.Add(address.City);
+                    availableCities.Add(new SelectListItem {
+                        Text = address.City,
+                        Value = address.City
+                    });
+                }
+            }
+        }
+        
+        // Sort cities alphabetically
+        availableCities = availableCities.OrderBy(x => x.Text).ToList();
+
         var model = new CustomerListModel {
             UsernamesEnabled = _customerSettings.UsernamesEnabled,
             CompanyEnabled = _customerSettings.CompanyEnabled,
@@ -143,6 +190,8 @@ public class CustomerViewModelService : ICustomerViewModelService
                 { Text = cr.Name, Value = cr.Id.ToString(), Selected = cr.Id == registered.Id }).ToList(),
             AvailableCustomerTags = (await _customerTagService.GetAllCustomerTags())
                 .Select(ct => new SelectListItem { Text = ct.Name, Value = ct.Id.ToString() }).ToList(),
+            AvailableDefaultReps = availableDefaultReps,
+            AvailableCities = availableCities,
             SearchCustomerGroupIds = new List<string> { customerGroups.FirstOrDefault(x => x.Id == registered.Id)?.Id }
         };
         return model;
@@ -150,13 +199,15 @@ public class CustomerViewModelService : ICustomerViewModelService
 
     public virtual async Task<(IEnumerable<CustomerModel> customerModelList, int totalCount)> PrepareCustomerList(
         CustomerListModel model,
-        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, int pageIndex, int pageSize)
+        string[] searchCustomerGroupIds, string[] searchCustomerTagIds, string[] searchDefaultRepIds, string[] searchCityNames, int pageIndex, int pageSize)
     {
         var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
 
         var customers = await _customerService.GetAllCustomers(
             customerGroupIds: searchCustomerGroupIds,
             customerTagIds: searchCustomerTagIds,
+            defaultImpersonatedByEmployeeIds: searchDefaultRepIds,
+            cityNames: searchCityNames,
             email: model.SearchEmail,
             username: model.SearchUsername,
             firstName: model.SearchFirstName,
@@ -164,13 +215,14 @@ public class CustomerViewModelService : ICustomerViewModelService
             company: model.SearchCompany,
             phone: model.SearchPhone,
             zipPostalCode: model.SearchZipPostalCode,
+            addressKeyword: model.SearchAddressKeyword,
             loadOnlyWithShoppingCart: false,
             salesEmployeeId: salesEmployeeId,
             pageIndex: pageIndex - 1,
             pageSize: pageSize);
 
         var customermodellist = new List<CustomerModel>();
-        foreach (var item in customers) customermodellist.Add(await PrepareCustomerModelForList(item));
+        foreach (var item in customers) customermodellist.Add(await PrepareCustomerModelForList(item, model.SearchAddressKeyword));
         return (customermodellist, customers.TotalCount);
     }
 
@@ -188,6 +240,7 @@ public class CustomerViewModelService : ICustomerViewModelService
                 model.VendorId = customer.VendorId;
                 model.StaffStoreId = customer.StaffStoreId;
                 model.SeId = customer.SeId;
+                model.DefaultImpersonatedByEmployeeId = customer.DefaultImpersonatedByEmployeeId;
                 model.AdminComment = customer.AdminComment;
                 model.IsTaxExempt = customer.IsTaxExempt;
                 model.FreeShipping = customer.FreeShipping;
@@ -272,6 +325,9 @@ public class CustomerViewModelService : ICustomerViewModelService
 
         //employees
         await PrepareSalesEmployeeModel(model);
+        
+        //available employees for impersonation
+        await PrepareAvailableEmployeesModel(model);
 
         //customer attributes
         await PrepareCustomerAttributeModel(model, customer);
@@ -378,6 +434,7 @@ public class CustomerViewModelService : ICustomerViewModelService
             VendorId = model.VendorId,
             StaffStoreId = model.StaffStoreId,
             SeId = model.SeId,
+            DefaultImpersonatedByEmployeeId = model.DefaultImpersonatedByEmployeeId,
             AdminComment = model.AdminComment,
             IsTaxExempt = model.IsTaxExempt,
             FreeShipping = model.FreeShipping,
@@ -487,6 +544,10 @@ public class CustomerViewModelService : ICustomerViewModelService
         customer.FreeShipping = model.FreeShipping;
         customer.Active = model.Active;
         customer.Attributes = model.Attributes;
+        
+        // Save DefaultImpersonatedByEmployeeId directly to the customer entity
+        // This field was not being updated properly before
+        customer.DefaultImpersonatedByEmployeeId = model.DefaultImpersonatedByEmployeeId;
 
         if (!model.TwoFactorEnabled)
             await _customerService.UpdateUserField(customer, SystemCustomerFieldNames.TwoFactorEnabled,
@@ -800,13 +861,41 @@ public class CustomerViewModelService : ICustomerViewModelService
         //countries
         model.Address.AvailableCountries.Add(new SelectListItem
             { Text = _translationService.GetResource("Admin.Address.SelectCountry"), Value = "" });
-        foreach (var c in await _countryService.GetAllCountries(showHidden: true))
+
+        var countries = await _countryService.GetAllCountries(showHidden: true);
+        
+        // Set default country to USA for new addresses (when address is null and no country is set)
+        if (address == null && string.IsNullOrEmpty(model.Address.CountryId))
+        {
+            var usaCountry = countries.FirstOrDefault(c => c.TwoLetterIsoCode == "US");
+            if (usaCountry != null)
+            {
+                model.Address.CountryId = usaCountry.Id;
+            }
+        }
+
+        foreach (var c in countries)
             model.Address.AvailableCountries.Add(new SelectListItem
                 { Text = c.Name, Value = c.Id, Selected = c.Id == model.Address.CountryId });
         //states
         var states = !string.IsNullOrEmpty(model.Address.CountryId)
             ? (await _countryService.GetCountryById(model.Address.CountryId))?.StateProvinces
             : new List<StateProvince>();
+
+        // Set default state to Oregon for new addresses in USA
+        if (address == null && string.IsNullOrEmpty(model.Address.StateProvinceId) && states?.Count > 0)
+        {
+            var usaCountry = countries.FirstOrDefault(c => c.TwoLetterIsoCode == "US");
+            if (usaCountry != null && model.Address.CountryId == usaCountry.Id)
+            {
+                var oregonState = states.FirstOrDefault(s => s.Abbreviation == "OR");
+                if (oregonState != null)
+                {
+                    model.Address.StateProvinceId = oregonState.Id;
+                }
+            }
+        }
+
         if (states?.Count > 0)
             foreach (var s in states)
                 model.Address.AvailableStates.Add(new SelectListItem
@@ -1262,15 +1351,15 @@ public class CustomerViewModelService : ICustomerViewModelService
         return result;
     }
 
-    protected virtual async Task<CustomerModel> PrepareCustomerModelForList(Customer customer)
+    protected virtual async Task<CustomerModel> PrepareCustomerModelForList(Customer customer, string addressKeyword = null)
     {
-        return new CustomerModel {
+        var model = new CustomerModel {
             Id = customer.Id,
             Email = !string.IsNullOrEmpty(customer.Email)
                 ? customer.Email
                 : _translationService.GetResource("Admin.Customers.Guest"),
             Username = customer.Username,
-            FullName = customer.GetFullName(),
+            FullName = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.FirstName),
             Company = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.Company),
             Phone = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.Phone),
             ZipPostalCode = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.ZipPostalCode),
@@ -1279,6 +1368,78 @@ public class CustomerViewModelService : ICustomerViewModelService
             CreatedOn = _dateTimeService.ConvertToUserTime(customer.CreatedOnUtc, DateTimeKind.Utc),
             LastActivityDate = _dateTimeService.ConvertToUserTime(customer.LastActivityDateUtc, DateTimeKind.Utc)
         };
+
+        // If address keyword search was used, find and format the matching address
+        if (!string.IsNullOrWhiteSpace(addressKeyword))
+        {
+            model.MatchedAddressInfo = await FormatMatchedAddress(customer, addressKeyword);
+        }
+
+        return model;
+    }
+
+    protected virtual Task<string> FormatMatchedAddress(Customer customer, string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword) || customer.Addresses == null || !customer.Addresses.Any())
+            return Task.FromResult<string>(null);
+
+        var keywordLower = keyword.ToLower();
+        
+        // Find the first address that matches the keyword
+        var matchedAddress = customer.Addresses.FirstOrDefault(addr =>
+            (addr.FirstName != null && addr.FirstName.ToLower().Contains(keywordLower)) ||
+            (addr.LastName != null && addr.LastName.ToLower().Contains(keywordLower)) ||
+            (addr.Email != null && addr.Email.ToLower().Contains(keywordLower)) ||
+            (addr.Address1 != null && addr.Address1.ToLower().Contains(keywordLower)) ||
+            (addr.Address2 != null && addr.Address2.ToLower().Contains(keywordLower)) ||
+            (addr.City != null && addr.City.ToLower().Contains(keywordLower)) ||
+            (addr.ZipPostalCode != null && addr.ZipPostalCode.ToLower().Contains(keywordLower)) ||
+            (addr.PhoneNumber != null && addr.PhoneNumber.ToLower().Contains(keywordLower)) ||
+            (addr.Company != null && addr.Company.ToLower().Contains(keywordLower))
+        );
+
+        if (matchedAddress == null)
+            return Task.FromResult<string>(null);
+
+        // Format the address for display
+        var parts = new List<string>();
+        
+        // Add company if present
+        if (!string.IsNullOrWhiteSpace(matchedAddress.Company))
+            parts.Add(matchedAddress.Company);
+        
+        // Add name if different from customer name
+        var addressName = $"{matchedAddress.FirstName} {matchedAddress.LastName}".Trim();
+        var customerName = customer.GetFullName();
+        if (!string.IsNullOrWhiteSpace(addressName) && !addressName.Equals(customerName, StringComparison.OrdinalIgnoreCase))
+            parts.Add(addressName);
+        
+        // Add street address
+        if (!string.IsNullOrWhiteSpace(matchedAddress.Address1))
+            parts.Add(matchedAddress.Address1);
+        
+        // Add city and zip
+        var cityZip = new List<string>();
+        if (!string.IsNullOrWhiteSpace(matchedAddress.City))
+            cityZip.Add(matchedAddress.City);
+        if (!string.IsNullOrWhiteSpace(matchedAddress.ZipPostalCode))
+            cityZip.Add(matchedAddress.ZipPostalCode);
+        
+        if (cityZip.Any())
+            parts.Add(string.Join(", ", cityZip));
+
+        var result = parts.Any() ? string.Join(" • ", parts) : null;
+        
+        // Highlight the matched keyword in the result
+        if (!string.IsNullOrEmpty(result))
+        {
+            // Simple highlighting - wrap matched text with <mark> tags
+            var regex = new System.Text.RegularExpressions.Regex($"({System.Text.RegularExpressions.Regex.Escape(keyword)})", 
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            result = regex.Replace(result, "<mark style='background-color: #fff3cd; padding: 1px 2px; border-radius: 2px;'>$1</mark>");
+        }
+        
+        return Task.FromResult(result);
     }
 
     protected virtual async Task PrepareSalesEmployeeModel(CustomerModel model)
@@ -1295,6 +1456,41 @@ public class CustomerViewModelService : ICustomerViewModelService
                 Text = employee.Name,
                 Value = employee.Id
             });
+    }
+
+    protected virtual async Task PrepareAvailableEmployeesModel(CustomerModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        
+        // Populate employee dropdown for DefaultImpersonatedByEmployeeId
+        model.AvailableEmployees.Add(new SelectListItem {
+            Text = _translationService.GetResource("Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId.None") ?? "None",
+            Value = ""
+        });
+        
+        // Get all employees (using customer service to get staff customers)
+        var staffGroup = await _groupService.GetCustomerGroupBySystemName(SystemCustomerGroupNames.Staff);
+        if (staffGroup != null)
+        {
+            var staffCustomers = await _customerService.GetAllCustomers(
+                customerGroupIds: new[] { staffGroup.Id },
+                pageSize: 500); // Reasonable limit
+                
+            foreach (var employee in staffCustomers)
+            {
+                var firstName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.FirstName);
+                var lastName = employee.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.LastName);
+                var employeeName = $"{firstName} {lastName}";
+                
+                if (string.IsNullOrWhiteSpace(employeeName.Trim()))
+                    employeeName = employee.Email;
+                    
+                model.AvailableEmployees.Add(new SelectListItem {
+                    Text = employeeName,
+                    Value = employee.Id
+                });
+            }
+        }
     }
 
 

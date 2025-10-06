@@ -10,6 +10,7 @@ using Grand.Domain.Directory;
 using Grand.Domain.Orders;
 using Grand.Domain.Shipping;
 using Grand.Infrastructure;
+using Grand.SharedKernel.Extensions;
 using Grand.Web.Vendor.Extensions;
 using Grand.Web.Vendor.Interfaces;
 using Grand.Web.Vendor.Models.Shipment;
@@ -172,9 +173,9 @@ public class ShipmentViewModelService : IShipmentViewModelService
     }
 
 
-    public virtual async Task<int> GetStockQty(Product product, string warehouseId)
+    public virtual async Task<double> GetStockQty(Product product, string warehouseId)
     {
-        var qty = new List<int>();
+        var qty = new List<double>();
         foreach (var item in product.BundleProducts)
         {
             var p1 = await _productService.GetProductById(item.ProductId);
@@ -192,9 +193,9 @@ public class ShipmentViewModelService : IShipmentViewModelService
         return qty.Count > 0 ? qty.Min() : 0;
     }
 
-    public virtual async Task<int> GetReservedQty(Product product, string warehouseId)
+    public virtual async Task<double> GetReservedQty(Product product, string warehouseId)
     {
-        var qty = new List<int>();
+        var qty = new List<double>();
         foreach (var item in product.BundleProducts)
         {
             var p1 = await _productService.GetProductById(item.ProductId);
@@ -531,7 +532,7 @@ public class ShipmentViewModelService : IShipmentViewModelService
             if (shipmentItemModel.QuantityToAdd <= 0)
                 continue;
             if (shipmentItemModel.QuantityToAdd > orderItem.OpenQty)
-                shipmentItemModel.QuantityToAdd = orderItem.OpenQty;
+                shipmentItemModel.QuantityToAdd = orderItem.OpenQty.ToInt();
 
             //ok. we have at least one item. create a shipment (if it does not exist)
             var orderItemTotalWeight = orderItem.ItemWeight * shipmentItemModel.QuantityToAdd;

@@ -4,11 +4,76 @@
     <h2 class="generalTitle text-center">@Loc["HomePage.NewProducts"]</h2>
     <div class="col-12 px-0">
         <div class="form-row">
+            @{
+                // Get the product attribute info dictionary from ViewData
+                var productAttributeInfo = ViewData["ProductAttributeInfo"] as Dictionary<string, List<(string combinationId, string attributeInfo)>>;
+                var displayedCount = 0;
+                var maxDisplay = order.Np_Xl * 4; // Approximate number of products that fit in the display
+            }
+            
             @foreach (var item in Model)
             {
-                <div class="col-xl-@order.Np_Xl col-lg-@order.Np_Lg col-md-@order.Np_Md col-sm-@order.Np_Sm col-@order.Np_Col product-container mb-2">
-                    <partial name="Partials/CatalogProductView" model="item"/>
-                </div>
+                // Check if this product has multiple attribute combinations
+                if (productAttributeInfo != null && productAttributeInfo.TryGetValue(item.Id, out var combinations) && combinations.Count > 1)
+                {
+                    // Display a card for each combination
+                    foreach (var combo in combinations)
+                    {
+                        if (displayedCount >= maxDisplay)
+                            break;
+                            
+                        // Create a modified copy of the model with the attribute info in the name
+                        var modifiedItem = new ProductOverviewModel
+                        {
+                            Id = item.Id,
+                            Name = $"{item.Name} - {combo.attributeInfo}",
+                            ShortDescription = item.ShortDescription,
+                            FullDescription = item.FullDescription,
+                            SeName = item.SeName,
+                            Url = item.Url,
+                            ProductType = item.ProductType,
+                            MarkAsNew = item.MarkAsNew,
+                            Sku = item.Sku,
+                            Flag = item.Flag,
+                            Gtin = item.Gtin,
+                            Mpn = item.Mpn,
+                            BrandName = item.BrandName,
+                            IsFreeShipping = item.IsFreeShipping,
+                            LowStock = item.LowStock,
+                            ShowSku = item.ShowSku,
+                            ShowQty = item.ShowQty,
+                            EndTime = item.EndTime,
+                            EndTimeLocalTime = item.EndTimeLocalTime,
+                            TaxDisplayType = item.TaxDisplayType,
+                            Interval = item.Interval,
+                            IntervalUnitId = item.IntervalUnitId,
+                            ProductPrice = item.ProductPrice,
+                            DefaultPictureModel = item.DefaultPictureModel,
+                            SecondPictureModel = item.SecondPictureModel,
+                            SpecificationAttributeModels = item.SpecificationAttributeModels,
+                            ProductAttributeModels = item.ProductAttributeModels,
+                            ReviewOverviewModel = item.ReviewOverviewModel,
+                            UserFields = item.UserFields
+                        };
+
+                        <div class="col-xl-@order.Np_Xl col-lg-@order.Np_Lg col-md-@order.Np_Md col-sm-@order.Np_Sm col-@order.Np_Col product-container mb-2">
+                            <partial name="Partials/CatalogProductView" model="modifiedItem"/>
+                        </div>
+                        
+                        displayedCount++;
+                    }
+                }
+                else
+                {
+                    if (displayedCount >= maxDisplay)
+                        break;
+                        
+                    <div class="col-xl-@order.Np_Xl col-lg-@order.Np_Lg col-md-@order.Np_Md col-sm-@order.Np_Sm col-@order.Np_Col product-container mb-2">
+                        <partial name="Partials/CatalogProductView" model="item"/>
+                    </div>
+                    
+                    displayedCount++;
+                }
             }
         </div>
     </div>

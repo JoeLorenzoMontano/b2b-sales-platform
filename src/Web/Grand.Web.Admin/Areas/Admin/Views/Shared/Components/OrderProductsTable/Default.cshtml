@@ -1,0 +1,1139 @@
+@using Grand.Domain.Tax
+@using Grand.Web.Admin.Components.OrderProductsTable
+@using Grand.Web.Admin.Extensions
+@model OrderProductsTableModel
+
+<!-- Products Section -->
+<div class="row mt-4" data-order-id="@Model.OrderId">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Order Products (@Model.Items.Count items)</h5>
+                @if (Model.Collapsible)
+                {
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#productsCollapse-@Model.OrderId">
+                        <i class="fa fa-chevron-down"></i>
+                    </button>
+                }
+            </div>
+            <div class="collapse show" id="productsCollapse-@Model.OrderId">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-right">Price</th>
+                                    <th class="text-right">Total</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var i = 0; i < Model.Items.Count; i++)
+                                {
+                                    var item = Model.Items[i];
+                                    <input name="Items[@i].Id" value="@item.Id" type="hidden"/>
+                                    <tr>
+                                        <td>@(i + 1)</td>
+                                        <td>
+                                            <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })">
+                                                @item.ProductName
+                                            </a>
+                                            @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                                            {
+                                                <br><small>@Html.Raw(item.AttributeInfo)</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.Sku))
+                                            {
+                                                <br><small class="text-muted">SKU: @item.Sku</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.WarehouseName))
+                                            {
+                                                <br><small class="text-muted">Warehouse: @item.WarehouseName</small>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.HasWeightBasedAttributes && item.WeightOptions?.Count > 0)
+                                            {
+                                                <div class="weight-attribute-wrapper" data-item-id="@item.Id">
+                                                    <div class="d-flex align-items-center justify-content-center">
+                                                        <input type="number"
+                                                               class="form-control inline-edit-field weight-quantity-input"
+                                                               data-item-id="@item.Id"
+                                                               value="@item.Quantity"
+                                                               style="width:60px; margin-right: 5px;"
+                                                               min="0.01"
+                                                               step="0.01"/>
+                                                        <select class="form-control weight-attribute-selector inline-edit-field"
+                                                                data-item-id="@item.Id"
+                                                                data-product-id="@item.ProductId"
+                                                                style="width:90px;">
+                                                            @foreach (var weightOption in item.WeightOptions)
+                                                            {
+                                                                <option value="@weightOption.CombinationId"
+                                                                        data-price="@weightOption.Price"
+                                                                        data-sku="@weightOption.Sku"
+                                                                        data-conversion-ratio="@weightOption.ConversionRatio"
+                                                                        selected="@(weightOption.CombinationId == item.SelectedWeightCombinationId)">
+                                                                    @weightOption.Name
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input inline-edit-field"/>
+                                                    <small class="text-muted d-block mt-1">
+                                                        @{
+                                                            var selectedOption = item.WeightOptions.FirstOrDefault(w => w.CombinationId == item.SelectedWeightCombinationId);
+                                                            var weightName = selectedOption?.Name ?? "unit";
+                                                            var plural = item.Quantity != 1 ? "s" : "";
+                                                            var conversionRatio = selectedOption?.ConversionRatio ?? 1;
+                                                            var baseUnits = item.Quantity * conversionRatio;
+                                                        }
+                                                        <span class="weight-quantity-info">@item.Quantity @weightName@(plural)</span>
+                                                        @if (conversionRatio > 1)
+                                                        {
+                                                            <br />
+                                                            <span class="text-muted" style="font-size: 0.85em;">(@baseUnits base units)</span>
+                                                        }
+                                                        <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>
+                                                    </small>
+                                                </div>
+                                            }
+                                            else if (item.CaseSize > 0)
+                                            {
+                                                <div class="quantity-unit-case-wrapper" data-case-size="@item.CaseSize" data-item-id="@item.Id">
+                                                    <div class="d-flex align-items-center justify-content-center">
+                                                        <input type="number"
+                                                               class="form-control inline-edit-field quantity-display-input"
+                                                               data-item-id="@item.Id"
+                                                               value="@item.Quantity"
+                                                               style="width:60px; margin-right: 5px;"
+                                                               min="1"/>
+                                                        <select class="form-control unit-case-selector"
+                                                                data-item-id="@item.Id"
+                                                                style="width:70px;">
+                                                            <option value="case">Case</option>
+                                                            <option value="unit">Unit</option>
+                                                        </select>
+                                                    </div>
+                                                    <input name="Items[@i].Quantity" value="@item.Quantity" type="hidden" class="actual-quantity-input inline-edit-field"/>
+                                                    <small class="text-muted d-block mt-1">
+                                                        @item.CaseSize per case
+                                                        <span class="inventory-indicator" id="inventory-@item.Id" style="display:none;"></span>
+                                                    </small>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <input name="Items[@i].Quantity" value="@item.Quantity" type="number" class="form-control inline-edit-field" style="width:100%; max-width:80px; margin: 0 auto;" min="1"/>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="position-relative">
+                                                <input name="Items[@i].UnitPriceExclTaxValue" value="@item.UnitPriceExclTaxValue" class="form-control inline-edit-field" style="width:100%; max-width:120px;" data-product-id="@item.ProductId"/>
+                                                <div class="savings-indicator mt-1" id="savings-@item.Id" style="display:none;">
+                                                    <small class="text-success font-weight-bold"></small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-right">
+                                            <span class="subtotal-display" data-order-item-id="@item.Id">
+                                                @switch (Model.TaxDisplayType)
+                                                {
+                                                    case TaxDisplayType.ExcludingTax:
+                                                        @item.SubTotalExclTax
+                                                        break;
+                                                    case TaxDisplayType.IncludingTax:
+                                                        @item.SubTotalInclTax
+                                                        break;
+                                                }
+                                            </span>
+                                            <div class="auto-save-status" id="save-status-@item.Id" style="display:none; margin-top: 4px;">
+                                                <small class="text-muted">
+                                                    <i class="fa fa-spinner fa-spin"></i> Saving...
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteOrderItem('@item.Id', '@Model.OrderId')" title="Delete">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <th colspan="4" class="text-right">Total:</th>
+                                    <th class="text-right"><span id="total-amount">@Model.OrderTotal</span></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Add Products Section and Order Summary Side-by-Side -->
+                    <div class="row mt-4 align-items-start">
+                        <!-- Add Products Section -->
+                        @if (Model.ShowAddProducts)
+                        {
+                            <div class="col-lg-6">
+                                <div class="add-products-section">
+                                    <div class="x_panel light form-fit">
+                                        <div class="x_content form">
+                                            @await Component.InvokeAsync("ProductSearchAdd", new { contextId = Model.ContextId, orderId = Model.OrderId, contextType = "order" })
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Order Summary -->
+                        @if (Model.ShowSummary)
+                        {
+                            <div class="@(Model.ShowAddProducts ? "col-lg-6" : "col-12")">
+                                <div class="card">
+                                    <div class="card-body">
+                                        @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Subtotal:</span>
+                                                <span id="summary-subtotal">@Model.OrderSubtotalInclTax</span>
+                                            </div>
+                                        }
+                                        @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Subtotal:</span>
+                                                <span id="summary-subtotal">@Model.OrderSubtotalExclTax</span>
+                                            </div>
+                                        }
+                                        @if (Model.TaxDisplayType == TaxDisplayType.IncludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Shipping:</span>
+                                                <span id="summary-shipping">@Model.OrderShippingInclTax</span>
+                                            </div>
+                                        }
+                                        @if (Model.TaxDisplayType == TaxDisplayType.ExcludingTax)
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span>Shipping:</span>
+                                                <span id="summary-shipping">@Model.OrderShippingExclTax</span>
+                                            </div>
+                                        }
+                                        <div class="d-flex justify-content-between">
+                                            <span>Tax:</span>
+                                            <span id="summary-tax">@Model.OrderTax</span>
+                                        </div>
+                                        <hr>
+                                        <div class="d-flex justify-content-between font-weight-bold">
+                                            <span>Total:</span>
+                                            <span id="summary-total">@Model.OrderTotal</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ProductSearchAdd component integration - Transparent styling */
+.add-products-section {
+    background: transparent;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-products-section .x_panel {
+    margin-bottom: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.add-products-section .x_title {
+    background: transparent;
+    padding: 10px 15px;
+    margin-bottom: 0;
+}
+
+/* Theme-aware text colors for Order Products table */
+/* Default (light theme) - use dark text */
+.table tbody td {
+    color: #212529 !important;
+}
+
+.table tbody td a {
+    color: #007bff !important;
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] .table tbody td,
+.dark-theme .table tbody td,
+body.dark .table tbody td {
+    color: #e0e0e0 !important;
+}
+
+[data-theme="dark"] .table tbody td a,
+.dark-theme .table tbody td a,
+body.dark .table tbody td a {
+    color: #88c0ff !important;
+}
+</style>
+
+<script>
+// Inline editing functionality for OrderProductsTable component
+(function() {
+    'use strict';
+
+    // Debug function for troubleshooting
+    window.debugOrderProductsTable = function(orderId) {
+        console.log('=== OrderProductsTable Debug Info ===');
+        console.log('Order ID:', orderId || 'Not specified');
+
+        $('.inline-edit-field').each(function(index) {
+            var $field = $(this);
+            var name = $field.attr('name') || 'NO NAME';
+            var value = $field.val();
+            var originalValue = $field.data('original-value');
+            var classes = $field.attr('class');
+
+            console.log(`Field ${index + 1}:`, {
+                name: name,
+                currentValue: value,
+                originalValue: originalValue,
+                classes: classes
+            });
+        });
+
+        console.log('Weight-based products:');
+        $('.weight-attribute-wrapper').each(function(index) {
+            var $wrapper = $(this);
+            var $display = $wrapper.find('.weight-quantity-input');
+            var $hidden = $wrapper.find('.actual-quantity-input');
+            var $selector = $wrapper.find('.weight-attribute-selector');
+
+            console.log(`Weight product ${index + 1}:`, {
+                displayValue: $display.val(),
+                hiddenValue: $hidden.val(),
+                hiddenOriginalValue: $hidden.data('original-value'),
+                selectedOption: $selector.find('option:selected').text(),
+                selectedPrice: $selector.find('option:selected').data('price')
+            });
+        });
+
+        console.log('Unit/case products:');
+        $('.quantity-unit-case-wrapper').each(function(index) {
+            var $wrapper = $(this);
+            var $display = $wrapper.find('.quantity-display-input');
+            var $hidden = $wrapper.find('.actual-quantity-input');
+            var $selector = $wrapper.find('.unit-case-selector');
+            var caseSize = $wrapper.data('case-size');
+
+            console.log(`Unit/case product ${index + 1}:`, {
+                displayValue: $display.val(),
+                hiddenValue: $hidden.val(),
+                hiddenOriginalValue: $hidden.data('original-value'),
+                unitType: $selector.val(),
+                caseSize: caseSize
+            });
+        });
+        console.log('=== End Debug Info ===');
+    };
+
+    // Save order item quantity changes
+    function saveOrderItemQuantity($field, newQuantity) {
+        console.log('OrderProductsTable: saveOrderItemQuantity called with value:', newQuantity, 'field type:', $field.attr('class'));
+
+        // Ensure quantity is a valid number
+        var quantity = parseFloat(newQuantity);
+        if (isNaN(quantity) || quantity <= 0) {
+            console.log('OrderProductsTable: Invalid quantity value:', newQuantity, '- aborting save');
+            return;
+        }
+
+        // For decimal quantities, check if we should round to integer
+        if (quantity !== Math.floor(quantity)) {
+            console.log('OrderProductsTable: Decimal quantity detected:', quantity, '- rounding to:', Math.round(quantity));
+            quantity = Math.round(quantity);
+        }
+
+        // Get order item ID from the field's name attribute (e.g., Items[0].Quantity)
+        var fieldName = $field.attr('name') || '';
+        var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
+
+        if (!orderItemIndexMatch) {
+            console.log('OrderProductsTable: Could not determine order item from field name:', fieldName);
+            return;
+        }
+
+        var orderItemIndex = parseInt(orderItemIndexMatch[1]);
+
+        // Find the order ID from the closest parent container with data-order-id
+        var $container = $field.closest('[data-order-id]');
+        if ($container.length === 0) {
+            console.log('OrderProductsTable: Could not find order ID container');
+            return;
+        }
+        var orderId = $container.data('order-id');
+
+        // Get the order item ID from hidden input or data attribute
+        var $hiddenIdInput = $field.closest('tr').find('input[name*=".Id"]');
+        var orderItemId = $hiddenIdInput.val();
+
+        if (!orderItemId) {
+            console.log('OrderProductsTable: Could not find order item ID - searching for alternatives');
+
+            // Try alternative methods to find order item ID
+            var $row = $field.closest('tr');
+            var $wrapper = $row.find('.weight-attribute-wrapper, .quantity-unit-case-wrapper');
+            if ($wrapper.length) {
+                orderItemId = $wrapper.data('item-id');
+                console.log('OrderProductsTable: Found order item ID from wrapper:', orderItemId);
+            }
+
+            if (!orderItemId) {
+                console.log('OrderProductsTable: Still could not find order item ID - aborting save');
+                return;
+            }
+        }
+
+        console.log('OrderProductsTable: Saving quantity - OrderId:', orderId, 'OrderItemId:', orderItemId, 'NewQuantity:', quantity, 'FieldName:', fieldName);
+
+        // Show saving indicator
+        var $saveStatus = $('#save-status-' + orderItemId);
+        if ($saveStatus.length === 0) {
+            // Create save status indicator if it doesn't exist
+            $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItemId + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+            $field.closest('td').append($saveStatus);
+        }
+        $saveStatus.show();
+        $field.prop('disabled', true);
+
+        $.ajax({
+            url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                orderItemId: orderItemId,
+                fieldType: 'quantity',
+                value: newQuantity,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                console.log('OrderProductsTable: Quantity save response:', result);
+                $field.prop('disabled', false);
+
+                if (result.success) {
+                    console.log('OrderProductsTable: Quantity save successful for value:', quantity);
+
+                    // Update original value to prevent re-saving - use the rounded quantity value
+                    $field.data('original-value', quantity.toString());
+                    $field.attr('value', quantity.toString());
+
+                    // Show success indicator briefly
+                    $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 2000);
+
+                    // For weight/unit-case products, also update the display input original values and clear saving flags
+                    var $row = $field.closest('tr');
+                    var $weightInput = $row.find('.weight-quantity-input');
+                    var $unitCaseInput = $row.find('.quantity-display-input');
+
+                    if ($weightInput.length) {
+                        $weightInput.data('original-value', $weightInput.val());
+                        $weightInput.data('saving', false);
+                        console.log('OrderProductsTable: Updated weight display input original-value and cleared saving flag:', $weightInput.val());
+                    }
+                    if ($unitCaseInput.length) {
+                        $unitCaseInput.data('original-value', $unitCaseInput.val());
+                        $unitCaseInput.data('saving', false);
+                        console.log('OrderProductsTable: Updated unit/case display input original-value and cleared saving flag:', $unitCaseInput.val());
+                    }
+
+                    // Real-time calculations already provide immediate visual feedback
+                    console.log('OrderProductsTable: Quantity save completed - relying on real-time calculations for UI updates');
+                } else {
+                    console.log('OrderProductsTable: Quantity save failed:', result.message);
+                    // Show error and revert value
+                    var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                    $field.val(originalValue);
+
+                    $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 5000);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('OrderProductsTable: Quantity save network error:', status, error, xhr.responseText);
+                $field.prop('disabled', false);
+
+                // Show error and revert value
+                var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                $field.val(originalValue);
+
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        });
+    }
+
+    // Save order item price changes
+    function saveOrderItemPrice($field, newPrice) {
+        console.log('OrderProductsTable: saveOrderItemPrice called with value:', newPrice);
+
+        // Get order item ID from the field's name attribute
+        var fieldName = $field.attr('name') || '';
+        var orderItemIndexMatch = fieldName.match(/Items\[(\d+)\]/);
+
+        if (!orderItemIndexMatch) {
+            console.log('OrderProductsTable: Could not determine order item from field name:', fieldName);
+            return;
+        }
+
+        var orderItemIndex = parseInt(orderItemIndexMatch[1]);
+
+        // Find the order ID from the closest parent container with data-order-id
+        var $container = $field.closest('[data-order-id]');
+        if ($container.length === 0) {
+            console.log('OrderProductsTable: Could not find order ID container');
+            return;
+        }
+        var orderId = $container.data('order-id');
+
+        // Get the order item ID from hidden input
+        var $hiddenIdInput = $field.closest('tr').find('input[name*=".Id"]');
+        var orderItemId = $hiddenIdInput.val();
+
+        if (!orderItemId) {
+            console.log('OrderProductsTable: Could not find order item ID');
+            return;
+        }
+
+        console.log('OrderProductsTable: Saving price - OrderId:', orderId, 'OrderItemId:', orderItemId, 'NewPrice:', newPrice);
+
+        // Show saving indicator
+        var $saveStatus = $('#save-status-' + orderItemId);
+        if ($saveStatus.length === 0) {
+            $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItemId + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+            $field.closest('td').append($saveStatus);
+        }
+        $saveStatus.show();
+        $field.prop('disabled', true);
+
+        $.ajax({
+            url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                orderItemId: orderItemId,
+                fieldType: 'price',
+                value: newPrice,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                console.log('OrderProductsTable: Price save response:', result);
+                $field.prop('disabled', false);
+
+                if (result.success) {
+                    // Update original value
+                    $field.data('original-value', newPrice);
+                    $field.attr('value', newPrice);
+
+                    // Show success indicator
+                    $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 2000);
+
+                    // Real-time calculations already provide immediate visual feedback
+                    console.log('OrderProductsTable: Price save completed - relying on real-time calculations for UI updates');
+                } else {
+                    console.log('OrderProductsTable: Price save failed:', result.message);
+                    // Show error and revert
+                    var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                    $field.val(originalValue);
+
+                    $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 5000);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('OrderProductsTable: Price save network error:', status, error, xhr.responseText);
+                $field.prop('disabled', false);
+
+                var originalValue = $field.data('original-value') || $field.attr('value') || '';
+                $field.val(originalValue);
+
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        });
+    }
+
+    // Real-time calculation function to update totals immediately
+    function updateLineTotal($row) {
+        var $priceInput = $row.find('[name*="UnitPriceExclTaxValue"]');
+        var $subtotalDisplay = $row.find('.subtotal-display');
+
+        if ($priceInput.length && $subtotalDisplay.length) {
+            var quantity = 0;
+            var unitPrice = parseFloat($priceInput.val()) || 0;
+
+            // Determine quantity based on product type
+            // 1. Check for weight-based products
+            var $weightWrapper = $row.find('.weight-attribute-wrapper');
+            if ($weightWrapper.length) {
+                // Use the actual hidden quantity for weight-based products
+                var $hiddenInput = $weightWrapper.find('.actual-quantity-input');
+                quantity = parseFloat($hiddenInput.val()) || 0;
+                console.log('OrderProductsTable: Using weight-based quantity for calculation:', quantity);
+            }
+            // 2. Check for unit/case products
+            else {
+                var $unitCaseWrapper = $row.find('.quantity-unit-case-wrapper');
+                if ($unitCaseWrapper.length) {
+                    // Use the actual hidden quantity for unit/case products
+                    var $hiddenInput = $unitCaseWrapper.find('.actual-quantity-input');
+                    quantity = parseFloat($hiddenInput.val()) || 0;
+                    console.log('OrderProductsTable: Using unit/case quantity for calculation:', quantity);
+                }
+                // 3. Standard products
+                else {
+                    var $quantityInput = $row.find('[name*="Quantity"]:not([type="hidden"])').first();
+                    quantity = parseFloat($quantityInput.val()) || 0;
+                    console.log('OrderProductsTable: Using standard quantity for calculation:', quantity);
+                }
+            }
+
+            var newTotal = quantity * unitPrice;
+            console.log('OrderProductsTable: Calculated line total:', newTotal, '(qty:', quantity, '× price:', unitPrice, ')');
+
+            // Format the total (you may want to add currency formatting here)
+            $subtotalDisplay.text(newTotal.toFixed(2));
+
+            // Optional: Add visual indication of change
+            $subtotalDisplay.addClass('text-primary font-weight-bold');
+            setTimeout(function() {
+                $subtotalDisplay.removeClass('text-primary font-weight-bold');
+            }, 1000);
+        }
+    }
+
+    // Specific handler for hidden actual-quantity-input fields (weight-based and unit/case products)
+    $(document).on('blur change', '.actual-quantity-input', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || $field.attr('value') || '';
+        var fieldName = $field.attr('name') || '';
+
+        console.log('OrderProductsTable: Hidden quantity input changed - Name:', fieldName, 'Current:', currentValue, 'Original:', originalValue, 'Type:', typeof currentValue, 'OrigType:', typeof originalValue);
+
+        // Normalize values for comparison (handle string vs number issues)
+        var currentNum = parseFloat(currentValue) || 0;
+        var originalNum = parseFloat(originalValue) || 0;
+
+        // Only save if value has actually changed (use numeric comparison)
+        if (Math.abs(currentNum - originalNum) > 0.001 && currentNum > 0) {
+            console.log('OrderProductsTable: Hidden quantity input has changed, saving:', currentNum, '(was:', originalNum, ')');
+
+            var $row = $field.closest('tr');
+
+            // Clear any saving flags on related display inputs
+            var $weightInput = $row.find('.weight-quantity-input');
+            var $unitCaseInput = $row.find('.quantity-display-input');
+            if ($weightInput.length) {
+                $weightInput.data('saving', false);
+                console.log('OrderProductsTable: Cleared weight input saving flag');
+            }
+            if ($unitCaseInput.length) {
+                $unitCaseInput.data('saving', false);
+                console.log('OrderProductsTable: Cleared unit/case input saving flag');
+            }
+
+            // Update real-time calculation immediately
+            updateLineTotal($row);
+
+            // Save the quantity change
+            console.log('OrderProductsTable: Calling saveOrderItemQuantity for hidden input with value:', currentNum);
+            saveOrderItemQuantity($field, currentNum);
+        } else if (Math.abs(currentNum - originalNum) <= 0.001) {
+            console.log('OrderProductsTable: No significant change detected for hidden quantity - Original:', originalNum, 'Current:', currentNum);
+        } else if (currentNum <= 0) {
+            console.log('OrderProductsTable: Invalid quantity value for hidden input:', currentNum, '- not saving');
+        }
+    });
+
+    // Unified auto-save handler for standard inline-edit-field elements (excludes special input types)
+    $(document).on('blur change', '.inline-edit-field:not(.actual-quantity-input):not(.weight-quantity-input):not(.quantity-display-input):not(.weight-attribute-selector)', function() {
+        var $field = $(this);
+        var currentValue = $field.val();
+        var originalValue = $field.data('original-value') || $field.attr('value') || '';
+        var fieldName = $field.attr('name') || '';
+
+        console.log('OrderProductsTable: Standard field changed - Name:', fieldName, 'Current:', currentValue, 'Original:', originalValue);
+
+        // Only save if value has changed
+        if (currentValue !== originalValue && currentValue !== '') {
+            var $row = $field.closest('tr');
+
+            // Update real-time calculation immediately
+            updateLineTotal($row);
+
+            // Determine field type and handle accordingly
+            if (fieldName.includes('Quantity')) {
+                console.log('OrderProductsTable: Saving standard quantity change:', currentValue);
+                saveOrderItemQuantity($field, currentValue);
+            } else if (fieldName.includes('UnitPriceExclTaxValue')) {
+                console.log('OrderProductsTable: Saving price change:', currentValue);
+                saveOrderItemPrice($field, currentValue);
+            } else {
+                console.log('OrderProductsTable: No handler found for field:', fieldName, 'Classes:', $field.attr('class'));
+            }
+        } else if (currentValue === originalValue) {
+            console.log('OrderProductsTable: No change detected for field:', fieldName);
+        } else if (currentValue === '') {
+            console.log('OrderProductsTable: Empty value for field:', fieldName, '- not saving');
+        }
+    });
+
+    // Real-time calculation on input (immediate feedback while typing)
+    $(document).on('input', '.inline-edit-field', function() {
+        var $field = $(this);
+        var $row = $field.closest('tr');
+
+        // Only update calculations for quantity and price fields
+        if ($field.attr('name')?.includes('Quantity') || $field.attr('name')?.includes('UnitPriceExclTaxValue')) {
+            updateLineTotal($row);
+        }
+    });
+
+    // Weight attribute selector handler
+    $(document).on('change', '.weight-attribute-selector', function() {
+        var $selector = $(this);
+        var selectedOption = $selector.find('option:selected');
+        var combinationId = selectedOption.val();
+        var newPrice = selectedOption.data('price');
+        var orderItemId = $selector.data('item-id');
+        var productId = $selector.data('product-id');
+        var weightName = selectedOption.text();
+        var $row = $selector.closest('tr');
+
+        // Get current quantity without conversion
+        var $wrapper = $selector.closest('.weight-attribute-wrapper');
+        var $quantityInput = $wrapper.find('.weight-quantity-input');
+        var currentDisplayQty = parseFloat($quantityInput.val()) || 1;
+
+        // Update info text to show current quantity with new unit name
+        var $infoSpan = $wrapper.find('.weight-quantity-info');
+        if ($infoSpan.length > 0) {
+            var pluralSuffix = (currentDisplayQty !== 1) ? 's' : '';
+            $infoSpan.text(currentDisplayQty + ' ' + weightName + pluralSuffix);
+        }
+
+        // Update price field immediately for real-time feedback
+        if (newPrice && newPrice > 0) {
+            var $priceInput = $row.find('[name*="UnitPriceExclTaxValue"]').first();
+            if ($priceInput.length) {
+                var oldPrice = $priceInput.val();
+                $priceInput.val(newPrice);
+
+                // Update the price field's original-value to the NEW price (weight attribute change is complete)
+                $priceInput.data('original-value', newPrice);
+                $priceInput.attr('value', newPrice);
+                console.log('OrderProductsTable: Updated weight-based price from', oldPrice, 'to', newPrice);
+
+                // Update real-time calculation with new price
+                updateLineTotal($row);
+
+                // Note: Price auto-save is not needed here since weight attribute save handles both variant and price update
+                console.log('OrderProductsTable: Weight attribute price update completed - no additional auto-save needed (Field:', $priceInput.attr('name'), 'Old:', oldPrice, 'New:', newPrice, ')');
+            }
+        }
+
+        if (!combinationId || !orderItemId) {
+            console.log('Missing combination ID or order item ID');
+            return;
+        }
+
+        // Find the order ID from the closest parent container with data-order-id
+        var $container = $selector.closest('[data-order-id]');
+        if ($container.length === 0) {
+            console.log('Could not find order ID container');
+            return;
+        }
+        var orderId = $container.data('order-id');
+
+        // Show saving indicator
+        var $saveStatus = $('#save-status-' + orderItemId);
+        if ($saveStatus.length === 0) {
+            $saveStatus = $('<div class="auto-save-status" id="save-status-' + orderItemId + '" style="margin-top: 4px;"><small class="text-muted"><i class="fa fa-spinner fa-spin"></i> Saving...</small></div>');
+            $selector.closest('td').append($saveStatus);
+        }
+        $saveStatus.show();
+        $selector.prop('disabled', true);
+
+        $.ajax({
+            url: '@Url.Action("UpdateOrderItemField", "Order", new { area = Constants.AreaAdmin })',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                orderItemId: orderItemId,
+                fieldType: 'weightAttribute',
+                value: combinationId,
+                additionalData: JSON.stringify({ price: newPrice, productId: productId }),
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(result) {
+                $selector.prop('disabled', false);
+
+                if (result.success) {
+                    // Show success indicator briefly
+                    $saveStatus.html('<small class="text-success"><i class="fa fa-check"></i> Saved</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 2000);
+
+                    // Real-time calculations and local updates already provide immediate visual feedback
+                    console.log('OrderProductsTable: Weight attribute save completed - relying on local updates for UI feedback');
+                } else {
+                    // Show error
+                    $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Error: ' + (result.message || 'Save failed') + '</small>');
+                    setTimeout(function() {
+                        $saveStatus.fadeOut();
+                    }, 5000);
+                }
+            },
+            error: function() {
+                $selector.prop('disabled', false);
+                $saveStatus.html('<small class="text-danger"><i class="fa fa-exclamation-triangle"></i> Network error</small>');
+                setTimeout(function() {
+                    $saveStatus.fadeOut();
+                }, 5000);
+            }
+        });
+    });
+
+    // Weight quantity input handler
+    $(document).on('blur input', '.weight-quantity-input', function(event) {
+        var $displayInput = $(this);
+        var $wrapper = $displayInput.closest('.weight-attribute-wrapper');
+        var $hiddenInput = $wrapper.find('.actual-quantity-input');
+        var $selector = $wrapper.find('.weight-attribute-selector');
+        var $row = $displayInput.closest('tr');
+        var currentValue = parseFloat($displayInput.val()) || 1;
+        var weightName = $selector.find('option:selected').text();
+
+        console.log('OrderProductsTable: Weight quantity input changed - Event:', event.type, 'Value:', currentValue);
+
+        // Update info text with defensive check
+        var $infoSpan = $wrapper.find('.weight-quantity-info');
+        if ($infoSpan.length > 0) {
+            var pluralSuffix = (currentValue !== 1) ? 's' : '';
+            $infoSpan.text(currentValue + ' ' + weightName + pluralSuffix);
+        }
+
+        // Update hidden input value with proper validation
+        if (currentValue > 0) {
+            var oldHiddenValue = $hiddenInput.val();
+            $hiddenInput.val(currentValue);
+            console.log('OrderProductsTable: Updated weight-based hidden input from', oldHiddenValue, 'to', currentValue);
+
+            // Update real-time calculation immediately
+            updateLineTotal($row);
+
+            // Only trigger save on blur, not on input
+            if (event.type === 'blur' || event.type === 'focusout') {
+                console.log('OrderProductsTable: Weight input blur/focusout event - triggering auto-save process');
+
+                // Normalize values for comparison
+                var originalValue = parseFloat($hiddenInput.data('original-value') || $hiddenInput.attr('value') || '0');
+                var currentNum = parseFloat(currentValue);
+
+                console.log('OrderProductsTable: Weight quantity comparison - Original:', originalValue, 'Current:', currentNum, 'Difference:', Math.abs(currentNum - originalValue));
+
+                if (Math.abs(currentNum - originalValue) > 0.001) {
+                    console.log('OrderProductsTable: Weight-based quantity has changed, starting save process...');
+
+                    // Mark as saving to prevent duplicate attempts
+                    $displayInput.data('saving', true);
+
+                    // Try hidden input blur first
+                    console.log('OrderProductsTable: Step 1 - Triggering hidden input blur event');
+                    $hiddenInput.trigger('blur');
+
+                    // Add direct save fallback after a short delay
+                    setTimeout(function() {
+                        console.log('OrderProductsTable: Step 2 - Weight-based direct save fallback check');
+
+                        // Check if we're still in saving state (save may have completed)
+                        if ($displayInput.data('saving')) {
+                            var currentHiddenOriginal = parseFloat($hiddenInput.data('original-value') || '0');
+                            console.log('OrderProductsTable: Fallback check - Hidden original:', currentHiddenOriginal, 'Target:', currentNum);
+
+                            if (Math.abs(currentNum - currentHiddenOriginal) > 0.001) {
+                                console.log('OrderProductsTable: Hidden input save appears to have failed, executing direct save');
+                                saveOrderItemQuantity($hiddenInput, currentNum);
+                            } else {
+                                console.log('OrderProductsTable: Hidden input save appears successful, no fallback needed');
+                                $displayInput.data('saving', false);
+                            }
+                        } else {
+                            console.log('OrderProductsTable: Save already completed, skipping fallback');
+                        }
+                    }, 300); // Increased timeout to allow save to complete
+                } else {
+                    console.log('OrderProductsTable: No significant change detected for weight-based quantity - not saving');
+                }
+            }
+        } else {
+            console.log('OrderProductsTable: Invalid weight quantity value:', currentValue, '- not saving');
+        }
+    });
+
+    // Unit/case quantity input handler for combination attributes
+    $(document).on('blur input', '.quantity-display-input', function(event) {
+        var $displayInput = $(this);
+        var $wrapper = $displayInput.closest('.quantity-unit-case-wrapper');
+        var $hiddenInput = $wrapper.find('.actual-quantity-input');
+        var $selector = $wrapper.find('.unit-case-selector');
+        var $row = $displayInput.closest('tr');
+        var displayValue = parseFloat($displayInput.val()) || 1;
+        var unitType = $selector.val() || 'unit';
+        var caseSize = parseInt($wrapper.data('case-size')) || 1;
+
+        console.log('OrderProductsTable: Unit/case quantity input changed - Event:', event.type, 'Display Value:', displayValue, 'Unit Type:', unitType, 'Case Size:', caseSize);
+
+        // Calculate actual quantity based on unit type
+        var actualQuantity;
+        if (unitType === 'case') {
+            actualQuantity = Math.round(displayValue * caseSize);
+        } else {
+            actualQuantity = Math.round(displayValue);
+        }
+
+        console.log('OrderProductsTable: Calculated actual quantity:', actualQuantity, 'from display:', displayValue, 'type:', unitType);
+
+        // Update hidden input value with converted quantity
+        if (actualQuantity > 0) {
+            var oldHiddenValue = $hiddenInput.val();
+            $hiddenInput.val(actualQuantity);
+            console.log('OrderProductsTable: Updated unit/case hidden input from', oldHiddenValue, 'to', actualQuantity);
+
+            // Update real-time calculation immediately
+            updateLineTotal($row);
+
+            // Only trigger save on blur, not on input
+            if (event.type === 'blur' || event.type === 'focusout') {
+                console.log('OrderProductsTable: Unit/case input blur/focusout event - triggering auto-save process');
+
+                // Normalize values for comparison
+                var originalValue = parseFloat($hiddenInput.data('original-value') || $hiddenInput.attr('value') || '0');
+                var actualNum = parseFloat(actualQuantity);
+
+                console.log('OrderProductsTable: Unit/case quantity comparison - Original:', originalValue, 'Current:', actualNum, 'Difference:', Math.abs(actualNum - originalValue));
+
+                if (Math.abs(actualNum - originalValue) > 0.001) {
+                    console.log('OrderProductsTable: Unit/case quantity has changed, starting save process...');
+
+                    // Mark as saving to prevent duplicate attempts
+                    $displayInput.data('saving', true);
+
+                    // Try hidden input blur first
+                    console.log('OrderProductsTable: Step 1 - Triggering hidden input blur event');
+                    $hiddenInput.trigger('blur');
+
+                    // Add direct save fallback after a short delay
+                    setTimeout(function() {
+                        console.log('OrderProductsTable: Step 2 - Unit/case direct save fallback check');
+
+                        // Check if we're still in saving state (save may have completed)
+                        if ($displayInput.data('saving')) {
+                            var currentHiddenOriginal = parseFloat($hiddenInput.data('original-value') || '0');
+                            console.log('OrderProductsTable: Fallback check - Hidden original:', currentHiddenOriginal, 'Target:', actualNum);
+
+                            if (Math.abs(actualNum - currentHiddenOriginal) > 0.001) {
+                                console.log('OrderProductsTable: Hidden input save appears to have failed, executing direct save');
+                                saveOrderItemQuantity($hiddenInput, actualNum);
+                            } else {
+                                console.log('OrderProductsTable: Hidden input save appears successful, no fallback needed');
+                                $displayInput.data('saving', false);
+                            }
+                        } else {
+                            console.log('OrderProductsTable: Save already completed, skipping fallback');
+                        }
+                    }, 300); // Increased timeout to allow save to complete
+                } else {
+                    console.log('OrderProductsTable: No significant change detected for unit/case quantity - not saving');
+                }
+            }
+        } else {
+            console.log('OrderProductsTable: Invalid unit/case quantity value:', actualQuantity, '- not saving');
+        }
+    });
+
+    // Unit/case selector handler - switches between unit and case modes
+    $(document).on('change', '.unit-case-selector', function() {
+        var $selector = $(this);
+        var $wrapper = $selector.closest('.quantity-unit-case-wrapper');
+        var $displayInput = $wrapper.find('.quantity-display-input');
+        var $hiddenInput = $wrapper.find('.actual-quantity-input');
+        var $row = $selector.closest('tr');
+        var unitType = $selector.val();
+        var caseSize = parseInt($wrapper.data('case-size')) || 1;
+        var currentActualQuantity = parseInt($hiddenInput.val()) || 1;
+
+        console.log('OrderProductsTable: Unit/case selector changed to:', unitType, 'Current actual quantity:', currentActualQuantity, 'Case size:', caseSize);
+
+        // Recalculate display value based on new unit type
+        var newDisplayValue;
+        if (unitType === 'case') {
+            // Convert from units to cases (round down to nearest whole case)
+            newDisplayValue = Math.floor(currentActualQuantity / caseSize);
+            if (newDisplayValue < 1) newDisplayValue = 1; // Minimum 1 case
+        } else {
+            // Show actual units
+            newDisplayValue = currentActualQuantity;
+        }
+
+        console.log('OrderProductsTable: Updated display value to:', newDisplayValue, 'for unit type:', unitType);
+
+        // Update display input
+        $displayInput.val(newDisplayValue);
+
+        // Recalculate actual quantity (this may change if we rounded down for cases)
+        var newActualQuantity;
+        if (unitType === 'case') {
+            newActualQuantity = newDisplayValue * caseSize;
+        } else {
+            newActualQuantity = newDisplayValue;
+        }
+
+        // Update hidden input if quantity changed due to conversion
+        if (newActualQuantity !== currentActualQuantity) {
+            console.log('OrderProductsTable: Unit/case conversion changed actual quantity from', currentActualQuantity, 'to', newActualQuantity);
+            $hiddenInput.val(newActualQuantity);
+
+            // Update real-time calculation
+            updateLineTotal($row);
+
+            // Trigger auto-save for the quantity change
+            var originalValue = $hiddenInput.data('original-value') || $hiddenInput.attr('value') || '';
+            if (String(newActualQuantity) !== String(originalValue)) {
+                console.log('OrderProductsTable: Triggering auto-save due to unit/case conversion');
+                $hiddenInput.trigger('blur');
+            }
+        }
+    });
+
+    // Initialize original values on page load
+    $(document).ready(function() {
+        $('.inline-edit-field').each(function() {
+            var $field = $(this);
+            if (!$field.data('original-value')) {
+                $field.data('original-value', $field.val());
+            }
+        });
+
+        // Special initialization for weight-based and unit/case products
+        $('.weight-attribute-wrapper').each(function() {
+            var $wrapper = $(this);
+            var $hiddenInput = $wrapper.find('.actual-quantity-input');
+            var $displayInput = $wrapper.find('.weight-quantity-input');
+
+            // Ensure hidden input has original-value set
+            if ($hiddenInput.length && !$hiddenInput.data('original-value')) {
+                $hiddenInput.data('original-value', $hiddenInput.val());
+                console.log('OrderProductsTable: Initialized weight-based hidden input original-value:', $hiddenInput.val());
+            }
+
+            // Sync display input with hidden input value
+            if ($displayInput.length && $hiddenInput.length) {
+                $displayInput.val($hiddenInput.val());
+                console.log('OrderProductsTable: Synced weight display input with hidden input:', $hiddenInput.val());
+            }
+        });
+
+        $('.quantity-unit-case-wrapper').each(function() {
+            var $wrapper = $(this);
+            var $hiddenInput = $wrapper.find('.actual-quantity-input');
+            var $displayInput = $wrapper.find('.quantity-display-input');
+            var $selector = $wrapper.find('.unit-case-selector');
+            var caseSize = parseInt($wrapper.data('case-size')) || 1;
+
+            // Ensure hidden input has original-value set
+            if ($hiddenInput.length && !$hiddenInput.data('original-value')) {
+                $hiddenInput.data('original-value', $hiddenInput.val());
+                console.log('OrderProductsTable: Initialized unit/case hidden input original-value:', $hiddenInput.val());
+            }
+
+            // Initialize display input and selector based on hidden input value
+            if ($displayInput.length && $hiddenInput.length) {
+                var actualQuantity = parseInt($hiddenInput.val()) || 1;
+
+                // Determine if this should be displayed as cases or units
+                if (actualQuantity >= caseSize && actualQuantity % caseSize === 0) {
+                    // Display as cases
+                    $displayInput.val(actualQuantity / caseSize);
+                    $selector.val('case');
+                    console.log('OrderProductsTable: Initialized as case mode - Display:', actualQuantity / caseSize, 'Cases, Actual:', actualQuantity);
+                } else {
+                    // Display as units
+                    $displayInput.val(actualQuantity);
+                    $selector.val('unit');
+                    console.log('OrderProductsTable: Initialized as unit mode - Display:', actualQuantity, 'Units');
+                }
+            }
+        });
+    });
+})();
+
+// Delete order item function
+function deleteOrderItem(orderItemId, orderId) {
+    if (!confirm('Are you sure you want to delete this order item?')) {
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("DeleteOrderItemInline", "Order", new { area = Constants.AreaAdmin })',
+        type: 'POST',
+        data: {
+            orderId: orderId,
+            orderItemId: orderItemId,
+            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                // Reload page to refresh the product list and totals
+                if (typeof window.refreshCurrentProductsGrid === 'function') {
+                    window.refreshCurrentProductsGrid();
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                alert('Error deleting order item: ' + (response.message || 'Unknown error'));
+            }
+        },
+        error: function() {
+            alert('Error occurred while deleting order item.');
+        }
+    });
+}
+</script>

@@ -19,7 +19,7 @@ public class GetShippingOptionRequest
         /// </summary>
         /// <param name="sci">Shopping cart item</param>
         /// <param name="qty">Override "Quantity" property of shopping cart item</param>
-        public PackageItem(ShoppingCartItem sci, int? qty = null)
+        public PackageItem(ShoppingCartItem sci, double? qty = null)
         {
             ShoppingCartItem = sci;
             OverriddenQuantity = qty;
@@ -33,9 +33,9 @@ public class GetShippingOptionRequest
         /// <summary>
         ///     If specified, override "Quantity" property of "ShoppingCartItem
         /// </summary>
-        public int? OverriddenQuantity { get; set; }
+        public double? OverriddenQuantity { get; set; }
 
-        public int GetQuantity()
+        public double GetQuantity()
         {
             return OverriddenQuantity ?? ShoppingCartItem.Quantity;
         }

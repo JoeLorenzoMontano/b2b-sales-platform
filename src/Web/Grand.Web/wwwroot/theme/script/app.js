@@ -34,7 +34,7 @@ var vm = new Vue({
         if (localStorage.fluid == "fluid") this.fluid = "fluid";
         if (localStorage.fluid == "") this.fluid = "false";
         if (localStorage.darkMode == "true") this.darkMode = true;
-        this.wishindicator = parseInt(this.$refs.wishlistQty.innerText);
+        this.wishindicator = this.$refs.wishlistQty ? parseInt(this.$refs.wishlistQty.innerText) : 0;
         this.updateCompareProductsQty();
         this.backToTop();
     },

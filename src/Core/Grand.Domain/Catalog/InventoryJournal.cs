@@ -11,8 +11,8 @@ public class InventoryJournal : BaseEntity
     public string ProductId { get; set; }
     public IList<CustomAttribute> Attributes { get; set; } = new List<CustomAttribute>();
     public string WarehouseId { get; set; }
-    public int InQty { get; set; }
-    public int OutQty { get; set; }
+    public double InQty { get; set; }
+    public double OutQty { get; set; }
     public string Comments { get; set; }
     public string Reference { get; set; }
 }

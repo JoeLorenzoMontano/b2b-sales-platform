@@ -1,0 +1,459 @@
+/home/jolomoadmin/Internal/development/grandnode2/customer_extractor/address_formatter/AddressFormatter.csproj : warning NU1903: Package 'System.Text.Json' 8.0.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-8g4q-xg66-9fp4
+/home/jolomoadmin/Internal/development/grandnode2/customer_extractor/address_formatter/AddressFormatter.csproj : warning NU1903: Package 'System.Text.Json' 8.0.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-hh2w-p6rv-4g7w
+/home/jolomoadmin/Internal/development/grandnode2/customer_extractor/address_formatter/AddressFormatter.csproj : warning NU1903: Package 'System.Text.Json' 8.0.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-8g4q-xg66-9fp4
+/home/jolomoadmin/Internal/development/grandnode2/customer_extractor/address_formatter/AddressFormatter.csproj : warning NU1903: Package 'System.Text.Json' 8.0.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-hh2w-p6rv-4g7w
+CUSTOMER_NAME	Address	City	State	Zip
+JOLOMO LLC	21 West 52nd Street	New York	OR	10021
+JoLoMo LLC	629 SW Brockwood ave	Mcminnville	OR	97128
+Love Buzz	5425 NE GLISAN ST PORTLAND, OR 97213	portland	OR	97213
+Love Buzz	18032 NE AIRPORT WAY	Portland	OR	97230
+Love Buzz	1915 NE Saratoga St	Portland	OR	97211
+JoLoMo LLC	629 SW Brockwood ave	Mcminnville	OR	97128
+JoLoMo LLC	123 W Street	Salem	OR	123456
+JoLoMo LLC	124 ST	Salem	OR	987987498
+Self made	Bbbbv	Ttttg	OR	97526
+JoLoMo LLC	629 SW Brockwood ave	Mcminnville	OR	97128
+Self Made Farm	2409 N Kerby ave	portland	OR	97227
+Self Made Farm	18032 NE AIRPORT WAY	Portland	OR	97230
+JoLoMo Software	435 SE Washington St	McMinnville	OR	97128
+Substance	1814 NE DIVISION ST.	BEND	OR	97701
+Substance	629 SW Brockwood ave	Mcminnville	OR	97128
+Substance	20365 Empire Ave	bend	OR	97703
+Substance	61406 S hwy 97	Bend	OR	97702
+Substance	1749 E MCANDREWS RD	MEDFORD 	OR	97504-5508
+Substance	3425 CRATER LAKE HWY	Medford	OR	97504-9292
+Substance	1526 SISKIYOU BLVD	Ashland	OR	 97520-2406
+Yachats Cannabis Company (DF)	430 N HWY 101	YACHATS	OR	97498
+The Green Front Glisan	6834 NE GLISAN ST.	PORTLAND	OR	97213
+Weedbucks Rogue River (DF)	204 MADRONE ST.	ROGUE RIVER	OR	97537
+WeedAgain (Eugene)(DF)	86784 FRANKLIN BLVD UNIT A	EUGENE	OR	97405
+WeedAgain (Eugene)(DF)	2390 Fairgrounds Rd NE	Salem	OR	97301
+WeedAgain (Eugene)(DF)	2410 MISSION STREET SE SUITE 010	SALEM	OR	97302
+WeedAgain (Eugene)(DF)	2674 Broadway Ave	North Bend	OR	97459
+5th LMNT	385 SW Columbia St.	BEND	OR	97702
+kaleafa	11821 NE GLISAN ST	PORTLAND	OR	97230
+Uplift Botanicals	5421 NE 33RD AVE	PORTLAND	OR	97211
+Eden	128 SE 12TH AVE.	PORTLAND	OR	97214
+Top Shelf Wellness Center - Medford (DF)	1925 ELM ST	MEDFORD	OR	97501
+Tsunami Marijuana LLC (DF)	36412 HWY 26	SEASIDE	OR	97138
+Top Shelf Medicine (Newport) (DF)	657 SW COAST HWY	NEWPORT	OR	97365
+Truth Dispensary	1735 LANCASTER DR. NE	SALEM	OR	97305
+Trichome Farms	21920 SW Chapman Road	Sherwood	OR	97140
+Top Shelf Medicine (DF)	815 NE GREENWOOD AVE	BEND	OR	97701
+World Famous Top Shelf Cannabis (Gearhart) (DF)	3521 Highway 101 N	Gearhart	OR	97138
+Greeley Gallery	6512 N GREELEY AVE	PORTLAND	OR	97217
+The Medication Station (DF)	454 SW COAST HIGHWAY	NEWPORT	OR	97365
+The Joint on Market st (DF)	3270 Market st	Salem	OR	97301
+The Joint on Market st (DF)	2350 STATE ST	SALEM	OR	97301
+The Green Remedy	12436 SE POWELL BLVD	PORTLAND	OR	97236
+The Grass Hut II	4085 CHERRY AVENUE NE	KEIZER	OR	97303
+The Canna Shoppe	6316 NE HALSEY ST	PORTLAND	OR	97213
+The Holistic Choice (DF)	1045 COMMERCIAL ST SE	SALEM	OR	97302
+Tangent Farmacy	32990 HWY 99E	TANGENT	OR	97389
+Good Life (DF)	193 MARINE DRIVE	ASTORIA	OR	97103
+The Bud House	115 NE 2ND ST	ONTARIO	OR	97914
+The Bud House	115 NE 2nd St	Ontario	OR	97914
+Cannabis Nation Sunriver	56789 LUNAR DRIVE	BEND	OR	97707
+Sumpter Nugget (DF)	"160 N. MILL STREET	 SUITE #102"	OR	OR
+American Cannabis Company (DF)	2131 W MAIN SUITE A	MEDFORD	OR	97501
+Highway 420 (DF)	1803 S ROOSEVELT DR SUITE C	SEASIDE	OR	97138
+BudMart (DF)	97900 SHOPPING CENTER AVE. SUITE #37	Brookings	OR	97415
+Portland Pot shop	4730 N LOMBARD ST	PORTLAND	OR	97203
+Southern Oregon Cannabis Connection - Medford (DF)	603 S Riverside Ave	Medford	OR	97501
+Southern Oregon Cannabis Connection (DF)	1950 NE 7TH STREET	GRANTS PASS	OR	97526
+Premium Choice Marijuana	1770 HWY 126	FLORENCE	OR	97439
+Silver Creek Dispensary	307 E. MAIN STREET	SILVERTON	OR	97381
+Gras Cannabis	621 SE 7TH AVE SUITE A	PORTLAND	OR	97214
+cannabis nation	550 S ROOSEVELT DR	SEASIDE	OR	97138
+Northwest compassion Medical Center	1970 NE 238TH DRIVE SUITE A & B	WOOD VILLAGE	OR	97060
+SR Collective (DF)	26033 Salmon River Hwy	Willamina	OR	97396
+Hippy Trip (DF)	249 S US-101	DEPOE BAY	OR	97341
+The Bake Shop	3125B PORTLAND RD NE	SALEM	OR	97301
+Ground Up (DF)	429 S CENTRAL AVENUE	MEDFORD	OR	97501
+Cannabiz Experience (DF)	333 North Riverside Ave	Medford	OR	97501
+Shango Premium Cannabis	8056 SE HAROLD ST	PORTLAND	OR	97206
+Rocky Mount Dispensary (DF)	743 Main Street	John Day	OR	97845
+Ripped City Greenz	15591 SE McLoughlin Blvd	MILWAUKIE	OR	97267
+Truly Pure	1006 SE GRAND AVE SUITE 104	PORTLAND	OR	97214
+Jenny's Dispensary	932 NE 3RD ST	BEND	OR	97701
+Electric Lettuce Alberta	1313 NE ALBERTA ST	PORTLAND	OR	97211
+Electric Lettuce Alberta	719 MAIN ST	OREGON CITY	OR	97045
+Homegrown Oregon	2820 LIBERTY STREET NE	SALEM	OR	97301
+Power Plant Salem	4340 COMMERCIAL ST NE SUITE 170	SALEM	OR	97302
+Portland Canna Connection	1515 SE 46TH AVE	PORTLAND	OR	97215
+Phresh Start Eugene (DF)	1055 BAILEY HILL RD STE. C & G	EUGENE	OR	97402
+Phresh Start Eugene (DF)	1623 21ST ST STE B	SPRINGFIELD	OR	97477
+Papa's Dispensary (DF)	214 N. REDWOOD HWY. SUITE E	CAVE JUNCTION	OR	97523
+Pakalolo	1528 SE HOLGATE BLVD	PORTLAND	OR	97202
+Pacific Green	710 NE KILLINGSWORTH STREET	PORTLAND	OR	97211
+Oregon's Green Rush (DF)	2644 RIVER ROAD #5	EUGENE	OR	97404
+Oregon Farmacy (DF)	1 WEST 6TH STREET SUITE 104	MEDFORD	OR	97501
+Oregon Euphorics	70 SW CENTURY DR. SUITE #170	BEND	OR	97702
+Cannabis Nation Oregon City	1128 MAIN ST	OREGON CITY	OR	97045
+Canna Bros. (DF)	1210 W MAIN ST	SHERIDAN	OR	97378
+Canna Bros. (DF)	2316 E PORTLAND RD SUITE C-2	NEWBERG	OR	97132
+Canna Bros. (DF)	2440 MARTIN DR	STAYTON	OR	97383
+Oregon Cannabis Co.	1977 SANTIAM HWY.	ALBANY	OR	97322
+Ocean Grown Cannabis Company (DF)	1597 E VILAS ROAD EAST	MEDFORD	OR	97502
+Oasis Cannabis (DF)	1111 S. Holladay Drive	Seaside	OR	97138
+Discovery Cannabis (DF)	250 SW HWY 101	WALDPORT	OR	97394
+Green Gratitude	10322 SE HOLGATE BLVD.	PORTLAND	OR	97266
+Bigfoot Bud Company (DF)	109 WEST MAIN STREET	MOLALLA	OR	97038
+Next Level Wellness (DF)	2837 WILLAMETTE STREET SUITE A	EUGENE	OR	97405
+MOOD (DF)	40 RIVER LOOP 2 BUILDING 1 SUITE B	EUGENE	OR	97404
+Modern Forest	634 S. MAIN STREET	LEBANON	OR	97355
+Floyds Fine Cannabis on Columbia (CT)	1602 N Columbia Blvd	PORTLAND	OR	97217
+Medigreen Collective	729 SE POWELL BLVD	PORTLAND	OR	97202
+Medicine Tree LLC	2046 OR HWY 99 STE A	MCMINNVILLE	OR	97128
+Floyd's Fine Cannabis on Broadway	801 NE BROADWAY	PORTLAND	OR	97232
+Tamerans Dispensary (DF)	3388 MERLIN RD.	GRANTS PASS	OR	97526
+satchel	6900 N. INTERSTATE AVENUE	PORTLAND	OR	97217
+Local Herb Collective	15948 SE DIVISION	PORTLAND	OR	97236
+Lincoln City Collective (DF)	1266 SW 50TH ST	LINCOLN CITY	OR	97367
+ReLeaf Health	3213 NE MARTIN LUTHER KING JR BLVD	PORTLAND	OR	97212
+Tetra	4011 SE BELMONT ST.	PORTLAND	OR	97214
+Hotbox Farms	P.O. Box 592	Ontario	OR	97914
+Hotbox Farms	325 NE goodfellow st	Ontario	OR	97914
+Oregons Finest - Pearl	911 NW 14th Ave	Portland	OR	97209
+Kingston Cannabis Company (DF)	2366 Ashland St.	Ashland	OR	97520
+Kingston Cannabis Company (DF)	1544 NEWMARK AVENUE	COOS BAY	OR	97420
+Attis Trading Company (Cully)	4920 NE CULLY BLVD	PORTLAND	OR	97218
+The Dispensary on 52nd	4452 SE 52ND AVE	PORTLAND	OR	97206
+Folium Originals	20930 S Harris Road	Oregon City	OR	97045
+Hashstoria (DF)	"229 W MARINE DR	 #C"	OR	OR
+Oregrown Portland	111 NE 12TH AVENUE SUITE A	PORTLAND	OR	97110
+Knotty Leaves (DF)	769 N MAIN SUITE C	INDEPENDENCE	OR	97351
+GM Dispensary (SP)	12745 SW WALKER RD. STE 100A	BEAVERTON	OR	97005
+Broadway Cannabis Market - Beaverton	9952 SW BEAVERTON HILLSDALE HIGHWAY	BEAVERTON	OR	97005
+Broadway Cannabis Market - Beaverton	219 SW Broadway	Portland	OR	97205
+Zuni Farm Stand (DF)	3540 B Demaray Dr	Grants Pass	OR	97527
+The Lucky Leaf (DF)	208 JERSEY ST	SILVERTON	OR	97381
+Fyre	2650 NE DIVISION ST	BEND	OR	97703
+Portland Best Buds	6313B N. LOMBARD ST	PORTLAND	OR	97203
+Natural Wonders	3831 SE MAIN ST.	PORTLAND	OR	97214
+MOSS CROSSING (DF)	2751 FRIENDLY ST.	EUGENE	OR	97405
+Madrone Cannabis Club	481 APPLEGATE WAY	ASHLAND	OR	97520
+Kind Heart Collective	8217 N DENVER AVE	PORTLAND	OR	97217
+Buzz Box	6611 SE POWELL BLVD	PORTLAND	OR	97206
+Green Health Eugene (DF)	607 HIGHWAY 99 N	EUGENE	OR	97402
+Chalice Farms	"13315 NE AIRPORT WAY	 700A"	OR	OR
+Arcanna	4605 NE FREMONT SUITE 105	PORTLAND	OR	97213
+Cafe Verde (DF)	2455 ROGUE RIVER HIGHWAY	GRANTS PASS	OR	97526
+Hyroot Organics	52410 RIVER PINE RD	LA PINE	OR	97739
+House of Leaves Medford (Nectar)	259 E BARNETT RD #1	MEDFORD	OR	97501
+The Flower Room	817 NW HILL STREET	BEND	OR	97703
+High 5 Cannabis (DF)	86531 COLLEGE VIEW ROAD	EUGENE	OR	97405
+Hierba Buena (DF)	3674 PACIFIC HWY	HUBBARD	OR	97032
+HGR2	7314 3RD ST SE	TURNER	OR	97392
+Hash it out (DF)	1080 w central blvd	Coquille	OR	97423
+TJ's on Powell	7827 SE POWELL BLVD	PORTLAND	OR	97206
+Emerald Triangle (DF)	103 N PACIFIC HWY UNITS B & C	TALENT	OR	97540
+green stop meds	17030 SE MCLOUGHLIN BLVD	PORTLAND	OR	97267
+Grasslands Dispensary (DF)	154 LAWRENCE ST	EUGENE	OR	97401
+Gram Central Station	6430 NE MARTIN LUTHER KING JR BLVD	PORTLAND	OR	97211
+Going Green Grand Ronde (DF)	8675 FORT HILL RD.	WILLAMINA	OR	97396
+A Prime Leaf (DF)	2974 12TH ST SE	SALEM	OR	97302
+FLOWR OF LYFE (DF)	114 WEST BROADWAY	EUGENE	OR	97401
+Eugreen Health Center; Verde (DF)	1000 OBIE STREET SUITE A	EUGENE	OR	97402
+Floyd's Fine Cannabis on Division (CT)	10561 SE Division st	portland	OR	97216
+Emerald City Medicinal (DF)	1474 WEST 6TH AVENUE	EUGENE	OR	97402
+Dub Hub	13122 SE Divison St	Portland	OR	97236
+Dreams Dispensary (DF)	1000 Obie St	Eugene	OR	97402
+Doctor's Orders	3424 NE 82ND AVE	PORTLAND	OR	97220
+Gnome Grown Oregon	5012 NE 28TH AVE	PORTLAND	OR	97211
+Mongoose Cannabis	3123 SE BELMONT ST.	PORTLAND	OR	97214
+The House of Dank LLC (DF)	379 FIR AVE UNITS 6-8	REEDSPORT	OR	97467
+Kings of Canna	1465 NE PRESCOTT STE C	PORTLAND	OR	97211
+Cured Green	3715 N LOMBARD ST STE. B	PORTLAND	OR	97217
+Crush Cannabis	2345 CENTER ST. NE	SALEM	OR	97301
+Coastal High Ways (DF)	"2233 Broadway Ave	 	OR	North Bend
+Club Sockeye (DF)	29970 ELLENSBURG AVE	GOLD BEACH	OR	97444
+The Holistic Coop LLC (DF)	1049 E MAIN ST	COTTAGE GROVE	OR	97424
+Central Organics	780 SW 4TH ST	MADRAS	OR	97741
+Capitol Green Leaf	1890 CAPITOL ST NE	SALEM	OR	97301
+Cannabis On Time (Discount Cannabis)(DF)	1985 W. 7th Ave.	Eugene	OR	97402
+Blooming Deals By Cannabis Nation	15915 NW SCHENDEL AVE #104	BEAVERTON	OR	97006
+Cannabend	3312 N HIGHWAY 97	BEND	OR	97703
+TJ's on 7th (DF)	1985 W 7th Ave	Eugene	OR	97402
+Buds 4 U	10778 HIGHWAY 126	MAPLETON	OR	97453
+Buds 4 U	72217 HWY101	LAKESIDE	OR	97449
+Buds 4 U	1480 Rhododendron Drive	Florence	OR	97439
+Budding Culture	6802 NE BROADWAY ST	PORTLAND	OR	97213
+BUD BROS LLC (DF)	335 SOUTH REDWOOD HIGHWAY	CAVE JUNCTION	OR	97523
+Kaya Shack	1719 SE HAWTHORNE BLVD	PORTLAND	OR	97214
+The Green Planet	25496 S HWY 99 E	AURORA	OR	97002
+The Farmacy LLC (DF)	2911 MARINE DR. SUITE B	ASTORIA	OR	97103
+Crush Cannabis	1026 Commercial St NE	Salem	OR	97301
+RVC West Main (DF)	2060 WEST MAIN ST	MEDFORD	OR	97501
+Mana Extracts	8009 N Kerby Ave	Portland	OR	97217
+BLOOMINATI CANNABIS CORP (DF)	240 SW WASHINGTON AVE	CORVALLIS	OR	97333
+BLOOMINATI CANNABIS CORP (DF)	2420 Pacific Ave	Forest Grove	OR	97116
+Blazen Cannabis (DF)	800 HIGHWAY 20 S	HINES	OR	97738
+Blackbird Crow (DF)	593 JACKSON ST E	MONMOUTH	OR	97361
+Floyds Fine Cannabis on Nicolai	2515 NW NICOLAI	PORTLAND	OR	97210
+Be Wonderful Wellness Center LLC	4565 NE 60TH AVE.	PORTLAND	OR	97218
+Bernie's Universal Dispensaries (DF)	3842 S COAST HWY	SOUTH BEACH	OR	97366
+Belmont Collective	2036 SE BELMONT ST	PORTLAND	OR	97214
+Beatnick's Finest (DF)	126 SW AVERY AVE	CORVALLIS	OR	97333
+Brothers Cannabis	3609 SE DIVISION ST	PORTLAND	OR	97202
+Brothers Cannabis	3609 SE DIVISION ST	Portland	OR	97202
+Mother Earth Medicines (DF)	36 S. RIVERSIDE AVENUE	MEDFORD	OR	97501
+Budlandia	8135 SE WOODWARD ST	PORTLAND	OR	97206
+Green Goddess Remedies	5435 SW TAYLOR'S FERRY RD	PORTLAND	OR	97219
+Floyd's Fine Cannabis on Sandy	5944 NE SANDY BLVD	PORTLAND	OR	97213
+Alternative Remedies	8109 SE FLAVEL	PORTLAND	OR	97206
+Floyd's Fine Cannabis - SE 28th	5217 SE 28TH AVE	PORTLAND	OR	97202
+Albany Alternative Health Solutions	820 PACIFIC BLVD SE B	ALBANY	OR	97321
+The Dime Store Cannabis	8218 SE HOLGATE BLVD.	PORTLAND	OR	97266
+Alternative Solutions	13560 SE POWELL BLVD.	PORTLAND	OR	97236
+Rogue Valley Cannabis - West Main St. (DF)	2060 West Main St	Medford	OR	97501
+West	480 HWY101 SOUTH	ROCKAWAY BEACH	OR	97136
+Weed Land Inc	4027 N INTERSTATE AVE	PORTLAND	OR	97227
+Weed Bucks (DF)	437 S Central Ave	Medford	OR	97501
+Weed Bucks (DF)	330 Galice Rd	Merlin	OR	97532
+vernonia's natural choice (DF)	736 BRIDGE STREET STE 1 PO BOX 385	VERNONIA	OR	97064
+Tokyo South	61230 S HWY 97	BEND	OR	97702
+Tokyo South	923 SE 3RD ST.	BEND	OR	97702
+Tokyo South	542 NW Arizona Ave.	Bend	OR	97701
+Kush Cart	"5100 SE HARNEY DR SUITES 237	 238	OR	PORTLAND
+Weedology	591 EAST IDAHO	ONTARIO	OR	97914
+Paradise Found	10735 NE HALSEY ST	PORTLAND	OR	97220
+Tree House Collective LLC	2419 NE Sandy BLVD	Portland	OR	97232
+Urban Farmacy	420 NE 60TH AVENUE	PORTLAND	OR	97213
+Kaleafa	10920 SW BEAVERTON HILLSDALE HWY.	BEAVERTON	OR	97005
+Mr. Nice Guy Medford (DF)	609 E. JACKSON STREET	MEDFORD	OR	97504
+Truth Dispensary #4	1025 Lancaster Dr SE	Salem	OR	97317
+Truth 2 INC.	2345 Center St NE	Salem	OR	97301
+Sensible Cannabis Company (DF)	3338 N PACIFIC HWY	MEDFORD	OR	97504
+Track Town Collective (DF)	3675 FRANKLIN BLVD	EUGENE	OR	97403
+Top Crop Cannabis Corvalis (DF)	1945 NW 9TH ST	CORVALLIS	OR	97330
+Bahama Buds (DF)	1088 S HEMLOCK ST	CANNON BEACH	OR	97110
+THUR'S SMOKE SHOP LLC	502 SE 16TH ST	PENDLETON	OR	97801
+The Weeds	S Santiam Hwy	Lebanon	OR	97355
+Hotbox Farms	325 NE GOODFELLOW STREET	ONTARIO	OR	97914
+420 Club LLC (DF)	2566 NE STEPHENS ST	ROSEBURG	OR	97470
+T.E.R.P Collective INC (DF)	4355 NE HWY 101 SUITE A	LINCOLN CITY	OR	97367
+High Winds	1817 CASCADE AVE	HOOD RIVER	OR	97031
+Pole Enterprises	56821 Columbia River Hwy	WARREN	OR	97053
+Sweet Relief Gearhart (DF)	4210 HWY 101 N.	GEARHART	OR	97138
+Sweet Relief Gearhart (DF)	1444 COMMERCIAL ST.	ASTORIA	OR	97103
+Sweet Relief Gearhart (DF)	52515 COLUMBIA RIVER HWY	SCAPPOOSE	OR	97056
+Sweet Relief Gearhart (DF)	1809 COLUMBIA BLVD	ST. HELENS	OR	97051
+Sweet Relief Gearhart (DF)	1906 1ST ST.	TILLAMOOK	OR	97141
+Stinkin BudZ LLC	1040 Commercial St SE	Salem	OR	97302
+Stokes Cannabis Dispensary	4570 River Rd Keizer OR 97303	Keizer	OR	97303
+Smoke On The Mountain LLC	23860 E ARRAH WANNA BLVD	WELCHES	OR	97067
+POPS - Port Orford Dispensary (DF)	264 Sixth St. Unit A	Port Orford	OR	97465
+The Herb Center	2205 NE DIVISION STREET SUITE 150	BEND	OR	97703
+S & S Emporium (DF)	294 CENTRAL	COOS BAY	OR	97420
+Hashstoria Springfield	1840 MAIN ST	SPRINGFIELD	OR	97477
+Speedy Jane's	733 SW DENNIS AVE	HILLSBORO	OR	97123
+Spacebuds The Dispensary (DF)	741 LINCOLN STREET	EUGENE	OR	97401
+South Coast Dispensaries and More (DF)	1025 CHETCO AVE #4	BROOKINGS	OR	97415
+Hall of Strains	2595 STATE ST	SALEM	OR	97301
+Smiles (DF)	655 NE CHESTNUT AVE	ROSEBURG	OR	97470
+Deanz Greenz	14154 SE DIVISION ST	PORTLAND	OR	97236
+Sensimilla	3210 N LOMBARD ST	PORTLAND	OR	97217
+Seaweed Reef LLC	5417 N Coast hwy	Newport	OR	97365
+Budz Cannabis Superstore	3600 MERLIN RD	GRANTS PASS	OR	97526
+CannaVida	325 NE Franklin Ave	Bend	OR	97701
+Bahama Buds (DF)	1415 N BAYSHORE DR	COOS BAY	OR	97420
+Breeze Botanicals Ashland (DF)	1526 SISKIYOU BLVD	ASHLAND	OR	97539
+Green Room	2521 NW 9TH ST	CORVALLIS	OR	97330
+HAPPY LEAF	1301 NE BROADWAY ST	PORTLAND	OR	97232
+Diem Cannabis - Commercial St	1040 COMMERCIAL STREET SE	SALEM	OR	97302
+M Thrive Organics LLC	3226 WEST 2ND STREET	THE DALLES	OR	97058
+Rogue Valley Cannabis - Central Point (DF)	6388 CRATER LAKE	CENTRAL POINT	OR	97502
+Forward Cannabis (DF)	1580 NE 7TH STREET SUITE A	GRANTS PASS	OR	97526
+Slim's | Portland	4936 N Williams Ave	Portland	OR	97217
+Reefer Madness	1675 FAIRGROUNDS RD. NE	SALEM	OR	97301
+Oregon Bud Company - Beaverton	3270 SW CEDAR HILLS BLVD #104	BEAVERTON	OR	97005
+Oregon Bud Company - Beaverton	5515 SE 122 AVE	PORTLAND	OR	97236
+Oregon Bud Company - Beaverton	837 SW BAY BLVD	NEWPORT	OR	97365
+Rare Earth Dispensary LLC (DF)	2880 ELMIRA RD SUITE B	EUGENE	OR	97402
+The New Amsterdam (DF)	15 N F ST	LAKEVIEW	OR	97630
+Top Shelf Wellness Center (DF)	205 N PHOENIX RD SUITE #C	PHOENIX	OR	97535
+Top Shelf Wellness Center (DF)	7162 CRATER LAKE HWY	WHITE CITY	OR	97503
+Pur Roots	5816 NE PORTLAND HWY	PORTLAND	OR	97218
+The Green Planet Beaverton	10100 SW CANYON RD	BEAVERTON	OR	97005
+LUCKY LION	7817 NE Halsey St	PORTLAND	OR	97213
+Cannabis & Glass (DF-SR)	182 EAST LANE	ONTARIO	OR	97914
+Puddletown Organics	8201 SE POWELL BLVD SUITE F	PORTLAND	OR	97266
+Power Plant Thurman	2384 NW THURMAN ST	Portland	OR	97210
+Power Plant	10215 SE Foster Rd	Portland	OR	97266
+POPS	264A Sixth ST	Port Orford	OR	97465
+Plus Dispensary	45 NE 122ND AVE	PORTLAND	OR	97220
+Pipe Dreams Dispensary (DF)	"1745 SW HIGHWAY 101 SUITES A	 B & C"	OR	OR
+Zion	340 SE 13TH ST	ONTARIO	OR	97914
+Plane Jane's	10530 NE SIMPSON ST.	PORTLAND	OR	97220
+Papa Buds	4020 SE CESAR E CHAVEZ BLVD	PORTLAND	OR	97202
+Otis Collective (DF)	1257 SALMON RIVER HWY	OTIS	OR	97368
+Emerald City Dispensary (DF)	50414 COLUMBIA RIVER	SCAPPOOSE	OR	97056
+Oregon Coast Dispensary Inc (DF)	861 A. NW BEACH DRIVE	NEWPORT	OR	97365
+Coastal Craft Cannabis (DF)	200 N Roosevelt	Seaside	OR	97138
+Natural Remedies	8720 SW BARBUR CT SUITE Z	PORTLAND	OR	97219
+NoDak Green Prairie (DF)	390 COBURG ROAD SUITE A - 2	EUGENE	OR	97401
+Eden Cannabis - HAH	4618 PORTLAND RD. NE #110	SALEM	OR	97305
+Solutions of the Millennium LLC (DF)	2893 OAK ST	EUGENE	OR	97405
+Kaleafa - Wholesale - Oregon (CT)	8235 SE Stark St.	Portland	OR	97206
+Kaleafa - Wholesale - Oregon (CT)	TBD	RBD	OR	97216
+Hood River Naturals	1020 WASCO SUITE K	HOOD RIVER	OR	97031
+FX 420 INC (CT-DF)	"161 NW GARDEN VALLEY BLVD	 SUITE 105"	OR	OR
+Farm Grass Table	4140 WESTCLIFF DRIVE	HOOD RIVER	OR	97031
+The Herbal Connection (DF)	463 RIVER AVE.	EUGENE	OR	97404
+Top Crop Cannabis Ontario	297 SE 10TH STREET	ONTARIO	OR	97914
+Parlour	4702 SW SCHOLLS FERRY ROAD	PORTLAND	OR	97225
+TJ's Provisions (DF)	1910 EMPIRE PARK DRIVE	EUGENE	OR	97402
+The Green Front Sandy	8138 NE Sandy Blvd	Portland	OR	97213
+Mandy's Sugar Shack (DF)	339 HWY 99 SOUTH	COTTAGE GROVE	OR	97424
+Cannasource	4435 NE 148TH AVE UNIT C	PORTLAND	OR	97230
+The Spot Cannabis Collective (DF)	2590 CRATER LAKE HIGHWAY	MEDFORD	OR	97504
+Lemonnade	11321 SW 64TH AVE	PORTLAND	OR	97219
+Redbarn Dispensary (DF)	1107 MARYLAND AVE.	MYRTLE POINT	OR	97458
+Redbarn Dispensary (DF)	1810 NE STEPHENS ST.	ROSEBURG	OR	97470
+THC Recreation Station	1295 OXFORD ST SE	SALEM	OR	97302
+Rogue Valley Cannabis - Ashland (DF)	505 SISKIYOU BLVD	ASHLAND	OR	97520
+Star Rock Inc.	1911 Lancaster Drive NE	Salem	OR	97305
+Willamette Valley Cannabis Co.	16869 65th Ave #288	Lake Oswego	OR	97035
+Joint Venture Cannabis	1111 Willamette St	Eugene	OR	97401
+La Mota - Beaverton 2	18918 SW Shaw St.	Beaverton	OR	97078
+Dr. Jolly's	415 SE 3RD ST	BEND	OR	97702
+Kush Dispensary	48122 HWY 58	Oakridge	OR	97463
+River City Retail (DF)	115 GALICE ROAD SUITE A	MERLIN	OR	97523
+Diem	305 SE 3RD AVE SUITE #203	PORTLAND	OR	97214
+Multnomah Greens	3005 SW MULTNOMAH BLVD.	PORTLAND	OR	97219
+Multnomah Greens	3005 sw Multnomah blvd	PORTLAND	OR	97219
+Green Ridge Apothecary	106 NE 8TH ST	MCMINNVILLE	OR	97128
+Oregon Bud Company - Cesar Chavez	4511 SE CESAR E CHAVEZ BLVD	PORTLAND	OR	97202
+Bridge City Collective	215 SE GRAND AVENUE	PORTLAND	OR	97214
+Kanopy 7 (DF)	1252 W MCANDREWS ROAD UNIT 2	MEDFORD	OR	97501
+Up N Smoke	1487 Broadway St NE	Salem	OR	97301
+Advanced Dna	2147 Main Street	SpringField	OR	97477
+Paradise Found	10655 SE 42ND AVENUE	MILWAUKIE	OR	97222
+West Coast Organics (DF)	855 RAILROAD STREET STE. C	BROOKINGS	OR	97415
+Green Therapy (DF)	85938 HWY 99 S	EUGENE	OR	97405
+DiamondTree Galivston	1233 NW Galveston Ave	Bend 	OR	97703
+DiamondTree Galivston	2715 US-20	Bend	OR	97701
+DiamondTree Galivston	380 North Sunset Highway	Madras	OR	97741
+OGC Inc (DF)	1201 W. STEWART AVE	MEDFORD	OR	97501
+Cascade Cannabis Solutions	8700 SW Barbur Ct	Portland	OR	97219
+Main St. Cannabis (DF)	905 Main N	Independence	OR	97351
+Bloom Well Wholesale (Substance Market)	61406 S HWY 97	BEND	OR	97702
+Electric Lettuce Foster-Powell	"5522 SE FOSTER ROAD	"	OR	OR
+Rosebud Inc	2637 NE Martin Luther King Jr Blvd	Portland	OR	97212
+Oregon Bud Company - Newport	1155 SW Coast Hwy	Newport	OR	97365
+River Valley Remedies	1487 BROADWAY ST NE	SALEM	OR	97301
+Cloud 9 Wellness (DF)	1411 HILTON RD	MEDFORD	OR	97504
+High Mountain Retail (DF)	2722 W 2ND ST	THE DALLES	OR	97058
+Cream Cannabis	2824 SW Sam Jackson Park Rd.	Portland	OR	97201
+Somewhere	2128 NW OVERTON STREET	PORTLAND	OR	97210
+Rose Budz PDX	2410 N MISSISSIPPI AVE	PORTLAND	OR	97227
+Plantae	2115 NE HWY 20 SUITE 107	BEND	OR	97701
+Kind Leaf Pendleton (DF)	1733 SW COURT AVE	PENDLETON	OR	97801
+Gorge Greenery	13 OAK STREET	HOOD RIVER	OR	97031
+Top Hat Express	11916 SE 22ND AVENUE SUITE B	MILWAUKIE	OR	97222
+Emerald Triangle Dispensary (DF)	246 EAST 10TH STREET	MEDFORD	OR	97501
+Pioneer Cannabis Co. Coos Bay (CT-DF)	63049 Highway 101	Coos Bay	OR	97420
+Pioneer Cannabis Co Madras (DF)	141 SE 5TH STREET	MADRAS	OR	97741
+Pakalolo	1528 SE Holgate Blvd	Portland	OR	97202
+Pacific Wave Resource Center	1543 NW 19TH SUITE B	LINCOLN CITY	OR	97367
+MindRite	1780 NW MARSHALL ST	PORTLAND	OR	97209
+Lighthouse	1630 SE Rhine St	Portland	OR	97202
+Holy Grail (DF)	1293 Lincoln St	Eugene	OR	97401
+High Tide Wellness Center (DF)	15957 US-101 SUITE #4	BROOKINGS	OR	97415
+Electric Lettuce - Kerns	2026 NE SANDY BLVD	PORTLAND	OR	97232
+Herbal Remedies 2	3940 COMMERCIAL ST SE	SALEM	OR	97302
+Rogue River Herbal PMC (DF)	510 EAST MAIN ST STE C	ROGUE RIVER	OR	97537
+Coastal Canna Supply	408 Commercial Avenue	COOS BAY	OR	97420
+GREEN KNOTTZ CHILOQUIN (DF)	131 S 1ST AVE.	CHILOQUIN	OR	97624
+Growing ReLeaf	4160 SW 109TH AVE	BEAVERTON	OR	97005
+Natural High (DF)	749 RIVERSIDE DRIVE SUITE A	COQUILLE	OR	97423
+Good Karma	3332 MAIN ST	SPRINGFIELD	OR	97478
+Going Green Sweet Home	2252 MAIN ST	SWEET HOME	OR	97386
+Green Mountain Fire	21951 SE STARK ST.	GRESHAM	OR	97030
+Nebula Cannabis	11605 SE POWELL BLVD	PORTLAND	OR	97266
+Hashstoria Gladstone	17763 SE 82nd Drive #D	Gladstone	OR	97027
+Hashstoria Gladstone	17763 SE 82ND DR STE D	GLADSTONE	OR	97027
+Old School Bliss (DF)	2090 OLYMPIC ST STE D	SPRINGFIELD	OR	97477
+Lucky Lion - Eugene	2164 W 7TH AVE	EUGENE	OR	97402
+Casper's Cannabis Club (Apothca)(DF)	1205 Alder st	Eugene	OR	97401
+Frontier Farms - The Dalles (DF)	609 E 2nd St	The Dalles	OR	97058
+Western Oregon Dispensary	652 SW BASELINE ST.	HILLSBORO	OR	97123
+Western Oregon Dispensary	38012 HWY 26 #2	SEASIDE	OR	97138
+High Tide Cannabis NW LLC (DF)	1074 Virginia Ave	North bend	OR	97459
+Eugreen (DF)	1111 WILLAMETTE ST.	EUGENE	OR	97401
+Emerald Triangle Talent	103 N Pacific Hwy B	Talent	OR	97540
+Preserve Oregon	1201 COMMERCIAL ST SE	SALEM	OR	97302
+The Local Market	1216 NE 1ST STREET SUITE 100	BEND	OR	97701
+ELEVATION 2150	2876 SW 4TH AVE SUITE 1	ONTARIO	OR	97914
+Amazon Organics (DF)	3443 HILYARD ST. SUITE F	EUGENE	OR	97405
+Lucky Lion - Sandy	16148 NE SANDY BLVD	PORTLAND	OR	97230
+Lucky Lion - Sandy	14800 SE POWELL BLVD #1	PORTLAND	OR	97236
+The Wicked Flower Shoppe (DF)	600 EAST JACKSON	MEDFORD	OR	97501
+AmeriCanna	8654 NE Sandy  Blvd	Portland	OR	97220
+Columbia River Herbals LLC	2630 W 6TH ST	THE DALLES	OR	97058
+High Lakes Cannabis (DF)	2820 MAYWOOD DR	KLAMATH FALLS	OR	97601
+High Lakes Cannabis (DF)	3945 Highway 97	Klamath Falls	OR	97601
+High Lakes Cannabis (DF)	593 Jackson St E	Monmouth	OR	97361
+Crater Cannabis (DF)	1180 Crater Lake Avenue	Medford	OR	97504
+Cougar Cannabis	1989 NE DIAMOND LAKE BLVD	ROSEBURG	OR	97470
+Cookies Halsey	7916 SE DIVISION STREET	PORTLAND	OR	97206
+Apothecaria (DF)	700 ROW RIVER ROAD	COTTAGE GROVE	OR	97424
+Cloud 9 Cannabis (DF)	154 MANOR ST NE	ALBANY	OR	97322
+SWED.CO	2058 NW BURNSIDE	GRESHAM	OR	97030
+Cherry City Compassion	1855 25TH STREET	SALEM	OR	97302
+Northwest Cannabis Co.	17937 SW McEwan Rd	Tualatin	OR	97224
+Electric Lettuce Montavilla	7201 NE GLISAN ST. SUITE D	PORTLAND	OR	97213
+Positive Vibrations (DF)	1195 NEWMARK AVE SUITE A	COOS BAY	OR	97420
+Budz Barn (DF)	3528 S Pacific Hwy	Medford	OR	97501
+Cannaking Marijuana Dispensaries (DF)	1449 NW MULHOLLAND DR	ROSEBURG	OR	97470
+Smooth Roots (Lincoln City) (DF)	325 SW HWY 101	LINCOLN CITY	OR	97367
+Smooth Roots (Lincoln City) (DF)	1500 SW BAKER STREET	MCMINNVILLE	OR	97128
+World Famous Top Shelf Cannabis (Brookings) (DF)	704 Chetco Ave.	Brookings	OR	97415
+Ripped City Greenz	15591 SE McLoughlin Blvd	Oak Grove	OR	97267
+Stumptown Cannabis	10587 SE 82ND AVE	HAPPY VALLEY	OR	97086
+Blue Dream Cannabis & Vintage	1436 SE Powell Blvd Frontage Rd	Portland	OR	97202
+Beaver Bowls (DF)	227 SW 6TH ST	CORVALLIS	OR	97333
+Beatnick’s Finest LLC (DF)	126 SW Avery Ave.	Corvallis	OR	97333
+Lemonnade Milwaukie Inc	18819 SE McLoughlin Blvd.	PORTLAND	OR	97267
+Lemonnade Milwaukie Inc	6218 NE COLUMBIA BLVD	PORTLAND	OR	97218
+Lemonnade Milwaukie Inc	8105 N Fessenden St	Portland	OR	97203
+Zion Cannabis	2331 SW 6TH AVE.	PORTLAND	OR	97201
+Monmouth Cannabis (DF)	210 SOUTH PACIFIC HIGHWAY SUITE A	MONMOUTH	OR	97361
+Monmouth Cannabis (DF)	2625 SALEM DALLAS HWY NW STE 100	SALEM	OR	97304
+Touch of Aloha (DF)	3885 N HIGHWAY 101 SUITE B	DEPOE BAY	OR	97341
+The Cannabis Shop (DF)	37575 century Dr	Albany	OR	97322
+Terpene Station (DF)	645 River Rd #3	Eugene	OR	97404
+Ishen Tree	11821 NE Glisan St	Portland	OR	97220
+BUD BROS LLC (DF)	"1240 CHETCO AVE.	 STE E	OR	BROOKINGS
+Green Cross Dispensary	221 WEST BISHOP WAY	BROWNSVILLE	OR	97327
+420ville	210 Washington St W	Huntington	OR	97907
+Three Kings Organics (DF)	224 TERMINAL AVE	THE DALLES	OR	97058
+Cultiv8	5230 SE 52nd Ave	Portland	OR	97206
+Nectar Markets	18032 NE Airport Way	Portland	OR	97230
+Nectar Markets	162 NE BEACON DR	Grants Pass	OR	97526-4260
+Nectar Markets	259 E Barnett Rd #1	Medford	OR	97501
+Avitas Processor	4660 RIDGE DR	Salem	OR	97301
+Elevate Holdings (processing)	30810 SE HEIPLE RD	Estacada	OR	97023
+"TODAY'S HERBAL CHOICE RAINIER	thcrainier@gmail.com	75940 ROCKCREST ST C-2	OR	OR
+"Today's Herbal Choice Barbur	thcbarbur@gmail.com	9220 S.W BARBUR BLVD SUITE 107	OR	OR
+Deanz Greenz	5625 B SE 85TH AVENUE	PORTLAND	OR	97266
+Love Buzz Broadway	6802 ne broadway	portland	OR	97213
+Love Buzz Broadway	5425 NE GLISAN ST	PORTLAND	OR	97213
+TJ's on Willamette (DF)	1027 WILLAMETTE STREET	EUGENE	OR	97401
+Nectar Wholesale - Flower Intake	18032 NE Airport Way	portland	OR	97230
+"Today's Herbal Choice Milwaukie	THCMilwaukie@gmail.com	3087 SE MONROE ST	OR	OR
+PottonMouth (DF)	950 SE SHERIDAN ROAD	SHERIDAN	OR	97378
+"Cannabis	cannabisllconmainst@gmail.com	1936 MAIN STREET	OR	OR
+The Arboretum (DF)	1541 HWY 101	FLORENCE	OR	97439
+"Diem Columbia	amanda@mythoscannabis.com	851 ne columbia blvd	OR	OR
+Self Made south	103	Medford	OR	
+Lifted Northwest	11121 SE Division St	Portland	OR	97266
+Elevation 2150	2876 SW 4TH AVE Suite 1 	Ontario 	OR	97914
+Exotic Belndz	845 NE COLUMBIA BLVD	Portland	OR	97211
+Noble Craft	26607 S Highway 170	Canby	OR	97013
+Cosmic Treehouse	1215 SE IVON ST STE 100, STE 100 200 & 1219 #100	Portland	OR	97202
+OG Extracts	20234 SE VENEER LN UNIT C	Sandy	OR	97055
+528HZ GARDENS	1332 E NEVADA ST	ASHLAND	OR	97520
+Treasure Valley Cannabis	560 SE 12th Ave 	ontario 	OR	97914
+The Red Eye Erin Wall	833 SW 30th street	ontario	OR	97914

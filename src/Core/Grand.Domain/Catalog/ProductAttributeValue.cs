@@ -49,8 +49,9 @@ public class ProductAttributeValue : SubBaseEntity, ITranslationEntity
 
     /// <summary>
     ///     Gets or sets the quantity of associated product (used only with AttributeValueType.AssociatedToProduct)
+    ///     or the conversion ratio (used with AttributeValueType.WeightBasedConversion)
     /// </summary>
-    public int Quantity { get; set; }
+    public double Quantity { get; set; }
 
     /// <summary>
     ///     Gets or sets a value indicating whether the value is pre-selected
@@ -67,6 +68,18 @@ public class ProductAttributeValue : SubBaseEntity, ITranslationEntity
     ///     picture once clicked (selected).
     /// </summary>
     public string PictureId { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the overridden price (used with AttributeValueType.WeightBasedConversion)
+    ///     If set, this price will be used instead of the product's base price
+    /// </summary>
+    public double? OverriddenPrice { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets a value indicating whether this attribute value allows sampling
+    ///     When enabled, selecting this value will set quantity to 1 and price to 0
+    /// </summary>
+    public bool AllowSample { get; set; }
 
     /// <summary>
     ///     Gets or sets the collection of locales

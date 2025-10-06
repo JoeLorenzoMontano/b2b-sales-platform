@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Language Name="English">
+  <Resource Name="Admin.Orders.Fulfillment">Fulfillment</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.Info">Mark items as packed and create a shipment when ready.</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.SelectAll">Select All</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.Status">Status</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.Pending">Pending</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.Completed">Completed</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.CreateShipment">Create Shipment</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.NoItemsSelected">Please select at least one item to create a shipment.</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.RequestedShipmentDate">Requested Shipment Date</Resource>
+  <Resource Name="Admin.Orders.Fulfillment.TargetDeliveryDate">Target Delivery Date</Resource>
+  <Resource Name="Catalog.AllProducts">All Products</Resource>
+  <Resource Name="Catalog.Products.NoData">No products found.</Resource>
+  <Resource Name="Products.Attributes">Has Options</Resource>
+  <Resource Name="Products.SelectAttributes">Select Options</Resource>
+</Language>

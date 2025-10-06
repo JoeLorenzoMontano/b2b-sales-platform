@@ -19,6 +19,7 @@ using Grand.Domain.Customers;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
 using Grand.Domain.Seo;
+using Grand.SharedKernel.Extensions;
 using Grand.Domain.Stores;
 using Grand.Domain.Vendors;
 using Grand.Infrastructure;
@@ -304,11 +305,28 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
             //ensure no circular references
             if (!isAssociatedProduct)
             {
+                var warehouseId = updateCartItem != null
+                    ? updateCartItem.WarehouseId
+                    : _contextAccessor.StoreContext.CurrentStore.DefaultWarehouseId;
+                
                 var associatedProducts =
                     await _productService.GetAssociatedProducts(product.Id, _contextAccessor.StoreContext.CurrentStore.Id);
+                
                 foreach (var associatedProduct in associatedProducts)
-                    model.AssociatedProducts.Add(
-                        await PrepareProductDetailsModel(store, associatedProduct, null, true));
+                {
+                    //// Create a temporary ShoppingCartItem to pass the warehouse ID to associated products
+                    //ShoppingCartItem tempCartItem = null;
+                    //if (associatedProduct.UseMultipleWarehouses && !string.IsNullOrEmpty(warehouseId))
+                    //{
+                    //    tempCartItem = new ShoppingCartItem
+                    //    {
+                    //        WarehouseId = warehouseId
+                    //    };
+                    //}
+                    
+                    var associatedModel = await PrepareProductDetailsModel(store, associatedProduct, null, true);
+                    model.AssociatedProducts.Add(associatedModel);
+                }
             }
 
         #endregion
@@ -380,7 +398,8 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
                 (product.AvailableEndDateTimeUtc.HasValue &&
                  product.AvailableEndDateTimeUtc.Value < DateTime.UtcNow),
             CompareProductsEnabled = _catalogSettings.CompareProductsEnabled,
-            AllowToSelectWarehouse = _shoppingCartSettings.AllowToSelectWarehouse,
+            // Only show warehouse selector if both the global setting AND product-specific setting are enabled
+            AllowToSelectWarehouse = _shoppingCartSettings.AllowToSelectWarehouse && product.UseMultipleWarehouses,
             IsShipEnabled = product.IsShipEnabled,
             AdditionalShippingCharge = product.AdditionalShippingCharge,
             NotReturnable = product.NotReturnable,
@@ -404,8 +423,8 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
                     product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouse.Id);
                 model.ProductWarehouses.Add(new ProductDetailsModel.ProductWarehouseModel {
                     Use = productwarehouse != null,
-                    StockQuantity = productwarehouse?.StockQuantity ?? 0,
-                    ReservedQuantity = productwarehouse?.ReservedQuantity ?? 0,
+                    StockQuantity = (productwarehouse?.StockQuantity ?? 0).ToInt(),
+                    ReservedQuantity = (productwarehouse?.ReservedQuantity ?? 0).ToInt(),
                     WarehouseId = warehouse.Id,
                     Name = warehouse.Name,
                     Code = warehouse.Code,
@@ -739,25 +758,42 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
         var model = new ProductDetailsModel.AddToCartModel {
             ProductId = product.Id
         };
-        if (updatecartitem != null)
+        if (updatecartitem != null && !string.IsNullOrEmpty(updatecartitem.Id))
         {
             model.UpdatedShoppingCartItemId = updatecartitem.Id;
             model.UpdateShoppingCartItemType = updatecartitem.ShoppingCartTypeId;
         }
 
         //quantity
-        model.EnteredQuantity = updatecartitem?.Quantity ?? product.OrderMinimumQuantity;
+        model.EnteredQuantity = updatecartitem != null ? updatecartitem.Quantity : product.OrderMinimumQuantity;
         model.MeasureUnit = !string.IsNullOrEmpty(product.UnitId)
             ? (await _measureService.GetMeasureUnitById(product.UnitId)).Name
             : string.Empty;
 
         //allowed quantities
         var allowedQuantities = product.ParseAllowedQuantities();
-        foreach (var qty in allowedQuantities)
+        var allowedQuantitiesList = new List<double>(allowedQuantities);
+        
+        // Add "1" option if the combination allows samples and set case size
+        var combination = product.FindProductAttributeCombination(
+            updatecartitem?.Attributes ?? new List<Domain.Common.CustomAttribute>());
+        
+        // Set case size from combination if available
+        model.CaseSize = combination?.CaseSize ?? 0;
+        if (combination != null && combination.AllowSample)
+        {
+            // Add sample quantity (1) if not already in the list
+            if (!allowedQuantitiesList.Contains(1))
+            {
+                allowedQuantitiesList.Insert(0, 1);
+            }
+        }
+        
+        foreach (var qty in allowedQuantitiesList)
             model.AllowedQuantities.Add(new SelectListItem {
-                Text = qty.ToString(),
-                Value = qty.ToString(),
-                Selected = updatecartitem != null && updatecartitem.Quantity == qty
+                Text = qty.ToString("F2").TrimEnd('0').TrimEnd('.'),
+                Value = qty.ToString("F2").TrimEnd('0').TrimEnd('.'),
+                Selected = updatecartitem != null && updatecartitem.Quantity.ToInt() == qty
             });
 
         //minimum quantity notification
@@ -1054,7 +1090,7 @@ public class GetProductDetailsPageHandler : IRequestHandler<GetProductDetailsPag
             var priceBase = await _taxService.GetProductPrice(product, (await _pricingService.GetFinalPrice(product,
                 _contextAccessor.WorkContext.CurrentCustomer, _contextAccessor.StoreContext.CurrentStore, _contextAccessor.WorkContext.WorkingCurrency,
                 0, _catalogSettings.DisplayTierPricesWithDiscounts, tierPrice.Quantity)).finalPrice);
-            tier.Quantity = tierPrice.Quantity;
+            tier.Quantity = tierPrice.Quantity.ToInt();
             tier.Price = _priceFormatter.FormatPrice(priceBase.productprice, _contextAccessor.WorkContext.WorkingCurrency);
             model.Add(tier);
         }

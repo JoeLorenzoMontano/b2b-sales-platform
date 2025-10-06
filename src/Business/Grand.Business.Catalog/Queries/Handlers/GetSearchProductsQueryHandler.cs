@@ -286,8 +286,23 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
         if (request.MarkedAsNewOnly)
         {
             var nowUtc = DateTime.UtcNow;
-            query = query.Where(p => p.MarkAsNew);
-            query = query.Where(p => (!p.MarkAsNewStartDateTimeUtc.HasValue || p.MarkAsNewStartDateTimeUtc.Value < nowUtc) && (!p.MarkAsNewEndDateTimeUtc.HasValue || p.MarkAsNewEndDateTimeUtc.Value > nowUtc));
+            
+            // Log debugging info
+            System.Diagnostics.Debug.WriteLine($"Applying new product filtering at {nowUtc}");
+            
+            // MongoDB prefers to have both conditions in a single Where clause rather than combining queries
+            // This approach is more compatible with MongoDB query translation
+            query = query.Where(p => 
+                (p.MarkAsNew && 
+                 (!p.MarkAsNewStartDateTimeUtc.HasValue || p.MarkAsNewStartDateTimeUtc.Value < nowUtc) && 
+                 (!p.MarkAsNewEndDateTimeUtc.HasValue || p.MarkAsNewEndDateTimeUtc.Value > nowUtc))
+                ||
+                (p.ProductAttributeCombinations.Any(c => 
+                    c.MarkAsNew && 
+                    (!c.MarkAsNewStartDateTimeUtc.HasValue || c.MarkAsNewStartDateTimeUtc.Value < nowUtc) && 
+                    (!c.MarkAsNewEndDateTimeUtc.HasValue || c.MarkAsNewEndDateTimeUtc.Value > nowUtc))
+                )
+            );
         }
         return query;
     }
@@ -296,10 +311,21 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
     {
         if (!string.IsNullOrWhiteSpace(request.Keywords))
         {
+            // Convert keywords to lowercase for case-insensitive search
+            var keywordsLower = request.Keywords.ToLower();
+            
             if (!request.SearchDescriptions)
-                query = query.Where(p => p.Name.ToLower().Contains(request.Keywords.ToLower()) || p.Locales.Any(x => x.LocaleKey == "Name" && x.LocaleValue != null && x.LocaleValue.ToLower().Contains(request.Keywords.ToLower())) || (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(request.Keywords.ToLower())));
+                query = query.Where(p => 
+                    (p.Name != null && p.Name.ToLower().Contains(keywordsLower)) || 
+                    p.Locales.Any(x => x.LocaleKey == "Name" && x.LocaleValue != null && x.LocaleValue.ToLower().Contains(keywordsLower)) || 
+                    (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(keywordsLower)));
             else
-                query = query.Where(p => (p.Name != null && p.Name.ToLower().Contains(request.Keywords.ToLower())) || (p.ShortDescription != null && p.ShortDescription.ToLower().Contains(request.Keywords.ToLower())) || (p.FullDescription != null && p.FullDescription.ToLower().Contains(request.Keywords.ToLower())) || p.Locales.Any(x => x.LocaleValue != null && x.LocaleValue.ToLower().Contains(request.Keywords.ToLower())) || (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(request.Keywords.ToLower())));
+                query = query.Where(p => 
+                    (p.Name != null && p.Name.ToLower().Contains(keywordsLower)) || 
+                    (p.ShortDescription != null && p.ShortDescription.ToLower().Contains(keywordsLower)) || 
+                    (p.FullDescription != null && p.FullDescription.ToLower().Contains(keywordsLower)) || 
+                    p.Locales.Any(x => x.LocaleValue != null && x.LocaleValue.ToLower().Contains(keywordsLower)) || 
+                    (request.SearchSku && p.Sku != null && p.Sku.ToLower().Contains(keywordsLower)));
         }
         return query;
     }
@@ -408,8 +434,8 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
         else
         {
             query = _catalogSettings.SortingByAvailability
-                ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name)
-                : query.OrderBy(x => x.Name);
+                ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name != null ? x.Name.ToLower() : "")
+                : query.OrderBy(x => x.Name != null ? x.Name.ToLower() : "");
         }
 
         return query;
@@ -417,16 +443,20 @@ public class GetSearchProductsQueryHandler : IRequestHandler<GetSearchProductsQu
 
     private IQueryable<Product> OrderByNameAsc(IQueryable<Product> query)
     {
+        // NameAsc (value 5) means "Name: A to Z" (ascending alphabetical order)
+        // This sorts products alphabetically from A to Z
         return _catalogSettings.SortingByAvailability
-            ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name)
-            : query.OrderBy(x => x.Name);
+            ? query.OrderBy(x => x.LowStock).ThenBy(x => x.Name != null ? x.Name.ToLower().Trim() : "")
+            : query.OrderBy(x => x.Name != null ? x.Name.ToLower().Trim() : "");
     }
 
     private IQueryable<Product> OrderByNameDesc(IQueryable<Product> query)
     {
+        // NameDesc (value 6) means "Name: Z to A" (descending alphabetical order)
+        // This sorts products alphabetically from Z to A
         return _catalogSettings.SortingByAvailability
-            ? query.OrderBy(x => x.LowStock).ThenByDescending(x => x.Name)
-            : query.OrderByDescending(x => x.Name);
+            ? query.OrderBy(x => x.LowStock).ThenByDescending(x => x.Name != null ? x.Name.ToLower().Trim() : "")
+            : query.OrderByDescending(x => x.Name != null ? x.Name.ToLower().Trim() : "");
     }
 
     private IQueryable<Product> OrderByPriceAsc(IQueryable<Product> query)

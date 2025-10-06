@@ -6,7 +6,7 @@ namespace Grand.Web.Models.ShoppingCart;
 public class MiniShoppingCartModel : BaseModel
 {
     public IList<ShoppingCartItemModel> Items { get; set; } = new List<ShoppingCartItemModel>();
-    public int TotalProducts { get; set; }
+    public double TotalProducts { get; set; }
     public string SubTotal { get; set; }
     public bool SubTotalIncludingTax { get; set; }
     public bool DisplayShoppingCartButton { get; set; }
@@ -27,7 +27,7 @@ public class MiniShoppingCartModel : BaseModel
         public string ProductSeName { get; set; }
         public string ProductUrl { get; set; }
 
-        public int Quantity { get; set; }
+        public double Quantity { get; set; }
 
         public string UnitPrice { get; set; }
 

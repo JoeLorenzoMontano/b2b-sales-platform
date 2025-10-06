@@ -31,6 +31,17 @@
                                 <li>
                                     <input type="button" id="exportexcel-selected" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.Selected"]"/>
                                 </li>
+                                <li class="divider"></li>
+                                <li>
+                                    <input type="submit" name="exportexcel-all-combinations" asp-action="ExportExcelAllWithCombinations" class="btn default" style="width: 100%;" value="Export All (with Combinations)"/>
+                                </li>
+                                <li>
+                                    <input type="button" id="exportexcel-selected-combinations" class="btn default" style="width: 100%;" value="Export Selected (with Combinations)"/>
+                                </li>
+                                <li class="divider"></li>
+                                <li>
+                                    <input type="submit" name="exportpdf-all" asp-action="ExportProductsPdf" class="btn default" style="width: 100%;" value="Export PDF Catalog"/>
+                                </li>
                             </ul>
                         </div>
                         <button type="button" id="importexcel" name="importexcel" class="btn default">
@@ -246,6 +257,13 @@
 						minScreenWidth: 750,
                         width: 80
                     }, {
+                        field: "ReservedQuantity",
+                        title: "@Loc["Admin.Catalog.Products.Fields.ReservedQuantity"]",
+						headerAttributes: { style: "text-align:right" },
+						attributes: { style: "text-align:right" },
+						minScreenWidth: 750,
+                        width: 80
+                    }, {
                         field: "ProductTypeName",
                         title: "@Loc["Admin.Catalog.Products.Fields.ProductType"]",
 						headerAttributes: { style: "text-align:center" },
@@ -437,7 +455,9 @@
 
 </script>
 <form asp-area="@Constants.AreaAdmin" asp-controller="Product" asp-action="ExportExcelSelected" method="post" id="export-excel-selected-form">
-
+    <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
+</form>
+<form asp-area="@Constants.AreaAdmin" asp-controller="Product" asp-action="ExportExcelSelectedWithCombinations" method="post" id="export-excel-selected-combinations-form">
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>
 <script>
@@ -447,6 +467,14 @@
             var ids = selectedIds.join(",");
             $('#export-excel-selected-form #selectedIds').val(ids);
             $('#export-excel-selected-form').submit();
+            return false;
+        });
+        
+        $('#exportexcel-selected-combinations').click(function (e) {
+            e.preventDefault();
+            var ids = selectedIds.join(",");
+            $('#export-excel-selected-combinations-form #selectedIds').val(ids);
+            $('#export-excel-selected-combinations-form').submit();
             return false;
         });
     });

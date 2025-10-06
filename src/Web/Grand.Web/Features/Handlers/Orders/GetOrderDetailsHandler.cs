@@ -15,6 +15,7 @@ using Grand.Domain.Directory;
 using Grand.Domain.Orders;
 using Grand.Domain.Payments;
 using Grand.Domain.Shipping;
+using Grand.SharedKernel.Extensions;
 using Grand.Domain.Tax;
 using Grand.Web.Common.Localization;
 using Grand.Web.Extensions;
@@ -366,7 +367,7 @@ public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderDeta
                 ProductId = product.Id,
                 ProductName = product.GetTranslation(x => x.Name, request.Language.Id),
                 ProductSeName = product.SeName,
-                Quantity = orderItem.Quantity,
+                Quantity = orderItem.Quantity.ToInt(),
                 AttributeInfo = orderItem.AttributeDescription
             };
             //prepare picture

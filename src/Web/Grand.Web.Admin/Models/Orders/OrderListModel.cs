@@ -15,7 +15,12 @@ public class OrderListModel : BaseModel
     [UIHint("DateNullable")]
     public DateTime? EndDate { get; set; }
 
-    public string CustomerId { get; set; }
+    [GrandResourceDisplayName("Admin.Orders.List.Customer")]
+    public IList<SelectListItem> AvailableCustomers { get; set; } = new List<SelectListItem>();
+
+    [GrandResourceDisplayName("Admin.Orders.List.Customer")]
+    [UIHint("MultiSelect")]
+    public IList<string> SearchCustomerIds { get; set; } = new List<string>();
 
     [GrandResourceDisplayName("Admin.Orders.List.BillingEmail")]
     public string BillingEmail { get; set; }
@@ -61,6 +66,9 @@ public class OrderListModel : BaseModel
     [GrandResourceDisplayName("Admin.Orders.List.GoDirectlyToNumber")]
 
     public string GoDirectlyToNumber { get; set; }
+    
+    [GrandResourceDisplayName("Admin.Orders.Fields.ImpersonatedByEmployee")]
+    public string ImpersonatedByEmployeeId { get; set; }
 
     [GrandResourceDisplayName("Admin.Orders.List.OrderTagId")]
     public string OrderTag { get; set; }
@@ -74,4 +82,5 @@ public class OrderListModel : BaseModel
     public IList<SelectListItem> AvailablePaymentMethods { get; set; } = new List<SelectListItem>();
     public IList<SelectListItem> AvailableCountries { get; set; } = new List<SelectListItem>();
     public IList<SelectListItem> AvailableOrderTags { get; set; } = new List<SelectListItem>();
+    public IList<SelectListItem> AvailableEmployees { get; set; } = new List<SelectListItem>();
 }

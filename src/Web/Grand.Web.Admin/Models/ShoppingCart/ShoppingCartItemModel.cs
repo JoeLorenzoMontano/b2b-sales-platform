@@ -22,7 +22,7 @@ public class ShoppingCartItemModel : BaseEntityModel
     public double UnitPriceValue { get; set; }
 
     [GrandResourceDisplayName("Admin.CurrentCarts.Quantity")]
-    public int Quantity { get; set; }
+    public double Quantity { get; set; }
 
     [GrandResourceDisplayName("Admin.CurrentCarts.Total")]
     public string Total { get; set; }

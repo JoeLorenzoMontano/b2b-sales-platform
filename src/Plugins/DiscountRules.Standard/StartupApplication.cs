@@ -18,6 +18,7 @@ public class StartupApplication : IStartupApplication
         services.AddScoped<HasAllProductsDiscountRule>();
         services.AddScoped<HasOneProductDiscountRule>();
         services.AddScoped<ShoppingCartDiscountRule>();
+        services.AddScoped<SpecificCustomerDiscountRule>();
     }
 
     public int Priority => 10;

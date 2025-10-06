@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Language Name="English">
+  <Resource Name="Admin.Orders.Fields.ImpersonatedByEmployee" Area="Admin">
+    <Value>Order Placed By Employee</Value>
+  </Resource>
+  <Resource Name="Admin.Customers.Customers.ImpersonatedOrders" Area="Admin">
+    <Value>Orders Created Via Impersonation</Value>
+  </Resource>
+  <Resource Name="Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId" Area="Admin">
+    <Value>Default Representative</Value>
+  </Resource>
+  <Resource Name="Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId.None" Area="Admin">
+    <Value>None</Value>
+  </Resource>
+  <Resource Name="Admin.Customers.Customers.Fields.DefaultImpersonatedByEmployeeId.Hint" Area="Admin">
+    <Value>Select the default representative who will be automatically recorded as the impersonator when orders are placed for this customer.</Value>
+  </Resource>
+</Language>

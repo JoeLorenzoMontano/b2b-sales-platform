@@ -41,7 +41,7 @@ public class LiquidProduct : Drop
 
     public double AdditionalShippingCharge => _product.AdditionalShippingCharge;
 
-    public int StockQuantity => _product.StockQuantity;
+    public double StockQuantity => _product.StockQuantity;
 
 
     public double Price => _product.Price;

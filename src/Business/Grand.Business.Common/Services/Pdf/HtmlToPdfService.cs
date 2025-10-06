@@ -1,6 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Pdf;
 using Grand.Data;
+using Grand.Domain.Catalog;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
 using Grand.Domain.Shipping;
@@ -19,6 +20,7 @@ public class HtmlToPdfService : IPdfService
 {
     private const string OrderTemplate = "~/Views/PdfTemplates/OrderPdfTemplate.cshtml";
     private const string ShipmentsTemplate = "~/Views/PdfTemplates/ShipmentPdfTemplate.cshtml";
+    private const string ProductCatalogTemplate = "~/Views/PdfTemplates/ProductCatalogPdfTemplate.cshtml";
     private readonly IRepository<Download> _downloadRepository;
     private readonly ILanguageService _languageService;
     private readonly IStoreFilesContext _storeFilesContext;
@@ -104,5 +106,16 @@ public class HtmlToPdfService : IPdfService
 
         //await _mediator.EntityInserted(download);
         return download.Id;
+    }
+
+    public async Task PrintProductCatalogToPdf(Stream stream, IList<Product> products)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(products);
+
+        var html = await _viewRenderService.RenderToStringAsync(ProductCatalogTemplate, products);
+        TextReader sr = new StringReader(html);
+        using var doc = Document.ParseDocument(sr, ParseSourceType.DynamicContent);
+        doc.SaveAsPDF(stream);
     }
 }

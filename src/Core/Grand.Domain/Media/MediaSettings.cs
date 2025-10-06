@@ -32,6 +32,8 @@ public class MediaSettings : ISettings
 
     public string AllowedFileTypes { get; set; }
 
+    public string AllowedDocumentFileTypes { get; set; }
+
     public string FileManagerEnabledCommands { get; set; } =
         "abort,open,file,mkdir,mkfile,parents,tmb,dim,paste,duplicate,get,rm,ls,put,size,rename,tree,resize,search,upload";
 

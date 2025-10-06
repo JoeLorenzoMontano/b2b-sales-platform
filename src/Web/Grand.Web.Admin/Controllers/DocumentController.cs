@@ -1,6 +1,9 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Marketing.Documents;
+using Grand.Business.Core.Interfaces.Storage;
+using Grand.Domain.Common;
+using Grand.Domain.Documents;
 using Grand.Domain.Permissions;
 using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
@@ -20,18 +23,21 @@ public class DocumentController : BaseAdminController
     private readonly IDocumentTypeService _documentTypeService;
     private readonly IDocumentViewModelService _documentViewModelService;
     private readonly ITranslationService _translationService;
+    private readonly IDownloadService _downloadService;
 
     public DocumentController(IDocumentViewModelService documentViewModelService,
         IDocumentService documentService,
         IDocumentTypeService documentTypeService,
         ITranslationService translationService,
-        ICustomerService customerService)
+        ICustomerService customerService,
+        IDownloadService downloadService)
     {
         _documentViewModelService = documentViewModelService;
         _documentService = documentService;
         _documentTypeService = documentTypeService;
         _translationService = translationService;
         _customerService = customerService;
+        _downloadService = downloadService;
     }
 
     public IActionResult Index()
@@ -88,6 +94,48 @@ public class DocumentController : BaseAdminController
 
         model = await _documentViewModelService.PrepareDocumentModel(model, null, null);
         return View(model);
+    }
+
+    [PermissionAuthorizeAction(PermissionActionName.Edit)]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateDocumentInline(string Name, string Description, string ObjectId, int ReferenceId, string DownloadId = "", bool Published = true)
+    {
+        try
+        {
+            // Validate required fields
+            if (string.IsNullOrEmpty(Name))
+            {
+                return Json(new { success = false, error = "Document name is required." });
+            }
+
+            if (string.IsNullOrEmpty(ObjectId))
+            {
+                return Json(new { success = false, error = "Order ID is required." });
+            }
+
+            // Create document model
+            var model = new DocumentModel
+            {
+                Name = Name,
+                Description = Description ?? "",
+                ObjectId = ObjectId,
+                ReferenceId = ReferenceId,
+                Published = Published,
+                StatusId = (int)DocumentStatus.Open,
+                DisplayOrder = 0,
+                DownloadId = DownloadId ?? ""
+            };
+
+            // Create the document
+            var document = await _documentViewModelService.InsertDocument(model);
+
+            return Json(new { success = true, documentId = document.Id });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, error = ex.Message });
+        }
     }
 
     [PermissionAuthorizeAction(PermissionActionName.Preview)]
@@ -241,6 +289,7 @@ public class DocumentController : BaseAdminController
 
         return RedirectToAction("Edit", new { id });
     }
+
 
     #endregion
 }

@@ -1,0 +1,52 @@
+@model BulkProductConfigModel
+
+<tr id="product-row-@Model.ProductId">
+    <td>
+        @Model.ProductName
+        <small class="text-muted">(@Model.Sku)</small>
+        <input type="hidden" asp-for="ProductId" />
+    </td>
+    <td>
+        <input type="number" asp-for="Quantity" min="1" class="form-control" style="width:80px;" />
+    </td>
+    @if (Model.NeedsWarehouse)
+    {
+        <td class="warehouse-cell">
+            <admin-select asp-for="WarehouseId" asp-items="Model.AvailableWarehouses" />
+        </td>
+    }
+    else
+    {
+        <td class="no-warehouse">N/A</td>
+    }
+    @if (Model.HasAttributes)
+    {
+        <td class="attributes-cell">
+            <select asp-for="SelectedCombinationId" class="form-control">
+                <option value="">Select Combination</option>
+                @foreach (var combo in Model.AttributeCombinations)
+                {
+                    <option value="@combo.Id" data-sku="@combo.Sku" data-stock="@combo.StockQuantity">
+                        @combo.AttributesInfo
+                        @if (combo.OverriddenPrice.HasValue)
+                        {
+                            <text> - $@combo.OverriddenPrice.Value.ToString("F2")</text>
+                        }
+                    </option>
+                }
+            </select>
+        </td>
+    }
+    else
+    {
+        <td class="no-attributes">N/A</td>
+    }
+    <td>
+        <input type="number" asp-for="UnitPrice" step="0.01" class="form-control" style="width:100px;" />
+    </td>
+    <td>
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeSelectedProduct('@Model.ProductId')">
+            <i class="fa fa-trash"></i>
+        </button>
+    </td>
+</tr>

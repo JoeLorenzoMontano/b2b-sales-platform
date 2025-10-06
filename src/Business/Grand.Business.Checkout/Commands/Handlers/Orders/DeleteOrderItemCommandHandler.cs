@@ -48,7 +48,7 @@ public class DeleteOrderItemCommandHandler : IRequestHandler<DeleteOrderItemComm
             || request.OrderItem.Status == OrderItemStatus.Close
             || request.OrderItem.OpenQty != request.OrderItem.Quantity
            )
-            return (true, "You can't delete this order item.");
+            return (true, $"You can't delete this order item. OpenQty: {request.OrderItem.OpenQty}, Quantity: {request.OrderItem.Quantity}, Status: {request.OrderItem.Status}");
         if (product.IsGiftVoucher)
         {
             var giftVouchers =

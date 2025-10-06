@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Language Name="English">
+  <Resource Name="Admin.Catalog.Products.Fields.HideFromCatalog" Area="Admin">
+    <Value>Hide from catalog</Value>
+  </Resource>
+</Language>

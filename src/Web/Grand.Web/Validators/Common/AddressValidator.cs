@@ -20,58 +20,65 @@ public class AddressValidator : BaseGrandValidator<AddressModel>
         AddressSettings addressSettings)
         : base(validators)
     {
-        RuleFor(x => x.FirstName)
-            .NotEmpty()
-            .WithMessage(translationService.GetResource("Address.Fields.FirstName.Required"));
-        RuleFor(x => x.LastName)
-            .NotEmpty()
-            .WithMessage(translationService.GetResource("Address.Fields.LastName.Required"));
-        RuleFor(x => x.Email)
-            .NotEmpty()
-            .WithMessage(translationService.GetResource("Address.Fields.Email.Required"));
+        // First Name, Last Name, Email, Country, and State requirements disabled per user request
+        // RuleFor(x => x.FirstName)
+        //     .NotEmpty()
+        //     .WithMessage(translationService.GetResource("Address.Fields.FirstName.Required"));
+        // RuleFor(x => x.LastName)
+        //     .NotEmpty()
+        //     .WithMessage(translationService.GetResource("Address.Fields.LastName.Required"));
+        // RuleFor(x => x.Email)
+        //     .NotEmpty()
+        //     .WithMessage(translationService.GetResource("Address.Fields.Email.Required"));
+        
+        // Keep email format validation but make it conditional on having a value
         RuleFor(x => x.Email)
             .EmailAddress()
-            .WithMessage(translationService.GetResource("Common.WrongEmail"));
-        if (addressSettings.CountryEnabled)
-        {
-            RuleFor(x => x.CountryId)
-                .NotNull()
-                .WithMessage(translationService.GetResource("Address.Fields.Country.Required"));
-            RuleFor(x => x.CountryId)
-                .NotEqual("")
-                .WithMessage(translationService.GetResource("Address.Fields.Country.Required"));
-        }
+            .WithMessage(translationService.GetResource("Common.WrongEmail"))
+            .When(x => !string.IsNullOrEmpty(x.Email));
+            
+        // Country and State requirements disabled
+        // if (addressSettings.CountryEnabled)
+        // {
+        //     RuleFor(x => x.CountryId)
+        //         .NotNull()
+        //         .WithMessage(translationService.GetResource("Address.Fields.Country.Required"));
+        //     RuleFor(x => x.CountryId)
+        //         .NotEqual("")
+        //         .WithMessage(translationService.GetResource("Address.Fields.Country.Required"));
+        // }
 
-        if (addressSettings.CountryEnabled && addressSettings.StateProvinceEnabled)
-            RuleFor(x => x.StateProvinceId).MustAsync(async (x, y, _) =>
-            {
-                var countryId = !string.IsNullOrEmpty(x.CountryId) ? x.CountryId : "";
-                var country = await countryService.GetCountryById(countryId);
-                if (country == null || !country.StateProvinces.Any()) return false;
-                //if yes, then ensure that state is selected
-                if (string.IsNullOrEmpty(y)) return false;
-                return country.StateProvinces.FirstOrDefault(s => s.Id == y) != null;
-            }).WithMessage(translationService.GetResource("Address.Fields.StateProvince.Required"));
-        if (addressSettings.CompanyRequired && addressSettings.CompanyEnabled)
-            RuleFor(x => x.Company).NotEmpty()
-                .WithMessage(translationService.GetResource("Address.Fields.Company.Required"));
+        // if (addressSettings.CountryEnabled && addressSettings.StateProvinceEnabled)
+        //     RuleFor(x => x.StateProvinceId).MustAsync(async (x, y, _) =>
+        //     {
+        //         var countryId = !string.IsNullOrEmpty(x.CountryId) ? x.CountryId : "";
+        //         var country = await countryService.GetCountryById(countryId);
+        //         if (country == null || !country.StateProvinces.Any()) return false;
+        //         //if yes, then ensure that state is selected
+        //         if (string.IsNullOrEmpty(y)) return false;
+        //         return country.StateProvinces.FirstOrDefault(s => s.Id == y) != null;
+        //     }).WithMessage(translationService.GetResource("Address.Fields.StateProvince.Required"));
+        // Company, Address, City, Zip, Phone requirements disabled per user request
+        // if (addressSettings.CompanyRequired && addressSettings.CompanyEnabled)
+        //     RuleFor(x => x.Company).NotEmpty()
+        //         .WithMessage(translationService.GetResource("Address.Fields.Company.Required"));
         if (addressSettings.VatNumberRequired && addressSettings.VatNumberEnabled)
             RuleFor(x => x.VatNumber).NotEmpty()
                 .WithMessage(translationService.GetResource("Address.Fields.VatNumber.Required"));
-        if (addressSettings.StreetAddressRequired && addressSettings.StreetAddressEnabled)
-            RuleFor(x => x.Address1).NotEmpty()
-                .WithMessage(translationService.GetResource("Address.Fields.StreetAddress.Required"));
+        // if (addressSettings.StreetAddressRequired && addressSettings.StreetAddressEnabled)
+        //     RuleFor(x => x.Address1).NotEmpty()
+        //         .WithMessage(translationService.GetResource("Address.Fields.StreetAddress.Required"));
         if (addressSettings.StreetAddress2Required && addressSettings.StreetAddress2Enabled)
             RuleFor(x => x.Address2).NotEmpty()
                 .WithMessage(translationService.GetResource("Address.Fields.StreetAddress2.Required"));
-        if (addressSettings.ZipPostalCodeRequired && addressSettings.ZipPostalCodeEnabled)
-            RuleFor(x => x.ZipPostalCode).NotEmpty()
-                .WithMessage(translationService.GetResource("Address.Fields.ZipPostalCode.Required"));
-        if (addressSettings.CityRequired && addressSettings.CityEnabled)
-            RuleFor(x => x.City).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.City.Required"));
-        if (addressSettings.PhoneRequired && addressSettings.PhoneEnabled)
-            RuleFor(x => x.PhoneNumber).NotEmpty()
-                .WithMessage(translationService.GetResource("Address.Fields.Phone.Required"));
+        // if (addressSettings.ZipPostalCodeRequired && addressSettings.ZipPostalCodeEnabled)
+        //     RuleFor(x => x.ZipPostalCode).NotEmpty()
+        //         .WithMessage(translationService.GetResource("Address.Fields.ZipPostalCode.Required"));
+        // if (addressSettings.CityRequired && addressSettings.CityEnabled)
+        //     RuleFor(x => x.City).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.City.Required"));
+        // if (addressSettings.PhoneRequired && addressSettings.PhoneEnabled)
+        //     RuleFor(x => x.PhoneNumber).NotEmpty()
+        //         .WithMessage(translationService.GetResource("Address.Fields.Phone.Required"));
         if (addressSettings.FaxRequired && addressSettings.FaxEnabled)
             RuleFor(x => x.FaxNumber).NotEmpty()
                 .WithMessage(translationService.GetResource("Address.Fields.Fax.Required"));

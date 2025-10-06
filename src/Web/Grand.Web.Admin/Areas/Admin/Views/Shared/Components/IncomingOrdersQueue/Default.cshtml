@@ -1,0 +1,1038 @@
+@inject AdminAreaSettings adminAreaSettings
+
+<!-- Incoming Orders Header with Create Order Button -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <button type="button" class="btn btn-success" onclick="openCreateOrderModal()">
+        <i class="fa fa-plus"></i> Create Order
+    </button>
+</div>
+
+<div id="incoming-orders-grid"></div>
+
+<!-- Customer Search Modal -->
+<div class="modal fade" id="customerSearchModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Create New Order - Select Customer</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Hidden for now - consolidated into unified search below
+                <div class="form-group">
+                    <label for="customerSearchInput">Search Customer</label>
+                    <input type="text" id="customerSearchInput" class="form-control" placeholder="Type customer email or name..." />
+                    <small class="form-text text-muted">Start typing to search customers</small>
+                </div>
+                -->
+                <div class="form-group">
+                    <label for="addressSearchInput">Search Customer</label>
+                    <input type="text" id="addressSearchInput" class="form-control" placeholder="Search by customer name, email, company, address, city, etc..." />
+                    <small class="form-text text-muted">Search customers by any information: name, email, company, address, city, etc.</small>
+                </div>
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="sameAddressCheckboxSearch" checked>
+                        <label class="form-check-label" for="sameAddressCheckboxSearch">
+                            Use same address for billing and shipping
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">When checked, clicking a customer will create order directly using their first address</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .incoming-orders-grid .k-grid-header .k-header {
+        background-color: #ff9800; /* Orange theme for incoming orders */
+        color: white !important;
+    }
+    .incoming-orders-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .incoming-order-details-grid .k-grid-header .k-header {
+        background-color: #ff9800; /* Orange theme for incoming orders detail */
+        color: white !important;
+    }
+    .incoming-order-details-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .verify-order-btn {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .verify-order-btn:hover {
+        background-color: #45a049;
+    }
+    .verify-order-btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    .highlight-success {
+        background-color: #d4edda !important;
+        border: 2px solid #28a745 !important;
+        transition: all 0.3s ease;
+    }
+    .highlight-error {
+        background-color: #f8d7da !important;
+        border: 2px solid #dc3545 !important;
+        transition: all 0.3s ease;
+    }
+    .incoming-order-control-panel {
+        /* background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 10px; */
+    }
+    .fulfillment-control-panel {
+       /*  background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 10px; */
+    }
+    .incoming-order-control-panel .form-control {
+        border-color: #ff9800;
+    }
+    .incoming-order-control-panel .form-control:focus {
+        border-color: #e68900;
+        box-shadow: 0 0 0 0.2rem rgba(255, 152, 0, 0.25);
+    }
+    .incoming-order-details-grid .form-control-sm {
+        padding: 2px 6px;
+        font-size: 0.875rem;
+        border-radius: 3px;
+        border: 1px solid #ddd;
+    }
+    .incoming-order-details-grid .form-control-sm:focus {
+        border-color: #ff9800;
+        box-shadow: 0 0 0 0.15rem rgba(255, 152, 0, 0.25);
+    }
+    .incoming-order-details-grid .quantity-input,
+    .incoming-order-details-grid .price-input {
+        text-align: center;
+    }
+    .incoming-order-details-grid .delete-order-item {
+        padding: 2px 6px;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+    .incoming-order-details-grid .delete-order-item:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    /* Customer Search Modal Autocomplete Styles */
+    .ui-autocomplete {
+        position: absolute;
+        top: 0;
+        left: 0;
+        cursor: default;
+        z-index: 9999 !important; /* Ensure it appears above modal */
+        background-color: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .ui-autocomplete .ui-menu-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .ui-autocomplete .ui-menu-item:hover,
+    .ui-autocomplete .ui-menu-item.ui-state-focus {
+        background-color: #e9ecef;
+        color: #333;
+    }
+
+    .ui-autocomplete .ui-menu-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Ensure modal doesn't interfere with autocomplete positioning */
+    #customerSearchModal .modal-body {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Responsive positioning for customer search modal - only when modal is shown */
+    #customerSearchModal.show {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 15px;
+    }
+
+    #customerSearchModal .modal-dialog {
+        margin: 0;
+        max-height: calc(100vh - 30px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    #customerSearchModal .modal-content {
+        height: fit-content;
+        max-height: 100%;
+        overflow-y: auto;
+    }
+
+    /* Ensure hidden modals don't interfere with page interactions */
+    #customerSearchModal:not(.show) {
+        display: none !important;
+        pointer-events: none;
+    }
+
+    /* Ensure proper sizing on smaller screens */
+    @@media (max-width: 767px) {
+        #customerSearchModal {
+            padding: 10px;
+        }
+        
+        #customerSearchModal .modal-dialog {
+            max-height: calc(100vh - 20px);
+            width: 100%;
+            max-width: none;
+        }
+    }
+    /* ProductSearchAdd component styling - copied from OrderDetails.Info.cshtml for consistency */
+    .incoming-order-products-container .add-products-section {
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .incoming-order-products-container .add-products-section .x_panel {
+        margin-bottom: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+    .incoming-order-products-container .add-products-section .x_title {
+        background: transparent;
+        padding: 10px 15px;
+        margin-bottom: 0;
+    }
+    .incoming-order-products-container .add-products-section .x_title .caption {
+        color: white;
+        font-weight: 600;
+        font-size: 1em;
+    }
+    .incoming-order-products-container .add-products-section .x_content {
+        padding: 10px;
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    /* Ensure Bootstrap grid stays within bounds */
+    .incoming-order-products-container .add-products-section .row {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+    }
+    .incoming-order-products-container .add-products-section [class*="col-"] {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    /* Ensure form controls don't overflow */
+    .incoming-order-products-container .add-products-section .form-control,
+    .incoming-order-products-container .add-products-section .form-group {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    /* Unit/Case quantity selector styling */
+    .incoming-order-products-container .quantity-unit-case-wrapper {
+        display: inline-block;
+    }
+    .incoming-order-products-container .quantity-unit-case-wrapper .d-flex {
+        gap: 4px;
+    }
+    .incoming-order-products-container .quantity-unit-case-wrapper .quantity-display-input {
+        text-align: center;
+    }
+</style>
+
+<script>
+    $(document).ready(function () {
+        $("#incoming-orders-grid").kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Html.Raw(Url.Action("IncomingOrdersList", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            dataType: "json",
+                            data: additionalData
+                        }
+                    },
+                    schema: {
+                        data: "Data",
+                        total: "Total",
+                        errors: "Errors"
+                    },
+                    error: function(e) {
+                        display_kendoui_grid_error(e);
+                        // Cancel the changes
+                        this.cancelChanges();
+                    },
+                    pageSize: 10,
+                    serverPaging: false,
+                    serverFiltering: false,
+                    serverSorting: false
+                },
+                pageable: {
+                    refresh: true,
+                    pageSizes: [10,20,50]
+                },
+                scrollable: false,
+                detailInit: orderItemDetailInit,
+                columns: [
+                    {
+                        field: "OrderNumber",
+                        title: "@Loc["Admin.Orders.Fields.Id"]",
+                        width: 100,
+                        template: '<a class="k-link" href="Admin/Order/Edit/#=Id#">#=OrderNumber#</a>',
+                    },
+                    {
+                        field: "CustomerEmail",
+                        title: "@Loc["Admin.Orders.Fields.Customer"]",
+                        width: 200,
+                        template: function(dataItem) {
+                            var customerDisplay = dataItem.CustomerFullName;
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                            }
+                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
+                        }                        
+                    },
+                    {
+                        field: "CustomerGroups",
+                        title: "@Loc["Admin.Orders.Fields.CustomerGroups"]",
+                        width: 150
+                    },
+                    {
+                        field: "Warehouses",
+                        title: "@Loc["Admin.Orders.Fields.Warehouses"]",
+                        width: 150
+                    },
+                    {
+                        field: "OrderTotal",
+                        title: "@Loc["Admin.Orders.Fields.OrderTotal"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "CreatedOn",
+                        title: "@Loc["Admin.Orders.Fields.CreatedOn"]",
+                        width: 120,
+                        type: "date",
+                        format: "{0:G}",
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        title: "Actions",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                        template: function(dataItem) {
+                            return '<button class="verify-order-btn" id="verify-btn-' + dataItem.Id + '" onclick="verifyOrder(\'' + dataItem.Id + '\')">Verify Order</button>';
+                        }
+                    }
+                ]
+            });
+
+        function additionalData() {
+            var data = {
+                // Filter for unverified orders only
+            };
+            addAntiForgeryToken(data);
+            return data;
+        }
+    });
+
+    function verifyOrder(orderId) {
+        if (confirm('Are you sure you want to verify this order? Once verified, it will be moved to the Fulfillment Queue.')) {
+            // Disable the button and show loading state
+            var button = $('#verify-btn-' + orderId);
+            button.prop('disabled', true).text('Verifying...');
+            
+            $.ajax({
+                url: '@Html.Raw(Url.Action("VerifyOrder", "Order", new { area = Constants.AreaAdmin }))',
+                type: 'POST',
+                data: {
+                    orderId: orderId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(result) {
+                    if (result.success) {
+                        // Add visual success feedback to the row
+                        var button = $('#verify-btn-' + orderId);
+                        var row = button.closest('tr');
+                        row.addClass('highlight-success');
+                        
+                        // Refresh the incoming orders grid to remove the verified order
+                        var incomingGrid = $('#incoming-orders-grid').data('kendoGrid');
+                        if (incomingGrid) {
+                            incomingGrid.dataSource.read();
+                        }
+                        
+                        // Force refresh the fulfillment queue grid with a slight delay to ensure order is processed
+                        setTimeout(function() {
+                            var fulfillmentGrid = $('#fulfillment-queue-grid').data('kendoGrid');
+                            if (fulfillmentGrid) {
+                                fulfillmentGrid.dataSource.read();
+                                console.log('Fulfillment Queue grid refreshed after order verification');
+                            } else {
+                                // Try alternative selector if the first one doesn't work
+                                var altGrid = $('[id*="fulfillment"]').data('kendoGrid');
+                                if (altGrid) {
+                                    altGrid.dataSource.read();
+                                    console.log('Fulfillment Queue grid refreshed using alternative selector');
+                                }
+                            }
+                        }, 500); // 500ms delay to ensure server processing is complete
+                        
+                        // Also try to refresh any other order-related grids on the page
+                        $('[id*="order"][id*="grid"]').each(function() {
+                            var grid = $(this).data('kendoGrid');
+                            if (grid && this.id !== 'incoming-orders-grid') {
+                                grid.dataSource.read();
+                            }
+                        });
+                        
+                    } else {
+                        // Add visual error feedback
+                        var button = $('#verify-btn-' + orderId);
+                        var row = button.closest('tr');
+                        row.addClass('highlight-error');
+                        setTimeout(function() {
+                            row.removeClass('highlight-error');
+                        }, 3000);
+                        
+                        // Re-enable the button on failure
+                        button.prop('disabled', false).text('Verify Order');
+                        
+                        alert(result.message || 'Failed to verify order');
+                    }
+                },
+                error: function() {
+                    // Add visual error feedback
+                    var button = $('#verify-btn-' + orderId);
+                    var row = button.closest('tr');
+                    row.addClass('highlight-error');
+                    setTimeout(function() {
+                        row.removeClass('highlight-error');
+                    }, 3000);
+                    
+                    alert('Error occurred while verifying order');
+                    // Re-enable the button on error
+                    button.prop('disabled', false).text('Verify Order');
+                },
+                complete: function() {
+                    // This runs whether success or error
+                    console.log('Order verification request completed for order: ' + orderId);
+                }
+            });
+        }
+    }
+
+    // Function to initialize the detail row with order products table component
+    function orderItemDetailInit(e) {
+        var orderId = e.data.Id;
+
+        // Create a container for the order products table component
+        var componentContainer = $("<div class='incoming-order-products-container'/>").appendTo(e.detailCell);
+
+        // Load the OrderProductsTable component via AJAX
+        $.ajax({
+            url: '@Html.Raw(Url.Action("GetOrderProductsTableComponent", "Order", new { area = Constants.AreaAdmin }))',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                contextId: 'incoming-' + orderId,
+                showAddProducts: true, // Show ProductSearchAdd component to match order edit page
+                showSummary: true, // Show order summary (subtotal, shipping, tax, total)
+                collapsible: false,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(componentHtml) {
+                // Insert the component HTML
+                componentContainer.html(componentHtml);
+
+                // After component is loaded, add the shipment date control panel
+                var datePanel = $('<div class="incoming-order-control-panel" data-order-id="' + orderId + '"></div>');
+
+                // Add requested shipment date row
+                var dateRow = $('<div class="row mt-3 mb-3"></div>');
+                var dateSection = $('<div class="col-md-6 form-group row"></div>');
+                dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]:</label>');
+                dateSection.append('<div class="col-sm-8"><input type="date" id="requestedShipmentDate_' + orderId + '" class="form-control requested-shipment-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
+                dateRow.append(dateSection);
+
+                // Create empty action buttons section for future use
+                var buttonSection = $('<div class="col-md-6 text-right"></div>');
+                dateRow.append(buttonSection);
+                datePanel.append(dateRow);
+
+                // Add the date panel after the component
+                componentContainer.after(datePanel);
+
+                // Set up context-specific refresh function for this order's products (no global collision)
+                window['refreshCurrentProductsGrid_incoming_' + orderId] = function() {
+                    // Reload the entire component to refresh the products table
+                    $.ajax({
+                        url: '@Html.Raw(Url.Action("GetOrderProductsTableComponent", "Order", new { area = Constants.AreaAdmin }))',
+                        type: 'POST',
+                        data: {
+                            orderId: orderId,
+                            contextId: 'incoming-' + orderId,
+                            showAddProducts: true, // Show ProductSearchAdd component in refresh function too
+                            showSummary: true, // Show order summary in refresh function too
+                            collapsible: false,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(html) {
+                            componentContainer.html(html);
+                            // Re-assign the refresh function after component reload
+                            window['refreshCurrentProductsGrid_incoming_' + orderId] = arguments.callee;
+                        }
+                    });
+                };
+
+                // Set up instance-specific refresh callback for ProductSearchAdd component
+                // Match the componentId pattern used in ProductSearchAdd: 'product-search-' + contextId with special chars replaced
+                var contextId = 'incoming-' + orderId;
+                var componentId = 'product-search-' + contextId.replace(/[^a-zA-Z0-9]/g, '_');
+                var callbackName = 'refreshCallback_' + componentId.replace(/-/g, '_');
+                window[callbackName] = function() {
+                    console.log('IncomingOrdersQueue: Refreshing products for order', orderId);
+                    window['refreshCurrentProductsGrid_incoming_' + orderId]();
+                };
+
+                // Load existing requested shipment date
+                $.ajax({
+                    url: "@Url.Action("GetRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin })",
+                    type: "GET",
+                    data: { orderId: orderId },
+                    success: function(response) {
+                        if (response && response.success && response.value) {
+                            $("#requestedShipmentDate_" + orderId).val(response.value);
+                        }
+                    }
+                });
+
+                // Wire up the date picker to save changes
+                $("#requestedShipmentDate_" + orderId).off("change").on("change", function() {
+                    var newDate = $(this).val();
+                    var data = {
+                        orderId: orderId,
+                        date: newDate
+                    };
+                    addAntiForgeryToken(data);
+
+                    $.ajax({
+                        url: "@Html.Raw(Url.Action("SaveRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        data: data,
+                        success: function(response) {
+                            if (response && response.success) {
+                                // Reload main grid to reflect changes
+                                setTimeout(function() {
+                                    $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
+                                }, 500);
+                            } else {
+                                alert("Failed to save delivery date");
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Save date error:", error);
+                            alert("Error saving date: " + error);
+                        }
+                    });
+                });
+            },
+            error: function(xhr, status, error) {
+                componentContainer.html('<div class="alert alert-danger">Error loading order products: ' + error + '</div>');
+            }
+        });
+    }
+
+    // Create Order functionality
+    function openCreateOrderModal() {
+        // Comprehensive cleanup before opening modal
+        cleanupCustomerSearchModal();
+        
+        // Show the modal
+        $('#customerSearchModal').modal('show');
+        
+        // Initialize autocomplete when modal is shown (ensures DOM element is visible)
+        $('#customerSearchModal').on('shown.bs.modal.customerSearch', function () {
+            // Initialize unified customer search
+            initializeCustomerSearch();
+            
+            // Focus on the search input
+            $('#addressSearchInput').focus();
+        });
+        
+        // Comprehensive cleanup when modal is hidden
+        $('#customerSearchModal').on('hidden.bs.modal.customerSearch', function () {
+            cleanupCustomerSearchModal();
+        });
+    }
+    
+    // Comprehensive cleanup function for customer search modal
+    function cleanupCustomerSearchModal() {
+        // Clear search results
+        $('.customer-search-results').remove();
+        
+        // Clear input values
+        $('#addressSearchInput').val('');
+        
+        // Remove existing event handlers with namespace
+        $('#addressSearchInput').off('input.customerSearch');
+        $('#customerSearchModal').off('shown.bs.modal.customerSearch hidden.bs.modal.customerSearch');
+        
+        // Clear any existing timeout
+        if (window.customerSearchTimeout) {
+            clearTimeout(window.customerSearchTimeout);
+            window.customerSearchTimeout = null;
+        }
+    }
+
+    // Initialize unified customer search - searches customers by all fields: name, email, address, etc.
+    function initializeCustomerSearch() {
+        // Use global timeout variable for proper cleanup
+        window.customerSearchTimeout = null;
+        
+        function performSearch() {
+            var searchKeyword = $('#addressSearchInput').val() || '';
+            
+            // Check if search has at least 1 character
+            var hasValidSearch = searchKeyword.length >= 1;
+            
+            console.log('performSearch called:', { searchKeyword, hasValidSearch });
+            
+            if (!hasValidSearch) {
+                // Clear results if no valid input
+                $('.customer-search-results').remove();
+                return;
+            }
+            
+            // Clear any existing timeout
+            if (window.customerSearchTimeout) {
+                clearTimeout(window.customerSearchTimeout);
+            }
+            
+            // Set new timeout for search
+            window.customerSearchTimeout = setTimeout(function() {
+                // Unified search with single term parameter
+                var data = {
+                    term: searchKeyword
+                };
+                
+                console.log('Making AJAX request with params:', data);
+                $.ajax({
+                    url: '@(Url.Action("CustomerSearchAutoComplete", "Customer", new { area = Constants.AreaAdmin }))',
+                    type: 'GET',
+                    data: data,
+                    success: function(data) {
+                        console.log('Search results received:', data);
+                        displaySearchResults(data);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error performing customer search:', { status, error, response: xhr.responseText });
+                    }
+                });
+            }, 500); // 500ms delay
+        }
+        
+        function displaySearchResults(results) {
+            // Remove existing results
+            $('.customer-search-results').remove();
+            
+            if (!results || results.length === 0) {
+                console.log('No results to display');
+                return;
+            }
+            
+            console.log('Displaying', results.length, 'results');
+            
+            // Create results container with proper styling
+            var resultsHtml = '<div class="customer-search-results list-group mt-2">';
+            results.forEach(function(customer) {
+                var addressIdAttr = customer.addressId ? 'data-address-id="' + customer.addressId + '"' : '';
+                var matchTypeAttr = customer.matchType ? 'data-match-type="' + customer.matchType + '"' : '';
+                
+                console.log('Creating result item:', {
+                    id: customer.id,
+                    label: customer.label,
+                    addressId: customer.addressId,
+                    matchType: customer.matchType
+                });
+                
+                resultsHtml += '<a href="#" class="list-group-item list-group-item-action customer-result-item" ' +
+                              'style="color: #333; background-color: #fff; border: 1px solid #ddd;" ' +
+                              'data-customer-id="' + customer.id + '" ' +
+                              'data-customer-label="' + customer.label + '" ' +
+                              addressIdAttr + ' ' + matchTypeAttr + '>' + 
+                              customer.label + '</a>';
+            });
+            resultsHtml += '</div>';
+            
+            // Add results after the address search input
+            $('#addressSearchInput').parent().after(resultsHtml);
+            
+            // Handle result selection and hover effects
+            $('.customer-result-item').on('click', function(e) {
+                e.preventDefault();
+                var customerId = $(this).data('customer-id');
+                var customerLabel = $(this).data('customer-label');
+                var addressId = $(this).data('address-id');
+                var matchType = $(this).data('match-type');
+                selectCustomerForOrder(customerId, customerLabel, addressId, matchType);
+            }).on('mouseenter', function() {
+                $(this).css({
+                    'background-color': '#f5f5f5',
+                    'color': '#000'
+                });
+            }).on('mouseleave', function() {
+                $(this).css({
+                    'background-color': '#fff',
+                    'color': '#333'
+                });
+            });
+        }
+        
+        // Bind events to the unified search input with namespace for proper cleanup
+        $('#addressSearchInput').on('input.customerSearch', performSearch);
+        
+        // Clear results when input is cleared
+        $('#addressSearchInput').on('input.customerSearch', function() {
+            if (!$('#addressSearchInput').val()) {
+                $('.customer-search-results').remove();
+            }
+        });
+        
+        console.log('Customer search initialized with namespaced events');
+    }
+
+    function selectCustomerForOrder(customerId, customerLabel, addressId, matchType) {
+        console.log('selectCustomerForOrder called with:', { customerId, customerLabel, addressId, matchType });
+        
+        // Hide customer search modal
+        $('#customerSearchModal').modal('hide');
+        
+        // Check checkbox state first - this determines the overall behavior
+        var useSameAddress = $('#sameAddressCheckboxSearch').is(':checked');
+        console.log('Checkbox "Use same address" checked:', useSameAddress);
+        
+        // If checkbox is UNCHECKED, always show address selection modal (manual mode)
+        if (!useSameAddress) {
+            console.log('Manual mode: Showing address selection modal for all result types');
+            $.ajax({
+                url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
+                type: "POST",
+                data: addAntiForgeryToken({
+                    customerId: customerId
+                }),
+                dataType: "json",
+                success: function(addressData) {
+                    if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
+                        showAddressSelectionModalForIncoming(customerId, customerLabel, addressData.addresses);
+                    } else {
+                        showNotificationIncoming("Customer must have saved addresses before creating an order", "error", 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showNotificationIncoming("Error loading customer addresses", "error", 5000);
+                }
+            });
+            return;
+        }
+        
+        // If checkbox is CHECKED, use match type logic (quick mode)
+        console.log('Quick mode: Using match type logic');
+        
+        // Address-specific results: create order directly with that address
+        if (addressId && matchType === 'address') {
+            console.log('Address-specific result: Creating order with address:', addressId);
+            createOrderWithSpecificAddress(customerId, customerLabel, addressId);
+            return;
+        }
+        
+        // Customer-only results: create order with first address
+        if (matchType === 'customer') {
+            console.log('Customer-only result: Creating order with first address');
+            createOrderDirectly(customerId, customerLabel);
+            return;
+        }
+        
+        // Fallback for unknown match types
+        console.log('Unknown match type, defaulting to first address');
+        createOrderDirectly(customerId, customerLabel);
+    }
+
+    function createOrderWithSpecificAddress(customerId, customerLabel, addressId) {
+        console.log('Creating order with specific address:', { customerId, customerLabel, addressId });
+        
+        // Create order directly using the specific address for both billing and shipping
+        $.ajax({
+            url: "@Html.Raw(Url.Action("StartOrder", "Customer", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: addAntiForgeryToken({
+                customerId: customerId,
+                billingAddressId: addressId,
+                shippingAddressId: addressId
+            }),
+            dataType: "json",
+            success: function(data) {
+                if (data.success) {
+                    // Refresh the incoming orders grid
+                    $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
+                    showNotificationIncoming("Order created successfully for " + customerLabel + " using selected address", "success", 5000);
+                } else {
+                    showNotificationIncoming(data.message || "Error creating order", "error", 5000);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error creating order with specific address:', error);
+                showNotificationIncoming("Error creating order: " + error, "error", 5000);
+            }
+        });
+    }
+
+    function createOrderDirectly(customerId, customerLabel) {
+        // Load customer addresses to get the first address
+        $.ajax({
+            url: "@Html.Raw(Url.Action("GetCustomerAddresses", "Customer", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: addAntiForgeryToken({
+                customerId: customerId
+            }),
+            dataType: "json",
+            success: function(addressData) {
+                if (addressData.success && addressData.addresses && addressData.addresses.length > 0) {
+                    // Use first address for both billing and shipping
+                    var firstAddress = addressData.addresses[0];
+                    var billingAddressId = firstAddress.id;
+                    var shippingAddressId = firstAddress.id;
+                    
+                    // Create order directly using the existing StartOrder endpoint
+                    $.ajax({
+                        url: "@Html.Raw(Url.Action("StartOrder", "Customer", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        data: addAntiForgeryToken({
+                            customerId: customerId,
+                            billingAddressId: billingAddressId,
+                            shippingAddressId: shippingAddressId
+                        }),
+                        dataType: "json",
+                        success: function(data) {
+                            if (data.success) {
+                                // Refresh the incoming orders grid
+                                $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
+                                showNotificationIncoming("Order created successfully for " + customerLabel, "success", 5000);
+                            } else {
+                                showNotificationIncoming(data.message || "Error creating order", "error", 5000);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            showNotificationIncoming("Error creating order: " + error, "error", 5000);
+                        }
+                    });
+                } else {
+                    showNotificationIncoming("Customer must have saved addresses before creating an order", "error", 5000);
+                }
+            },
+            error: function(xhr, status, error) {
+                showNotificationIncoming("Error loading customer addresses", "error", 5000);
+            }
+        });
+    }
+
+    function showAddressSelectionModalForIncoming(customerId, customerLabel, addresses) {
+        var modalHtml = `
+            <div class="modal fade" id="addressSelectionModalIncoming" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">Create Order for: ${customerLabel}</h4>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="billingAddressSelectIncoming">Billing Address</label>
+                                <select id="billingAddressSelectIncoming" class="form-control">
+                                    <option value="">Select Address...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="sameAddressCheckbox" checked>
+                                    <label class="form-check-label" for="sameAddressCheckbox">
+                                        Use same address for billing and shipping
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group" id="shippingAddressGroup" style="display: none;">
+                                <label for="shippingAddressSelectIncoming">Shipping Address</label>
+                                <select id="shippingAddressSelectIncoming" class="form-control">
+                                    <option value="">Select Address...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="createOrderFromIncoming('${customerId}')">Create Order</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        $('#addressSelectionModalIncoming').remove();
+        
+        // Add modal to page
+        $('body').append(modalHtml);
+        
+        // Populate address dropdowns
+        addresses.forEach(function(address) {
+            var addressText = address.firstName + ' ' + address.lastName;
+            if (address.company) {
+                addressText += ' (' + address.company + ')';
+            }
+            if (address.address1) {
+                addressText += ', ' + address.address1;
+            }
+            if (address.city) {
+                addressText += ', ' + address.city;
+            }
+            
+            var option = '<option value="' + address.id + '">' + addressText + '</option>';
+            $('#billingAddressSelectIncoming').append(option);
+            $('#shippingAddressSelectIncoming').append(option);
+        });
+        
+        // Set first address as default for both dropdowns since checkbox is checked by default
+        if (addresses.length > 0) {
+            var firstAddressId = addresses[0].id;
+            $('#billingAddressSelectIncoming').val(firstAddressId);
+            $('#shippingAddressSelectIncoming').val(firstAddressId);
+        }
+        
+        // Show modal
+        $('#addressSelectionModalIncoming').modal('show');
+        
+        // Set up same address checkbox functionality
+        $('#sameAddressCheckbox').on('change', function() {
+            var isChecked = $(this).is(':checked');
+            var shippingGroup = $('#shippingAddressGroup');
+            var shippingSelect = $('#shippingAddressSelectIncoming');
+            var billingSelect = $('#billingAddressSelectIncoming');
+            
+            if (isChecked) {
+                // Hide shipping address selection and sync with billing
+                shippingGroup.hide();
+                shippingSelect.val(billingSelect.val());
+            } else {
+                // Show shipping address selection
+                shippingGroup.show();
+            }
+        });
+        
+        // When billing address changes and checkbox is checked, update shipping address too
+        $('#billingAddressSelectIncoming').on('change', function() {
+            if ($('#sameAddressCheckbox').is(':checked')) {
+                $('#shippingAddressSelectIncoming').val($(this).val());
+            }
+        });
+    }
+
+    function createOrderFromIncoming(customerId) {
+        var billingAddressId = $('#billingAddressSelectIncoming').val();
+        var shippingAddressId = $('#shippingAddressSelectIncoming').val();
+        
+        if (!billingAddressId || !shippingAddressId) {
+            showNotificationIncoming("Please select both billing and shipping addresses", "error", 5000);
+            return;
+        }
+        
+        $('#addressSelectionModalIncoming').modal('hide');
+        
+        // Use the existing StartOrder endpoint from CustomerController
+        $.ajax({
+            url: "@Html.Raw(Url.Action("StartOrder", "Customer", new { area = Constants.AreaAdmin }))",
+            type: "POST",
+            data: addAntiForgeryToken({
+                customerId: customerId,
+                billingAddressId: billingAddressId,
+                shippingAddressId: shippingAddressId
+            }),
+            dataType: "json",
+            success: function(data) {
+                if (data.success) {
+                    // Refresh the incoming orders grid
+                    $("#incoming-orders-grid").data("kendoGrid").dataSource.read();
+                    showNotificationIncoming("Order created successfully and added to incoming queue", "success", 5000);
+                } else {
+                    showNotificationIncoming(data.message || "Error creating order", "error", 5000);
+                }
+            },
+            error: function(xhr, status, error) {
+                showNotificationIncoming("Error creating order", "error", 5000);
+            }
+        });
+    }
+
+    function showNotificationIncoming(message, type, timeout) {
+        timeout = timeout || 5000;
+        
+        // Try displayGrandeNotification first (if available)
+        if (typeof displayGrandeNotification === 'function') {
+            displayGrandeNotification(message, type, timeout);
+            return;
+        }
+        
+        // Fallback to alert for errors and warnings
+        if (type === 'error' || type === 'warning') {
+            alert(message);
+            return;
+        }
+        
+        // For success messages, create a simple toast
+        if (type === 'success') {
+            var toast = $('<div class="alert alert-success" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;">' +
+                         '<button type="button" class="close" onclick="$(this).parent().fadeOut(function(){ $(this).remove(); })">&times;</button>' +
+                         '<strong>Success!</strong> ' + message + '</div>');
+            $('body').append(toast);
+            
+            setTimeout(function() {
+                toast.fadeOut(function() {
+                    toast.remove();
+                });
+            }, timeout);
+        }
+    }
+</script>

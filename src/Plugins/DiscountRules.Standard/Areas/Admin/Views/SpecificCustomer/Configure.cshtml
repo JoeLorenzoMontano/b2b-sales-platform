@@ -1,0 +1,136 @@
+@{
+    Layout = "";
+}
+@using System.Text.Encodings.Web
+@using DiscountRules.Standard.Models
+@model DiscountRules.Standard.Models.RequirementSpecificCustomerModel
+
+<script>
+    $(document).ready(function () {
+        $('#savespecificcustomerrequirement@(Model.RequirementId)').click(function () {
+            var customerId = $("#@Html.IdFor(model => model.CustomerId)").val();
+            var discountId = '@Model.DiscountId';
+            var requirementId = '@Model.RequirementId';
+
+            if(customerId == "") return;
+
+            var postData = {
+                discountId: discountId,
+                discountRequirementId: requirementId,
+                customerId: customerId
+            };
+            addAntiForgeryToken(postData);
+
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "@Url.Action("Configure", "SpecificCustomer")",
+                data: postData,
+                success: function (data) {
+                    $('#pnl-save-requirement-result@(Model.RequirementId)').fadeIn("slow").delay(1000).fadeOut("slow");
+                    //notify parent if it's a new requirement
+                    @if (string.IsNullOrEmpty(Model.RequirementId))
+                    {
+                        <text>$("#discountRequirementContainer").trigger('grandnewdiscountruleadded', [data.NewRequirementId]);</text>
+                    }
+                },
+                error:function (xhr, ajaxOptions, thrownError){
+                    alert('@Html.Raw(JavaScriptEncoder.Default.Encode(Loc["admin.marketing.Discounts.Requirements.FailedToSave"]))');
+                }
+            });
+        });
+
+        // Open customer selector popup
+        $('#select-customer-button@(Model.RequirementId)').click(function() {
+            var discountId = '@Model.DiscountId';
+            var requirementId = '@Model.RequirementId';
+            var customerIdInput = '@Html.IdFor(model => model.CustomerId)';
+            var customerInfoInput = 'customer-info-@(Model.RequirementId)';
+
+            var customerSelectorUrl = '@Url.Action("CustomerSelector", "SpecificCustomer")?discountId=' + discountId + '&discountRequirementId=' + requirementId + '&customerIdInput=' + customerIdInput + '&customerInfoInput=' + customerInfoInput;
+            
+            // Open in a new window instead of iframe (simpler approach)
+            var customerSelectorWindow = window.open(customerSelectorUrl, 'CustomerSelector', 'width=800,height=700,resizable=yes');
+            
+            // Define the selectCustomer function globally for the popup window to call
+            window.selectCustomerFromPopup = function(customerId, customerText) {
+                $("#@Html.IdFor(model => model.CustomerId)").val(customerId);
+                $('#customer-info-@(Model.RequirementId)').html(customerText);
+                $('#customer-info-@(Model.RequirementId)').show();
+                customerSelectorWindow.close();
+            };
+            
+            return false;
+        });
+
+        //customer autocomplete
+        $("#@Html.IdFor(model => model.CustomerEmail)").autocomplete({
+            delay: 500,
+            minLength: 3,
+            source: function (request, response) {
+                $.ajax({
+                    cache: false,
+                    type: "GET",
+                    url: "@(Url.Action("CustomerList", "SpecificCustomer"))",
+                    data: { term: request.term },
+                    success: function (data) {
+                        response($.map(data, function (item) {
+                            return {
+                                label: item.text,
+                                value: item.text,
+                                customerId: item.id
+                            };
+                        }));
+                    }
+                });
+            },
+            select: function (event, ui) {
+                $("#@Html.IdFor(model => model.CustomerId)").val(ui.item.customerId);
+                $(this).val(ui.item.label);
+                $('#customer-info-@(Model.RequirementId)').html(ui.item.label);
+                return false;
+            }
+        });
+    });
+</script>
+<div class="form-horizontal">
+    <div class="form-group">
+        <admin-label asp-for="CustomerEmail" />
+        <div class="col-md-9 col-sm-9">
+            <div class="input-group">
+                <admin-input asp-for="CustomerEmail" />
+                <div class="input-group-append">
+                    <button type="button" id="select-customer-button@(Model.RequirementId)" class="btn btn-info">
+                        <i class="fa fa-search"></i> @Loc["Admin.Common.Browse"]
+                    </button>
+                </div>
+            </div>
+            <admin-input asp-for="CustomerId" type="hidden" />
+            
+            @if (!string.IsNullOrEmpty(Model.CustomerInfo))
+            {
+                <div class="mt-2">
+                    <span id="customer-info-@(Model.RequirementId)" class="badge alert-info">@Model.CustomerInfo</span>
+                </div>
+            }
+            else
+            {
+                <div class="mt-2">
+                    <span id="customer-info-@(Model.RequirementId)" class="badge alert-info" style="display:none;"></span>
+                </div>
+            }
+            
+            <div class="group-btn btn-group-devided margin-top-10">
+                <input type="button" id="savespecificcustomerrequirement@(Model.RequirementId)" class="btn default" value="@Loc["Admin.Common.Save"]" />
+            </div>
+            <div id="pnl-save-requirement-result@(Model.RequirementId)" style="display:none;">@Loc["admin.marketing.Discounts.Requirements.Saved"]</div>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-md-offset-3 col-md-9 col-sm-9">
+            <p class="small">
+                <em>@Loc["Admin.Promotions.Discounts.Requirements.SpecificCustomer.Hint"]</em>
+            </p>
+        </div>
+    </div>
+</div>

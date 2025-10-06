@@ -2,6 +2,7 @@
 using Grand.Business.Core.Events.Catalog;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Data;
+using Grand.Domain;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Shipping;
@@ -141,6 +142,67 @@ public class InventoryManageService : IInventoryManageService
     private async Task ManageAttributesInventory(Product product, Shipment shipment, ShipmentItem shipmentItem)
     {
         var attributeValues = product.ParseProductAttributeValues(shipmentItem.Attributes);
+        
+        // First check for weight-based conversion attributes
+        foreach (var attributeValue in attributeValues)
+        {
+            if (attributeValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+            {
+                // For weight-based conversion, we directly adjust the main product's inventory
+                if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+                {
+                    // Apply conversion ratio to the main product stock
+                    if (!product.UseMultipleWarehouses)
+                    {
+                        product.StockQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                        product.ReservedQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                        if (product.ReservedQuantity < 0)
+                            product.ReservedQuantity = 0;
+                            
+                        await UpdateStockProduct(product);
+                    }
+                    else
+                    {
+                        var pwi = product.ProductWarehouseInventory.FirstOrDefault(pi =>
+                            pi.WarehouseId == shipmentItem.WarehouseId);
+                        if (pwi != null)
+                        {
+                            pwi.ReservedQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                            pwi.StockQuantity -= shipmentItem.Quantity * attributeValue.Quantity;
+                            if (pwi.ReservedQuantity < 0)
+                                pwi.ReservedQuantity = 0;
+
+                            await _productRepository.UpdateToSet(product.Id, x => x.ProductWarehouseInventory, z => z.Id, pwi.Id, pwi);
+                            await _productRepository.UpdateField(product.Id, x => x.UpdatedOnUtc, DateTime.UtcNow);
+
+                            product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
+                            product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
+                            await UpdateStockProduct(product);
+                        }
+                    }
+                    
+                    // Create an inventory journal entry
+                    var ij = new InventoryJournal {
+                        CreateDateUtc = DateTime.UtcNow,
+                        ObjectType = typeof(Shipment).Name,
+                        ObjectId = shipment.Id,
+                        PositionId = shipmentItem.Id,
+                        Attributes = shipmentItem.Attributes,
+                        ProductId = product.Id,
+                        WarehouseId = shipmentItem.WarehouseId,
+                        Reference = shipment.ShipmentNumber.ToString(),
+                        Comments = $"Shipment - {shipment.TrackingNumber} - Weight based conversion ({attributeValue.Quantity}:1)",
+                        OutQty = shipmentItem.Quantity * attributeValue.Quantity
+                    };
+                    await _inventoryJournalRepository.InsertAsync(ij);
+                }
+                
+                // We've handled the weight-based conversion, return early
+                return;
+            }
+        }
+        
+        // Handle associated products if no weight-based conversion was found
         foreach (var attributeValue in attributeValues)
         {
             if (attributeValue.AttributeValueTypeId != AttributeValueType.AssociatedToProduct) continue;
@@ -271,6 +333,71 @@ public class InventoryManageService : IInventoryManageService
 
     #endregion
 
+    /// <summary>
+    /// Inserts an inventory journal entry for manual stock quantity changes
+    /// </summary>
+    /// <param name="product">Product</param>
+    /// <param name="warehouseId">Warehouse ID (if applicable)</param>
+    /// <param name="previousStockQty">Previous stock quantity</param>
+    /// <param name="newStockQty">New stock quantity</param>
+    /// <param name="userId">User ID who made the change (optional)</param>
+    /// <returns>Task</returns>
+    /// <summary>
+    /// Generates a descriptive comment for inventory journal entries
+    /// </summary>
+    private string GenerateInventoryJournalComment(double previousStockQty, double newStockQty, string userId, IList<CustomAttribute> attributes)
+    {
+        // Format user who made the change
+        string userInfo = string.IsNullOrEmpty(userId) ? "administrator" : userId;
+        
+        // Format attribute information
+        string attributeInfo = "";
+        
+        if (attributes != null && attributes.Any())
+        {
+            attributeInfo = " for attribute combination";
+        }
+        
+        // Create the complete comment
+        return $"Stock changed from {previousStockQty} to {newStockQty}{attributeInfo} by {userInfo}";
+    }
+    
+    private async Task InsertManualInventoryJournal(Product product, string warehouseId, double previousStockQty, double newStockQty, string userId = null, IList<CustomAttribute> attributes = null)
+    {
+        var qtyChange = newStockQty - previousStockQty;
+        if (qtyChange == 0)
+            return;
+
+        // Get combination text if available
+        string combinationText = "";
+        if (attributes != null && attributes.Any() && product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
+        {
+            var combination = product.FindProductAttributeCombination(attributes);
+            if (combination != null && !string.IsNullOrEmpty(combination.Text))
+            {
+                combinationText = combination.Text;
+            }
+        }
+            
+        var ij = new InventoryJournal {
+            CreateDateUtc = DateTime.UtcNow,
+            ObjectType = "Admin",
+            ObjectId = product.Id,
+            PositionId = Guid.NewGuid().ToString(),
+            Attributes = attributes ?? new List<CustomAttribute>(),
+            ProductId = product.Id,
+            WarehouseId = warehouseId,
+            Reference = "Manual Update",
+            Comments = string.IsNullOrEmpty(combinationText) 
+                ? GenerateInventoryJournalComment(previousStockQty, newStockQty, userId, attributes)
+                : $"Stock changed from {previousStockQty} to {newStockQty} for variant [{combinationText}] by {(string.IsNullOrEmpty(userId) ? "administrator" : userId)}",
+            InQty = qtyChange > 0 ? Math.Abs(qtyChange) : 0,
+            OutQty = qtyChange < 0 ? Math.Abs(qtyChange) : 0
+        };
+        
+        await _inventoryJournalRepository.InsertAsync(ij);
+    }
+
     #region Inventory management methods
 
     /// <summary>
@@ -280,7 +407,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="quantityToChange">Quantity to increase or decrease</param>
     /// <param name="attributes">Attributes</param>
     /// <param name="warehouseId">Warehouse ident</param>
-    public virtual async Task AdjustReserved(Product product, int quantityToChange,
+    public virtual async Task AdjustReserved(Product product, double quantityToChange,
         IList<CustomAttribute> attributes = null, string warehouseId = "")
     {
         ArgumentNullException.ThrowIfNull(product);
@@ -424,15 +551,87 @@ public class InventoryManageService : IInventoryManageService
                     }) await AdjustReserved(p1, quantityToChange * item.Quantity, attributes, warehouseId);
             }
 
-        //bundled products
+        // Check for weight-based conversion first
+        double originalQuantityToChange = quantityToChange;
+        bool hasWeightBasedConversion = false;
+        double conversionRatio = 1;
+        
         var attributeValues = product.ParseProductAttributeValues(attributes);
         foreach (var attributeValue in attributeValues)
         {
-            if (attributeValue.AttributeValueTypeId != AttributeValueType.AssociatedToProduct) continue;
-            //associated product (bundle)
-            var associatedProduct = await _productRepository.GetByIdAsync(attributeValue.AssociatedProductId);
-            if (associatedProduct != null)
-                await AdjustReserved(associatedProduct, quantityToChange * attributeValue.Quantity, null, warehouseId);
+            if (attributeValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+            {
+                // Store the conversion ratio but don't apply it yet
+                hasWeightBasedConversion = true;
+                conversionRatio = attributeValue.Quantity;
+                break; // Only apply one conversion
+            }
+        }
+        
+        // If we found a weight-based conversion, apply it by directly manipulating the product's stock
+        if (hasWeightBasedConversion && product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+        {
+            // We need to manually adjust the stock by the conversion ratio
+            if (!product.UseMultipleWarehouses)
+            {
+                // For negative quantities (reserving inventory)
+                if (quantityToChange < 0)
+                {
+                    product.ReservedQuantity += -quantityToChange * conversionRatio;
+                    await UpdateStockProduct(product);
+                }
+                // For positive quantities (unreserving inventory)
+                else if (quantityToChange > 0)
+                {
+                    product.ReservedQuantity -= quantityToChange * conversionRatio;
+                    if (product.ReservedQuantity < 0)
+                        product.ReservedQuantity = 0;
+                    await UpdateStockProduct(product);
+                }
+            }
+            else
+            {
+                // Handle multi-warehouse scenario
+                var pwi = product.ProductWarehouseInventory.FirstOrDefault(x => x.WarehouseId == warehouseId);
+                if (pwi != null)
+                {
+                    // For negative quantities (reserving inventory)
+                    if (quantityToChange < 0)
+                    {
+                        pwi.ReservedQuantity += -quantityToChange * conversionRatio;
+                    }
+                    // For positive quantities (unreserving inventory)
+                    else if (quantityToChange > 0)
+                    {
+                        pwi.ReservedQuantity -= quantityToChange * conversionRatio;
+                        if (pwi.ReservedQuantity < 0)
+                            pwi.ReservedQuantity = 0;
+                    }
+                    
+                    await _productRepository.UpdateToSet(product.Id, x => x.ProductWarehouseInventory, z => z.Id, pwi.Id, pwi);
+                    await _productRepository.UpdateField(product.Id, x => x.UpdatedOnUtc, DateTime.UtcNow);
+                    
+                    product.StockQuantity = product.ProductWarehouseInventory.Sum(x => x.StockQuantity);
+                    product.ReservedQuantity = product.ProductWarehouseInventory.Sum(x => x.ReservedQuantity);
+                    
+                    await UpdateStockProduct(product);
+                }
+            }
+            
+            // Since we've manually handled the inventory, return early
+            return;
+        }
+        
+        // Process associated products
+        foreach (var attributeValue in attributeValues)
+        {
+            if (attributeValue.AttributeValueTypeId == AttributeValueType.AssociatedToProduct)
+            {
+                //associated product (bundle)
+                var associatedProduct = await _productRepository.GetByIdAsync(attributeValue.AssociatedProductId);
+                if (associatedProduct != null)
+                    await AdjustReserved(associatedProduct, originalQuantityToChange * attributeValue.Quantity, null, warehouseId);
+            }
         }
 
         //event notification
@@ -445,7 +644,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="product">Product</param>
     /// <param name="quantity">Quantity, must be negative</param>
     /// <param name="warehouseId"></param>
-    protected virtual async Task ReserveInventory(Product product, int quantity, string warehouseId)
+    protected virtual async Task ReserveInventory(Product product, double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
 
@@ -489,7 +688,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="quantity">Quantity, must be negative</param>
     /// <param name="warehouseId">Warehouse ident</param>
     protected virtual async Task ReserveInventoryCombination(Product product, ProductAttributeCombination combination,
-        int quantity, string warehouseId)
+        double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
         ArgumentNullException.ThrowIfNull(combination);
@@ -546,7 +745,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="product">Product</param>
     /// <param name="quantity">Quantity, must be positive</param>
     /// <param name="warehouseId">Warehouse ident</param>
-    protected virtual async Task UnblockReservedInventory(Product product, int quantity, string warehouseId)
+    protected virtual async Task UnblockReservedInventory(Product product, double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
 
@@ -592,7 +791,7 @@ public class InventoryManageService : IInventoryManageService
     /// <param name="quantity">Quantity, must be positive</param>
     /// <param name="warehouseId">Warehouse ident</param>
     protected virtual async Task UnblockReservedInventoryCombination(Product product,
-        ProductAttributeCombination combination, int quantity, string warehouseId)
+        ProductAttributeCombination combination, double quantity, string warehouseId)
     {
         ArgumentNullException.ThrowIfNull(product);
 
@@ -706,12 +905,41 @@ public class InventoryManageService : IInventoryManageService
     }
 
 
-    public virtual async Task UpdateStockProduct(Product product, bool mediator = true)
+    public virtual async Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, double? previousStockQuantity = null, string warehouseId = null, string userId = null, IList<CustomAttribute> attributes = null)
     {
         ArgumentNullException.ThrowIfNull(product);
 
         if (product.ReservedQuantity < 0)
             product.ReservedQuantity = 0;
+            
+        // Track inventory changes in the journal if requested (for manual admin updates)
+        if (trackInventory && previousStockQuantity.HasValue) 
+        {
+            // For attribute-based inventory - must track per combination
+            if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes && attributes != null)
+            {
+                var combination = product.FindProductAttributeCombination(attributes);
+                if (combination != null)
+                {
+                    // Get previous attribute combination stock quantity - this is the specific value we need
+                    // Don't use the passed-in previousStockQuantity (which is for the whole product)
+                    // This way we track only the changes to this specific attribute combination
+                    
+                    // Note: we rely on the caller to pass us the right previousStockQuantity for THIS combination
+                    // The UI service is responsible for tracking the pre-change state correctly
+                    if (previousStockQuantity.Value != combination.StockQuantity)
+                    {
+                        await InsertManualInventoryJournal(product, warehouseId, previousStockQuantity.Value, combination.StockQuantity, userId, attributes);
+                    }
+                }
+            }
+            // For regular inventory
+            else if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock && 
+                     previousStockQuantity.Value != product.StockQuantity)
+            {
+                await InsertManualInventoryJournal(product, warehouseId, previousStockQuantity.Value, product.StockQuantity, userId);
+            }
+        }
 
         //update
         await _productRepository.UpdateField(product.Id, x => x.StockQuantity, product.StockQuantity);
@@ -732,6 +960,33 @@ public class InventoryManageService : IInventoryManageService
 
         //event notification
         await _mediator.EntityUpdated(product);
+    }
+
+    /// <summary>
+    /// Gets inventory journal entries for a product
+    /// </summary>
+    /// <param name="productId">Product ID (optional)</param>
+    /// <param name="warehouseId">Warehouse ID (optional)</param>
+    /// <param name="pageIndex">Page index</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>Inventory journal entries</returns>
+    public virtual async Task<IPagedList<InventoryJournal>> GetInventoryJournal(string productId = "", string warehouseId = "", 
+        int pageIndex = 0, int pageSize = int.MaxValue)
+    {
+        var query = _inventoryJournalRepository.Table;
+        
+        // Filter by product
+        if (!string.IsNullOrEmpty(productId))
+            query = query.Where(x => x.ProductId == productId);
+            
+        // Filter by warehouse
+        if (!string.IsNullOrEmpty(warehouseId))
+            query = query.Where(x => x.WarehouseId == warehouseId);
+            
+        // Order by create date descending
+        query = query.OrderByDescending(x => x.CreateDateUtc);
+        
+        return await Task.FromResult(new PagedList<InventoryJournal>(query, pageIndex, pageSize));
     }
 
     #endregion

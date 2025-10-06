@@ -82,7 +82,8 @@ public partial class InstallationService
             MaximumImageSize = 1980,
             ImageQuality = 100,
             DefaultPictureZoomEnabled = true,
-            AllowedFileTypes = ".gif, .jpg, .jpeg, .png, .bmp, .webp"
+            AllowedFileTypes = ".gif, .jpg, .jpeg, .png, .bmp, .webp",
+            AllowedDocumentFileTypes = ".pdf, .doc, .docx, .txt, .zip"
         });
 
         await _settingRepository.SaveSetting(new StorageSettings {

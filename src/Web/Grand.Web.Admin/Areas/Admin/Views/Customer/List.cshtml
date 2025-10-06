@@ -28,13 +28,18 @@
                             </a>
                             <ul class="dropdown-menu pull-right">
                                 <li>
-                                    <input type="submit" name="exportexcel-all" asp-action="ExportExcelAll" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.All"]"/>
+                                    <input type="button" id="exportexcel-all" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.All"]"/>
                                 </li>
                                 <li>
                                     <input type="button" id="exportexcel-selected" class="btn default" style="width: 100%;" value="@Loc["Admin.Common.ExportToExcel.Selected"]"/>
                                 </li>
                             </ul>
                             <vc:admin-widget widget-zone="customer_list_buttons" additional-data="null"/>
+                        </div>
+                        <div class="btn-group btn-group-devided">
+                            <a class="btn green" id="import-csv-button" href="javascript:;">
+                                <i class="fa fa-upload"></i>&nbsp;@Loc["Admin.Common.Import"]
+                            </a>
                         </div>
                         <button type="button" name="delete-selected" id="delete-selected" class="btn red">
                             <i class="fa fa-trash-o"></i>
@@ -47,13 +52,25 @@
                         <div class="form-body">
                             <div class="main-header col-12 px-0">
                                 <div class="row align-items-end">
-                                    <div class="col-md-8 col-ms-12 col-12">
+                                    <div class="col-md-3 col-ms-6 col-12">
+                                        <div class="form-group mb-0">
+                                            <admin-label asp-for="SearchFirstName" class="control-label"/>
+                                            <admin-input asp-for="SearchFirstName"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-ms-6 col-12">
                                         <div class="form-group mb-0">
                                             <admin-label asp-for="SearchEmail" class="control-label"/>
                                             <admin-input asp-for="SearchEmail"/>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 col-sm-12 col-12">
+                                    <div class="col-md-3 col-ms-6 col-12">
+                                        <div class="form-group mb-0">
+                                            <admin-label asp-for="SearchAddressKeyword" class="control-label"/>
+                                            <admin-input asp-for="SearchAddressKeyword"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-12 col-12">
                                         <div class="form-actions">
                                             <div class="btn-group">
                                                 <button class="btn btn-success filter-submit" id="search-customers">
@@ -79,12 +96,6 @@
                                         </div>
                                     }
                                     <div class="form-group">
-                                        <admin-label asp-for="SearchFirstName" class="col-sm-3 control-label"/>
-                                        <div class="col-md-9 col-sm-9">
-                                            <admin-input asp-for="SearchFirstName"/>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
                                         <admin-label asp-for="SearchLastName" class="col-sm-3 control-label"/>
                                         <div class="col-md-9 col-sm-9">
                                             <admin-input asp-for="SearchLastName"/>
@@ -109,6 +120,18 @@
                                         <admin-label asp-for="SearchCustomerTagIds" class="col-sm-3 control-label"/>
                                         <div class="col-md-9 col-sm-9">
                                             <admin-input asp-for="SearchCustomerTagIds" asp-template="MultiSelect" asp-selectitem="Model.AvailableCustomerTags"/>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <admin-label asp-for="SearchDefaultRepIds" class="col-sm-3 control-label"/>
+                                        <div class="col-md-9 col-sm-9">
+                                            <admin-input asp-for="SearchDefaultRepIds" asp-template="MultiSelect" asp-selectitem="Model.AvailableDefaultReps"/>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <admin-label asp-for="SearchCityNames" class="col-sm-3 control-label"/>
+                                        <div class="col-md-9 col-sm-9">
+                                            <admin-input asp-for="SearchCityNames" asp-template="MultiSelect" asp-selectitem="Model.AvailableCities"/>
                                         </div>
                                     </div>
                                     @if (Model.PhoneEnabled)
@@ -189,11 +212,6 @@
                             attributes: { style: "text-align:center" },
                             template: "<label class='mt-checkbox mt-checkbox-outline control control-checkbox mt-NoMargin'><input type='checkbox' value='#=Id#' class='checkboxGroups'/><div class='control__indicator control__indicator_customers mt-NoMargin'></div></label>",
                             width: 40
-                        }, {
-                            field: "Email",
-                            title: "@Loc["Admin.Customers.Customers.Fields.Email"]",
-                            width: 200,
-                            template: '<a class="k-link" href="Edit/#=Id#">#=Email#</a>',
                         },
                         @if (Model.UsernamesEnabled)
                         {
@@ -209,9 +227,26 @@
                             width: 200,
                             encoded: true,
                         }, {
+                            field: "Email",
+                            title: "@Loc["Admin.Customers.Customers.Fields.Email"]",
+                            width: 200,
+                            template: '<a class="k-link" href="Edit/#=Id#">#=Email#</a>',
+                        }, {
                             field: "CustomerGroupNames",
                             title: "@Loc["Admin.Customers.Customers.Fields.CustomerGroups"]",
                             width: 200
+                        }, {
+                            field: "MatchedAddressInfo",
+                            title: "Matched Address",
+                            template: function(dataItem) {
+                                if (dataItem.MatchedAddressInfo) {
+                                    var content = dataItem.MatchedAddressInfo;
+                                    return '<i class="fa fa-map-marker" style="color: #337ab7; margin-right: 4px;"></i>' + content;
+                                }
+                                return '';
+                            },
+                            encoded: false,
+                            hidden: true
                         },
 
                         @if (Model.CompanyEnabled)
@@ -265,6 +300,13 @@
                         format: "{0:G}"
                     }]
                 });
+
+                // Initially hide the address column if no address search is active
+                var initialAddressKeyword = $('#@Html.IdFor(model => model.SearchAddressKeyword)').val();
+                var grid = $('#customers-grid').data('kendoGrid');
+                if (!initialAddressKeyword || initialAddressKeyword.trim().length === 0) {
+                    grid.hideColumn("MatchedAddressInfo");
+                }
             });
     </script>
 
@@ -274,9 +316,27 @@
 
             $(document).ready(function () {
 
+                // Debounce helper function for auto-search
+                let searchTimeout;
+                function debounceSearch(delay = 500) {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(function() {
+                        $('#search-customers').click();
+                    }, delay);
+                }
+
                 //search button
                 $('#search-customers').click(function () {
                     var grid = $('#customers-grid').data('kendoGrid');
+                    
+                    // Show/hide address column based on whether address search is used
+                    var addressKeyword = $('#@Html.IdFor(model => model.SearchAddressKeyword)').val();
+                    if (addressKeyword && addressKeyword.trim().length > 0) {
+                        grid.showColumn("MatchedAddressInfo");
+                    } else {
+                        grid.hideColumn("MatchedAddressInfo");
+                    }
+                    
                     grid.dataSource.page(1); //new search. Set page size to 1
                     //grid.dataSource.read(); we already loaded the grid above using "page" function
                     //clear selected checkboxes
@@ -298,12 +358,41 @@
                     }
                 })
 
-
-                $("#@Html.IdFor(model => model.SearchEmail)").keydown(function (event) {
+                $("#@Html.IdFor(model => model.SearchDefaultRepIds)").keydown(function (event) {
                     if (event.keyCode == 13) {
                         $("#search-customers").click();
                         return false;
                     }
+                });
+
+                $("#@Html.IdFor(model => model.SearchDefaultRepIds)").data().kendoMultiSelect.input.on('keydown',function(e){
+                    if (event.keyCode == 13) {
+                        $("#search-customers").click();
+                        return false;
+                    }
+                })
+
+                $("#@Html.IdFor(model => model.SearchCityNames)").keydown(function (event) {
+                    if (event.keyCode == 13) {
+                        $("#search-customers").click();
+                        return false;
+                    }
+                });
+
+                $("#@Html.IdFor(model => model.SearchCityNames)").data().kendoMultiSelect.input.on('keydown',function(e){
+                    if (event.keyCode == 13) {
+                        $("#search-customers").click();
+                        return false;
+                    }
+                })
+
+                // Auto-search with debounce for SearchEmail
+                $("#@Html.IdFor(model => model.SearchEmail)").on('keyup', function (event) {
+                    // Debounced search on typing
+                    debounceSearch();
+                }).on('input', function () {
+                    // Debounced search on input events (paste, cut, etc.)
+                    debounceSearch();
                 });
                 $("#@Html.IdFor(model => model.SearchUsername)").keydown(function (event) {
                     if (event.keyCode == 13) {
@@ -311,11 +400,30 @@
                         return false;
                     }
                 });
-                $("#@Html.IdFor(model => model.SearchFirstName)").keydown(function (event) {
-                    if (event.keyCode == 13) {
+                // Auto-search with debounce for SearchFirstName
+                $("#@Html.IdFor(model => model.SearchFirstName)").on('keyup', function (event) {
+                    // Debounced search on typing
+                    debounceSearch();
+                }).on('input', function () {
+                    // Debounced search on input events (paste, cut, etc.)
+                    debounceSearch();
+                });
+                // Auto-search with debounce for SearchAddressKeyword
+                $("#@Html.IdFor(model => model.SearchAddressKeyword)").on('keyup', function (event) {
+                    if (event.which == 13 || event.keyCode == 13) {
+                        // Immediate search on Enter for instant column visibility update
+                        event.preventDefault();
+                        event.stopPropagation();
+                        clearTimeout(searchTimeout);
                         $("#search-customers").click();
                         return false;
+                    } else {
+                        // Debounced search on typing
+                        debounceSearch();
                     }
+                }).on('input', function () {
+                    // Debounced search on input events (paste, cut, etc.)
+                    debounceSearch();
                 });
                 $("#@Html.IdFor(model => model.SearchLastName)").keydown(function (event) {
                     if (event.keyCode == 13) {
@@ -425,16 +533,29 @@
                     customerTagIds = $('#@Html.IdFor(model => model.SearchCustomerTagIds)').val();
                 }
 
+                var defaultRepIds = [];
+                if($('#@Html.IdFor(model => model.SearchDefaultRepIds)').val()!=null){
+                    defaultRepIds = $('#@Html.IdFor(model => model.SearchDefaultRepIds)').val();
+                }
+
+                var cityNames = [];
+                if($('#@Html.IdFor(model => model.SearchCityNames)').val()!=null){
+                    cityNames = $('#@Html.IdFor(model => model.SearchCityNames)').val();
+                }
+
                 var data = {
                     SearchCustomerGroupIds: customerGroupIds,
                     SearchCustomerTagIds: customerTagIds,
+                    SearchDefaultRepIds: defaultRepIds,
+                    SearchCityNames: cityNames,
                     SearchEmail: $('#@Html.IdFor(model => model.SearchEmail)').val(),
                     SearchUsername: $('#@Html.IdFor(model => model.SearchUsername)').val(),
                     SearchFirstName: $('#@Html.IdFor(model => model.SearchFirstName)').val(),
                     SearchLastName: $('#@Html.IdFor(model => model.SearchLastName)').val(),
                     SearchCompany: $('#@Html.IdFor(model => model.SearchCompany)').val(),
                     SearchPhone: $('#@Html.IdFor(model => model.SearchPhone)').val(),
-                    SearchZipPostalCode: $('#@Html.IdFor(model => model.SearchZipPostalCode)').val()
+                    SearchZipPostalCode: $('#@Html.IdFor(model => model.SearchZipPostalCode)').val(),
+                    SearchAddressKeyword: $('#@Html.IdFor(model => model.SearchAddressKeyword)').val()
                 };
                 addAntiForgeryToken(data);
                 return data;
@@ -458,15 +579,91 @@
     <input type="hidden" id="selectedIds" name="selectedIds" value=""/>
 </form>
 
+<!-- Import CSV Modal -->
+<div class="modal fade" id="import-csv-modal" tabindex="-1" role="dialog" aria-labelledby="import-csv-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="import-csv-modal-label">@Loc["Admin.Common.ImportFromCsv"]</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            </div>
+            <form asp-area="@Constants.AreaAdmin" asp-controller="Customer" asp-action="ImportFromCsv" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <div class="col-md-12">
+                                    <div class="note note-info">
+                                        <p>
+                                            <strong>@Loc["Admin.Common.ImportFromCsvTip"]</strong><br/>
+                                            Active,Company,FirstName,LastName,Phone,Email,StreetAddress,City,State,Zip
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-md-12">
+                                    <input type="file" id="importcsvfile" name="importcsvfile" class="form-control"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">@Loc["Admin.Common.Import"]</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">@Loc["Admin.Common.Cancel"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 
     $(document).ready(function () {
+        $('#exportexcel-all').click(function (e) {
+            e.preventDefault();
+            // Create a temporary form to submit to ExportExcelAll action
+            var form = $('<form>', {
+                'method': 'POST',
+                'action': '@Url.Action("ExportExcelAll", "Customer", new { area = Constants.AreaAdmin })'
+            });
+            
+            // Add all current filter data to the form
+            var data = additionalData();
+            $.each(data, function(key, value) {
+                if (Array.isArray(value)) {
+                    $.each(value, function(index, item) {
+                        form.append($('<input>', {
+                            'type': 'hidden',
+                            'name': key,
+                            'value': item
+                        }));
+                    });
+                } else {
+                    form.append($('<input>', {
+                        'type': 'hidden',
+                        'name': key,
+                        'value': value
+                    }));
+                }
+            });
+            
+            form.appendTo('body').submit();
+            return false;
+        });
+        
         $('#exportexcel-selected').click(function (e) {
             e.preventDefault();
             var ids = selectedIds.join(",");
             $('#export-excel-selected-form #selectedIds').val(ids);
             $('#export-excel-selected-form').submit();
             return false;
+        });
+        
+        // Open the CSV import modal when the import button is clicked
+        $('#import-csv-button').click(function() {
+            $('#import-csv-modal').modal('show');
         });
     });
 

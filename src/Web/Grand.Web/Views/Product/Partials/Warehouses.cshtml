@@ -2,52 +2,101 @@
 
 @if (Model.ProductWarehouses.Any())
 {
-    <div>
-        <label for="warehouseId" class="col-form-label">@Loc["Products.Warehouse"]:</label>
-        <select class="custom-select form-control" name="WarehouseId" id="WarehouseId">
-            @foreach (var warehouse in Model.ProductWarehouses)
-            {
-                <option selected="@(warehouse.Selected)" value="@warehouse.WarehouseId">@(warehouse.Name)</option>
-            }
-        </select>
+    <div id="product-warehouses" class="attributes">
+        <table class="table">
+            <tr>
+                <td id="warehouse_label">
+                    <span class="attribute-name">@Loc["Products.Warehouse"]</span><span class="required">*</span>
+                </td>
+                <td id="warehouse_input" style="width: 100%">
+                    <select class="form-control custom-select w-100" name="WarehouseId" id="WarehouseId">
+                        @foreach (var warehouse in Model.ProductWarehouses)
+                        {
+                            <option selected="@(warehouse.Selected)" value="@warehouse.WarehouseId">@(warehouse.Name)</option>
+                        }
+                    </select>
+                </td>
+            </tr>
+        </table>
     </div>
-    @if (Model.ProductAttributes.Any())
-    {
-        <script asp-location="Footer" asp-order="300">
-            @{
-                var attributeChangeHandlerFuncName = $"attribute_change_handler_{Model.Id}();";
+    <script asp-location="Footer" asp-order="300">
+        // Dual-endpoint warehouse change handler - calls both warehouse and attribute endpoints for maximum compatibility
+        function warehouse_change_handler() {
+            var form = document.getElementById('@($"product-details-form-{Model.Id}")');
+            if (!form) return;
+            
+            var data = new FormData(form);
+            
+            // Ensure warehouse ID is included
+            var warehouseId = document.getElementById('WarehouseId').value;
+            if (data.has('WarehouseId')) {
+                data.delete('WarehouseId');
             }
-            document.addEventListener("DOMContentLoaded", function () {
-                document.getElementById('WarehouseId').addEventListener('change', function () { @attributeChangeHandlerFuncName });
-            });
-        </script>
-    }
-    else
-    {
-        <script asp-location="Footer" asp-order="300">
-            function warehouse_change_handler() {
-                var data = new FormData();
-                data.append('warehouseId', document.getElementById('WarehouseId').value);
-                data.append('productId', '@Model.Id');
-                axios({
-                    url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
-                    data: data,
-                    method: 'post',
-                }).then(function (response) {
-                    if (response.data.stockAvailability) {
+            data.append('WarehouseId', warehouseId);
+            
+            // First call: Dedicated warehouse change endpoint for inventory-specific updates
+            axios({
+                url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product", new { productId = Model.Id }))',
+                data: data,
+                method: 'post',
+                params: { product: '@Model.Id' },
+                }).then(function (warehouseResponse) {
+                    // Update stock availability from warehouse-specific response
+                    if (warehouseResponse.data.stockAvailability) {
                         if (document.getElementById('stock-availability-value-@Model.Id')) {
-                            document.getElementById('stock-availability-value-@Model.Id').innerText = response.data.stockAvailability
+                            document.getElementById('stock-availability-value-@Model.Id').innerText = warehouseResponse.data.stockAvailability;
                         }
                     }
-                })
-
-    }
-            document.addEventListener("DOMContentLoaded", function () {
-                document.getElementById('WarehouseId').addEventListener('change', function () {
+                    
+                    // Second call: Comprehensive attribute change endpoint for price/UI updates
+                    return axios({
+                        url: '@Html.Raw(Url.Action("productdetails_attributechange", "product", new { productId = Model.Id, loadPicture = true }))',
+                        data: data,
+                        method: 'post',
+                        params: { product: '@Model.Id' },
+                    });
+                }).then(function (attributeResponse) {
+                    // Update comprehensive data from attribute response (price, out-of-stock, etc.)
+                    if (attributeResponse.data.stockAvailability) {
+                        if (document.getElementById('stock-availability-value-@Model.Id')) {
+                            document.getElementById('stock-availability-value-@Model.Id').innerText = attributeResponse.data.stockAvailability;
+                        }
+                    }
+                    
+                    if (attributeResponse.data.price) {
+                        if (document.querySelector('.price-value-@Model.Id .actual-price'))
+                            document.querySelector('.price-value-@Model.Id .actual-price').innerText = attributeResponse.data.price;
+                        else
+                            document.querySelector('.price-value-@Model.Id').innerText = attributeResponse.data.price;
+                    }
+                    
+                    // Handle out of stock subscription
+                    if (attributeResponse.data.outOfStockSubscription) {
+                        var element = document.querySelector('#out-of-stock-subscribe-@Model.Id');
+                        if (element)
+                            element.style.display = "block";
+                    }
+                    if (attributeResponse.data.outOfStockSubscription == false) {
+                        var element = document.querySelector('#out-of-stock-subscribe-@Model.Id');
+                        if (element) {
+                            element.style.display = "none";
+                        }
+                    }
+                });
+        }
+        
+        document.addEventListener("DOMContentLoaded", function () {
+            var warehouseSelect = document.getElementById('WarehouseId');
+            if (warehouseSelect) {
+                warehouseSelect.addEventListener('change', function () {
                     warehouse_change_handler();
                 });
+            }
+            
+            // Initial load - wait a moment to ensure all attributes are initialized
+            setTimeout(function() {
                 warehouse_change_handler();
-            });
-        </script>
-    }
+            }, 100);
+        });
+    </script>
 }

@@ -1,0 +1,239 @@
+﻿@model OrderModel
+
+<vc:admin-widget widget-zone="order_details_fulfillment_top" additional-data="Model"/>
+<div class="panel-body">
+    <div class="card">
+        <div class="card-header">
+            <h5>@Loc["Admin.Orders.Fulfillment"]</h5>
+        </div>
+        <div class="card-body">
+            <div class="form-horizontal">
+                <div class="form-body">
+                    <div class="note note-info">
+                        @Loc["Admin.Orders.Fulfillment.Info"]
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        @Loc["Admin.Orders.Fulfillment.SelectAll"]
+                                        <input type="checkbox" id="select-all-items" />
+                                    </th>
+                                    <th>
+                                        @Loc["Admin.Orders.Products.Picture"]
+                                    </th>
+                                    <th>
+                                        @Loc["Admin.Orders.Products.ProductName"]
+                                    </th>
+                                    <th>
+                                        @Loc["Admin.Orders.Products.SKU"]
+                                    </th>
+                                    <th>
+                                        @Loc["Admin.Orders.Products.Quantity"]
+                                    </th>
+                                    <th>
+                                        @Loc["Admin.Orders.Fulfillment.Status"]
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (item.OpenQty > 0)
+                                            {
+                                                <input type="checkbox" name="packed_items" value="@item.Id" class="packed-item-checkbox" data-orderitemid="@item.Id" />
+                                            }
+                                        </td>
+                                        <td>
+                                            <img src="@item.PictureThumbnailUrl" alt="" title="" />
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <em>
+                                                    <a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })">@item.ProductName</a>
+                                                </em>
+                                                @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                                                {
+                                                    <p>
+                                                        @Html.Raw(item.AttributeInfo)
+                                                    </p>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @item.Sku
+                                        </td>
+                                        <td>
+                                            @item.OpenQty
+                                        </td>
+                                        <td class="fulfillment-status">
+                                            @if (item.OpenQty == 0)
+                                            {
+                                                <span class="badge badge-success">@Loc["Admin.Orders.Fulfillment.Completed"]</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-warning">@Loc["Admin.Orders.Fulfillment.Pending"]</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]</label>
+                    <input type="date" id="requested-shipment-date" class="form-control" value="@(Model.RequestedShipmentDate.HasValue ? Model.RequestedShipmentDate.Value.ToString("yyyy-MM-dd") : "")" />
+                </div>
+                <div class="col-md-4">
+                    <label class="control-label">@Loc["Admin.Orders.Fulfillment.TargetDeliveryDate"]</label>
+                    <input type="date" id="target-delivery-date" class="form-control" value="@(Model.TargetDeliveryDate.HasValue ? Model.TargetDeliveryDate.Value.ToString("yyyy-MM-dd") : "")" />
+                </div>
+                <div class="col-md-4 mt-4">
+                    <button type="button" id="create-shipment" class="btn btn-success" disabled>@Loc["Admin.Orders.Fulfillment.CreateShipment"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom styling will be handled by JavaScript -->
+
+<script>
+$(document).ready(function() {
+    // Get any previously set target delivery date
+    function loadTargetDeliveryDate() {
+        $.ajax({
+            cache: false,
+            type: "GET",
+            url: "@Url.Action("GetTargetDeliveryDate", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin })",
+            success: function(data) {
+                if (data.success && data.value) {
+                    console.log("Loaded date value:", data.value);
+                    $("#target-delivery-date").val(data.value);
+                }
+            }
+        });
+    }
+    
+    // Target delivery date is already set in the input value attribute, no need to reload
+    
+    // Function to check if all items are selected and enable/disable the button
+    function checkAllItemsSelected() {
+        var checkboxes = $(".packed-item-checkbox");
+        var totalItemsWithOpenQty = checkboxes.length;
+        var selectedItems = checkboxes.filter(":checked").length;
+        
+        // Only enable the button if all available items are selected
+        $("#create-shipment").prop("disabled", !(totalItemsWithOpenQty > 0 && selectedItems === totalItemsWithOpenQty));
+    }
+    
+    // Run check when page loads
+    checkAllItemsSelected();
+    
+    // Select all checkbox logic
+    $("#select-all-items").change(function() {
+        $(".packed-item-checkbox").prop("checked", $(this).prop("checked"));
+        checkAllItemsSelected();
+    });
+    
+    // Individual checkbox change
+    $(".packed-item-checkbox").change(function() {
+        checkAllItemsSelected();
+    });
+    
+    // Save requested shipment date when changed
+    $("#requested-shipment-date").change(function() {
+        var requestedDate = $(this).val();
+        
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@Html.Raw(Url.Action("SaveRequestedShipmentDate", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+            data: addAntiForgeryToken({ 
+                date: requestedDate
+            }),
+            success: function(data) {
+                if (data.success) {
+                    // Display a success notification without reloading the page
+                    if (typeof displayGrandeNotification === 'function') {
+                        displayGrandeNotification("Requested shipment date saved successfully", "success", 5000);
+                    }
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            }
+        });
+    });
+    
+    // Save target delivery date when changed
+    $("#target-delivery-date").change(function() {
+        var targetDate = $(this).val();
+        
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@Html.Raw(Url.Action("SaveTargetDeliveryDate", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+            data: addAntiForgeryToken({ 
+                date: targetDate
+            }),
+            success: function(data) {
+                if (data.success) {
+                    // Display a success notification without reloading the page
+                    if (typeof displayGrandeNotification === 'function') {
+                        displayGrandeNotification("Target delivery date saved successfully", "success", 5000);
+                    }
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            }
+        });
+    });
+    
+    
+    // Create shipment button
+    $("#create-shipment").click(function() {
+        var selectedItems = [];
+        $(".packed-item-checkbox:checked").each(function() {
+            selectedItems.push($(this).data("orderitemid"));
+        });
+        
+        if (selectedItems.length === 0) {
+            alert('@Loc["Admin.Orders.Fulfillment.NoItemsSelected"]');
+            return;
+        }
+        
+        var targetDeliveryDate = $("#target-delivery-date").val();
+        
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@Html.Raw(Url.Action("CreateFulfillmentShipment", "Order", new { orderId = Model.Id, area = Constants.AreaAdmin }))",
+            data: addAntiForgeryToken({ 
+                orderItemIds: selectedItems.join(","),
+                targetDeliveryDate: targetDeliveryDate
+            }),
+            success: function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error);
+                }
+            },
+            error: function(xhr, ajaxOptions, thrownError) {
+                alert('Error occurred. Please try again.');
+            }
+        });
+    });
+});
+</script>
+
+<vc:admin-widget widget-zone="order_details_fulfillment_bottom" additional-data="Model"/>

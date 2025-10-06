@@ -230,6 +230,11 @@ public class EndpointProvider : IEndpointProvider
         endpointRouteBuilder.MapControllerRoute("VendorList",
             pattern + "vendor/all/",
             new { controller = "Catalog", action = "VendorAll" });
+            
+        //all products
+        endpointRouteBuilder.MapControllerRoute("AllProducts",
+            pattern + "products/all/",
+            new { controller = "Catalog", action = "AllProducts" });
 
         //product tags
         endpointRouteBuilder.MapControllerRoute("ProductsByTag",

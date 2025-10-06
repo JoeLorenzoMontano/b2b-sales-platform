@@ -113,11 +113,16 @@ public class OrderModel : BaseEntityModel
         public double UnitPriceInclTaxValue { get; set; }
         public double UnitPriceExclTaxValue { get; set; }
 
-        public int Quantity { get; set; }
-        public int OpenQty { get; set; }
-        public int CancelQty { get; set; }
-        public int ShipQty { get; set; }
-        public int ReturnQty { get; set; }
+        [UIHint("DecimalN2")]
+        public double Quantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double OpenQty { get; set; }
+        [UIHint("DecimalN2")]
+        public double CancelQty { get; set; }
+        [UIHint("DecimalN2")]
+        public double ShipQty { get; set; }
+        [UIHint("DecimalN2")]
+        public double ReturnQty { get; set; }
 
         public string DiscountInclTax { get; set; }
         public string DiscountExclTax { get; set; }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Language Name="English" IsDefault="true" IsRightToLeft="false">
+  <Resource Name="Admin.Orders.Products.AddMultiple" Area="Admin">
+    <Value>Add Multiple Products</Value>
+  </Resource>
+  <Resource Name="Admin.Orders.Products.AddMultiple.Title" Area="Admin">
+    <Value>Add multiple products to order #{0}</Value>
+  </Resource>
+  <Resource Name="Admin.Orders.Products.SelectedProducts" Area="Admin">
+    <Value>Selected Products</Value>
+  </Resource>
+  <Resource Name="Admin.Orders.Products.AddSelected" Area="Admin">
+    <Value>Add Selected Products</Value>
+  </Resource>
+  <Resource Name="Admin.Orders.Products.BulkSelection" Area="Admin">
+    <Value>Bulk Product Selection</Value>
+  </Resource>
+  <Resource Name="Admin.Orders.Products.ConfigureSelected" Area="Admin">
+    <Value>Configure Selected Products</Value>
+  </Resource>
+  <Resource Name="Admin.Orders.Products.SelectCombination" Area="Admin">
+    <Value>Select Combination</Value>
+  </Resource>
+  <Resource Name="Admin.Orders.Products.SelectWarehouse" Area="Admin">
+    <Value>Select Warehouse</Value>
+  </Resource>
+</Language>

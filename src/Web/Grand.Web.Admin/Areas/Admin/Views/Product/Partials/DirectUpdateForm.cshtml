@@ -1,0 +1,27 @@
+@model Grand.Web.Admin.Models.Catalog.ProductModel.ProductAttributeValueModel
+
+<div class="form-horizontal">
+    <div class="form-body">
+        <h4>Direct Price Override Form</h4>
+        <p>This is a special form to directly update the override price for the weight-based attribute.</p>
+        
+        <form method="post" action="@Url.Action("UpdateAttributeValuePrice", "Product", new { area = "Admin" })">
+            <input type="hidden" name="productId" value="681bd3b0485d148947623481" />
+            <input type="hidden" name="productAttributeMappingId" value="68263b174f188b22ae4b10c0" />
+            <input type="hidden" name="attributeValueId" value="@Model.Id" />
+            
+            <div class="form-group">
+                <label class="col-sm-3 control-label">Price Override Value:</label>
+                <div class="col-md-9 col-sm-9">
+                    <input type="number" name="overriddenPrice" value="@(Model.OverriddenPrice?.ToString() ?? "")" step="0.01" class="form-control" />
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="col-md-9 col-sm-9 offset-md-3">
+                    <button type="submit" class="btn btn-primary">Save Direct Price</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

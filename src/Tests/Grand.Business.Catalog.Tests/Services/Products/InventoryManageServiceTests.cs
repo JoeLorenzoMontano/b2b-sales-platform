@@ -143,7 +143,7 @@ public class InventoryManageServiceTests
         //Act
         product.StockQuantity = 10;
         product.ReservedQuantity = 10;
-        await _inventoryManageService.UpdateStockProduct(product);
+        await _inventoryManageService.UpdateStockProduct(product, true, false, null, null, null, null);
 
         product = _repository.Table.FirstOrDefault(x => x.Id == product.Id);
 

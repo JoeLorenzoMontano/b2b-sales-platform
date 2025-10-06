@@ -272,6 +272,7 @@ public class ProductService : IProductService
             .Set(x => x.ProductLayoutId, product.ProductLayoutId)
             .Set(x => x.ProductTypeId, product.ProductTypeId)
             .Set(x => x.Published, product.Published)
+            .Set(x => x.HideFromCatalog, product.HideFromCatalog)
             .Set(x => x.RecurringCycleLength, product.RecurringCycleLength)
             .Set(x => x.RecurringCyclePeriodId, product.RecurringCyclePeriodId)
             .Set(x => x.RecurringTotalCycles, product.RecurringTotalCycles)

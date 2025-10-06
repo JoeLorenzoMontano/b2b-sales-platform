@@ -1,4 +1,5 @@
-﻿using Grand.Domain.Catalog;
+﻿using Grand.Domain;
+using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Shipping;
 
@@ -13,7 +14,12 @@ public interface IInventoryManageService
     /// </summary>
     /// <param name="product">Product</param>
     /// <param name="mediator">Notification</param>
-    Task UpdateStockProduct(Product product, bool mediator = true);
+    /// <param name="trackInventory">Whether to track the inventory change in journal</param>
+    /// <param name="previousStockQuantity">Previous stock quantity (required when trackInventory is true)</param>
+    /// <param name="warehouseId">Warehouse ID (for multi-warehouse scenarios)</param>
+    /// <param name="userId">User ID who made the change</param>
+    /// <param name="attributes">Product attributes (for attribute-based inventory)</param>
+    Task UpdateStockProduct(Product product, bool mediator = true, bool trackInventory = false, double? previousStockQuantity = null, string warehouseId = null, string userId = null, IList<CustomAttribute> attributes = null);
 
     /// <summary>
     ///     Adjust reserved inventory
@@ -22,7 +28,7 @@ public interface IInventoryManageService
     /// <param name="quantityToChange">Quantity to increase or decrease</param>
     /// <param name="attributes">Attributes</param>
     /// <param name="warehouseId">Warehouse ident</param>
-    Task AdjustReserved(Product product, int quantityToChange, IList<CustomAttribute> attributes = null,
+    Task AdjustReserved(Product product, double quantityToChange, IList<CustomAttribute> attributes = null,
         string warehouseId = "");
 
 
@@ -41,6 +47,16 @@ public interface IInventoryManageService
     /// <param name="shipmentItem">Shipment item</param>
     /// <returns>Quantity reversed</returns>
     Task ReverseBookedInventory(Shipment shipment, ShipmentItem shipmentItem);
+    
+    /// <summary>
+    /// Gets inventory journal entries for a product
+    /// </summary>
+    /// <param name="productId">Product ID (optional)</param>
+    /// <param name="warehouseId">Warehouse ID (optional)</param>
+    /// <param name="pageIndex">Page index</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>Inventory journal entries</returns>
+    Task<IPagedList<InventoryJournal>> GetInventoryJournal(string productId = "", string warehouseId = "", int pageIndex = 0, int pageSize = int.MaxValue);
 
     #endregion
 }

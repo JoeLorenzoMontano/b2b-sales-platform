@@ -163,10 +163,12 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
     public IList<SelectListItem> AvailableWarehouses { get; set; } = new List<SelectListItem>();
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.StockQuantity")]
-    public int StockQuantity { get; set; }
+    [UIHint("DecimalN2")]
+    public double StockQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.ReservedQuantity")]
-    public int ReservedQuantity { get; set; }
+    [UIHint("DecimalN2")]
+    public double ReservedQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.StockQuantity")]
     public string StockQuantityStr { get; set; }
@@ -178,13 +180,15 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
     public bool DisplayStockQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.MinStockQuantity")]
-    public int MinStockQuantity { get; set; }
+    [UIHint("DecimalN2")]
+    public double MinStockQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.LowStockActivity")]
     public int LowStockActivityId { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.NotifyAdminForQuantityBelow")]
-    public int NotifyAdminForQuantityBelow { get; set; }
+    [UIHint("DecimalN2")]
+    public double NotifyAdminForQuantityBelow { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.BackorderMode")]
     public int BackorderModeId { get; set; }
@@ -193,10 +197,12 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
     public bool AllowOutOfStockSubscriptions { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.OrderMinimumQuantity")]
-    public int OrderMinimumQuantity { get; set; }
+    [UIHint("DecimalN2")]
+    public double OrderMinimumQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.OrderMaximumQuantity")]
-    public int OrderMaximumQuantity { get; set; }
+    [UIHint("DecimalN2")]
+    public double OrderMaximumQuantity { get; set; }
 
     [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.AllowedQuantities")]
     public string AllowedQuantities { get; set; }
@@ -599,7 +605,8 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
         public IList<SelectListItem> AvailableCurrencies { get; set; } = new List<SelectListItem>();
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.TierPrices.Fields.Quantity")]
-        public int Quantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double Quantity { get; set; }
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.TierPrices.Fields.Price")]
         public double Price { get; set; }
@@ -634,10 +641,12 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
         public bool WarehouseUsed { get; set; }
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.ProductWarehouseInventory.Fields.StockQuantity")]
-        public int StockQuantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double StockQuantity { get; set; }
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.ProductWarehouseInventory.Fields.ReservedQuantity")]
-        public int ReservedQuantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double ReservedQuantity { get; set; }
     }
 
     public class ReservationModel : BaseEntityModel, IProductValidVendor
@@ -695,7 +704,8 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
         public bool IncBothDate { get; set; }
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.Calendar.Quantity")]
-        public int Quantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double Quantity { get; set; }
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.Fields.Calendar.Resource")]
         public string Resource { get; set; }
@@ -865,7 +875,8 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
         public double Cost { get; set; }
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity")]
-        public int Quantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double Quantity { get; set; }
 
         [GrandResourceDisplayName("Vendor.Catalog.Products.ProductAttributes.Attributes.Values.Fields.IsPreSelected")]
         public bool IsPreSelected { get; set; }
@@ -912,7 +923,8 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
 
         [GrandResourceDisplayName(
             "Vendor.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.StockQuantity")]
-        public int StockQuantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double StockQuantity { get; set; }
 
         [GrandResourceDisplayName(
             "Vendor.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.AllowOutOfStockOrders")]
@@ -934,7 +946,11 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
 
         [GrandResourceDisplayName(
             "Vendor.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.NotifyAdminForQuantityBelow")]
-        public int NotifyAdminForQuantityBelow { get; set; }
+        [UIHint("DecimalN2")]
+        public double NotifyAdminForQuantityBelow { get; set; }
+        
+        [GrandResourceDisplayName("Vendor.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.CaseSize")]
+        public double CaseSize { get; set; }
 
         public string ProductId { get; set; }
     }
@@ -946,7 +962,8 @@ public class ProductModel : BaseEntityModel, ILocalizedModel<ProductLocalizedMod
         /// <summary>
         ///     Gets or sets the quantity
         /// </summary>
-        public int Quantity { get; set; }
+        [UIHint("DecimalN2")]
+        public double Quantity { get; set; }
 
         /// <summary>
         ///     Gets or sets the price

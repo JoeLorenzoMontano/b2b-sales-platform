@@ -4,6 +4,7 @@ using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Domain.Catalog;
 using Grand.Domain.Shipping;
+using Grand.SharedKernel.Extensions;
 using Grand.Web.Features.Models.Common;
 using Grand.Web.Features.Models.Orders;
 using Grand.Web.Models.Orders;
@@ -104,8 +105,8 @@ public class GetShipmentDetailsHandler : IRequestHandler<GetShipmentDetails, Shi
                 ProductName = product.GetTranslation(x => x.Name, request.Language.Id),
                 ProductSeName = product.GetSeName(request.Language.Id),
                 AttributeInfo = orderItem.AttributeDescription,
-                QuantityOrdered = orderItem.Quantity,
-                QuantityShipped = shipmentItem.Quantity
+                QuantityOrdered = orderItem.Quantity.ToInt(),
+                QuantityShipped = shipmentItem.Quantity.ToInt()
             };
 
             model.Items.Add(shipmentItemModel);

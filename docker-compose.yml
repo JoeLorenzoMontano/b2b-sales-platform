@@ -2,9 +2,11 @@ version: '3.4'
 
 services:
   grandnode:
-    image: grandnode/grandnode2:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
-      - CONNECTION_STRING=mongodb://mongodb:27017/grandnode
+      - CONNECTION_STRING=mongodb://mongodb:27017/b2b-sales-platform
     ports:
       - "81:8080"
     depends_on:
@@ -25,6 +27,7 @@ services:
     networks:
       - grandnode-network
     restart: always
+    command: mongod --bind_ip_all
 
 networks:
   grandnode-network:

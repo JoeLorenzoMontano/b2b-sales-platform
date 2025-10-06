@@ -44,7 +44,7 @@ public class OrderPlacedEventHandler : INotificationHandler<OrderPlacedEvent>
                 ProductId = item.ProductId,
                 OrderId = order.Id,
                 CreatedOrderOnUtc = order.CreatedOnUtc,
-                Quantity = it.Quantity,
+                Quantity = (int)it.Quantity,
                 StoreId = order.StoreId,
                 ProductId2 = it.ProductId
             };

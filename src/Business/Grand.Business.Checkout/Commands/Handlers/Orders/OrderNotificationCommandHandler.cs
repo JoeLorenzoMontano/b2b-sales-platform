@@ -44,19 +44,49 @@ public class OrderNotificationCommandHandler : IRequestHandler<OrderNotification
         try
         {
             if (request.WorkContext.OriginalCustomerIfImpersonated != null)
+            {
                 //this order is placed by a store administrator impersonating a customer
+                var impersonatingEmployee = request.WorkContext.OriginalCustomerIfImpersonated;
+                
+                // No need to set ImpersonatedByEmployeeId again since we're already doing it in PlaceOrderCommandHandler
+                
                 await _orderService.InsertOrderNote(new OrderNote {
                     Note =
-                        $"Order placed by a store owner ('{request.WorkContext.OriginalCustomerIfImpersonated.Email}'. ID = {request.WorkContext.OriginalCustomerIfImpersonated.Id}) impersonating the customer.",
+                        $"Order placed by a store owner ('{impersonatingEmployee.Email}'. ID = {impersonatingEmployee.Id}) impersonating the customer.",
                     DisplayToCustomer = false,
-                    OrderId = request.Order.Id
+                    OrderId = request.Order.Id,
+                    CreatedOnUtc = DateTime.UtcNow
                 });
+                
+                // Log additional debug info
+                _logger.LogInformation($"Impersonation info saved for order {request.Order.Id}. Employee ID: {impersonatingEmployee.Id}, Email: {impersonatingEmployee.Email}");
+            }
             else
                 await _orderService.InsertOrderNote(new OrderNote {
                     Note = "Order placed",
                     DisplayToCustomer = false,
-                    OrderId = request.Order.Id
+                    OrderId = request.Order.Id,
+                    CreatedOnUtc = DateTime.UtcNow
                 });
+                
+            // Add the customer's order note if provided
+            if (!string.IsNullOrWhiteSpace(request.OrderNote))
+            {
+                _logger.LogWarning($"CUSTOMER_NOTE_DEBUG: About to insert customer note for order {request.Order.Id}");
+                _logger.LogWarning($"CUSTOMER_NOTE_DEBUG: Note content: {request.OrderNote}");
+                
+                var customerNote = new OrderNote {
+                    Note = request.OrderNote,
+                    DisplayToCustomer = true,
+                    CreatedByCustomer = true,
+                    OrderId = request.Order.Id,
+                    CreatedOnUtc = DateTime.UtcNow
+                };
+                
+                await _orderService.InsertOrderNote(customerNote);
+                
+                _logger.LogWarning($"CUSTOMER_NOTE_DEBUG: Customer note added for order {request.Order.Id} with ID: {customerNote.Id}");
+            }
 
             //send email notifications
             await _messageProviderService.SendOrderPlacedStoreOwnerMessage(request.Order, request.WorkContext.CurrentCustomer,

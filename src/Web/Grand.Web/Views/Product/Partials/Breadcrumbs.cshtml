@@ -15,14 +15,31 @@
                     <meta itemprop="position" content="@count"/>
                 </a>
             </li>
-            @foreach (var category in Model.CategoryBreadcrumb)
+            @if (Model.CategoryBreadcrumb.Any())
             {
+                @foreach (var category in Model.CategoryBreadcrumb)
+                {
+                    count++;
+                    <li itemprop="itemListElement" itemscope="itemscope" itemtype="http://schema.org/ListItem" class="breadcrumb-item">
+                        <a href="@Url.RouteUrl("Category", new { category.SeName })" target="_self">
+                            <span itemprop="name">@category.Name</span>
+                            <span itemprop="item" itemscope itemtype="http://schema.org/Thing"
+                                  id="@Url.RouteUrl("Category", new { category.SeName })">
+                            </span>
+                            <meta itemprop="position" content="@count"/>
+                        </a>
+                    </li>
+                }
+            }
+            else
+            {
+                @* If no category, show All Products link *@
                 count++;
                 <li itemprop="itemListElement" itemscope="itemscope" itemtype="http://schema.org/ListItem" class="breadcrumb-item">
-                    <a href="@Url.RouteUrl("Category", new { category.SeName })" target="_self">
-                        <span itemprop="name">@category.Name</span>
+                    <a href="@Url.RouteUrl("AllProducts")" target="_self">
+                        <span itemprop="name">@Loc["Catalog.AllProducts"]</span>
                         <span itemprop="item" itemscope itemtype="http://schema.org/Thing"
-                              id="@Url.RouteUrl("Category", new { category.SeName })">
+                              id="@Url.RouteUrl("AllProducts")">
                         </span>
                         <meta itemprop="position" content="@count"/>
                     </a>

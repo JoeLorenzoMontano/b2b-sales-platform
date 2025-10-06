@@ -10,7 +10,8 @@ public record AddProductToOrderModel(
     double UnitPriceInclTax,
     double UnitPriceExclTax,
     int Quantity,
-    int TaxRate)
+    int TaxRate,
+    string WarehouseId = "")
 {
     public GiftvoucherModel Giftvoucher { get; set; }
 

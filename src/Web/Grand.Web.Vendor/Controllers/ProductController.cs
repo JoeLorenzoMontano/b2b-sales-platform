@@ -2145,9 +2145,11 @@ public class ProductController : BaseVendorController
         if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
         {
             var pr = await _productService.GetProductById(productId);
+            var prevStockQuantity = pr.StockQuantity;
             pr.StockQuantity = pr.ProductAttributeCombinations.Sum(x => x.StockQuantity);
             pr.ReservedQuantity = pr.ProductAttributeCombinations.Sum(x => x.ReservedQuantity);
-            await _inventoryManageService.UpdateStockProduct(pr, false);
+            var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+            await _inventoryManageService.UpdateStockProduct(pr, false, true, prevStockQuantity, null, userId, null);
         }
 
         return new JsonResult("");
@@ -2215,9 +2217,14 @@ public class ProductController : BaseVendorController
 
             if (product.ManageInventoryMethodId == ManageInventoryMethod.ManageStockByAttributes)
             {
+                var prevStockQuantity = product.StockQuantity;
                 product.StockQuantity = 0;
                 product.ReservedQuantity = 0;
-                await _inventoryManageService.UpdateStockProduct(product, false);
+                var userId = _contextAccessor.WorkContext.CurrentCustomer?.Email;
+                
+                // Create an inventory journal entry for the net change when clearing combinations
+                // This is a legitimate inventory operation to track, unlike generating combinations
+                await _inventoryManageService.UpdateStockProduct(product, false, true, prevStockQuantity, null, userId, null);
             }
 
             return Json(new { Success = true });

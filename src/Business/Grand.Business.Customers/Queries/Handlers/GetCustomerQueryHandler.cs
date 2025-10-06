@@ -41,6 +41,10 @@ public class GetCustomerQueryHandler : IRequestHandler<GetCustomerQuery, IQuerya
         if (request.CustomerTagIds is { Length: > 0 })
             foreach (var item in request.CustomerTagIds)
                 query = query.Where(c => c.CustomerTags.Contains(item));
+        if (request.DefaultImpersonatedByEmployeeIds is { Length: > 0 })
+            query = query.Where(c => request.DefaultImpersonatedByEmployeeIds.Contains(c.DefaultImpersonatedByEmployeeId));
+        if (request.CityNames is { Length: > 0 })
+            query = query.Where(c => c.Addresses.Any(addr => request.CityNames.Contains(addr.City)));
         if (!string.IsNullOrWhiteSpace(request.Email))
             query = query.Where(c => c.Email != null && c.Email.Contains(request.Email.ToLower()));
         if (!string.IsNullOrWhiteSpace(request.Username))
@@ -71,6 +75,25 @@ public class GetCustomerQueryHandler : IRequestHandler<GetCustomerQuery, IQuerya
             query = query.Where(x => x.UserFields.Any(y =>
                 y.Key == SystemCustomerFieldNames.ZipPostalCode && y.Value != null &&
                 y.Value.ToLower().Contains(request.ZipPostalCode.ToLower())));
+
+        //search by address keyword
+        if (!string.IsNullOrWhiteSpace(request.AddressKeyword))
+        {
+            var keyword = request.AddressKeyword.ToLower();
+            query = query.Where(c => c.Addresses.Any(addr =>
+                (addr.FirstName != null && addr.FirstName.ToLower().Contains(keyword)) ||
+                (addr.LastName != null && addr.LastName.ToLower().Contains(keyword)) ||
+                (addr.Email != null && addr.Email.ToLower().Contains(keyword)) ||
+                (addr.Address1 != null && addr.Address1.ToLower().Contains(keyword)) ||
+                (addr.Address2 != null && addr.Address2.ToLower().Contains(keyword)) ||
+                (addr.City != null && addr.City.ToLower().Contains(keyword)) ||
+                (addr.ZipPostalCode != null && addr.ZipPostalCode.ToLower().Contains(keyword)) ||
+                (addr.PhoneNumber != null && addr.PhoneNumber.ToLower().Contains(keyword)) ||
+                (addr.Company != null && addr.Company.ToLower().Contains(keyword)) ||
+                (addr.CountryId != null && addr.CountryId.ToLower().Contains(keyword)) ||
+                (addr.StateProvinceId != null && addr.StateProvinceId.ToLower().Contains(keyword))
+            ));
+        }
 
         if (request.LoadOnlyWithShoppingCart)
             query = request.Sct.HasValue

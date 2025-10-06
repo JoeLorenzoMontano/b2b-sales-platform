@@ -57,10 +57,21 @@
                 <div class="container">
                     <div class="row">
                         <vc:widget widget-zone="productdetails_before_pictures" additional-data="@Model.Id"></vc:widget>
+                        
+                        @{
+                            // For grouped products, always hide the main product image and use full width
+                            bool hasRealImage = Model.DefaultPictureModel != null && 
+                                             !string.IsNullOrEmpty(Model.DefaultPictureModel.ImageUrl) && 
+                                             !Model.DefaultPictureModel.ImageUrl.Contains("/no-image");
+                            
+                            // Grouped products always use full width layout
+                            // This is ProductLayout.Grouped.cshtml
+                        }
+                        
                         <!--product pictures-->
                         <partial name="Partials/Pictures" model="Model"/>
                         <vc:widget widget-zone="productdetails_after_pictures" additional-data="@Model.Id"></vc:widget>
-                        <div class="col-xl-6 col-lg-6 col-md-7 col-12 overview pl-md-3 pl-0 pr-0">
+                        <div class="col-12 overview pl-md-3 pl-0 pr-0">
                             @if (!string.IsNullOrEmpty(Model.Flag))
                             {
                                 <div class="product-label">
@@ -153,18 +164,44 @@
                     @foreach (var variant in Model.AssociatedProducts)
                     {
                         <form asp-route="Product" asp-route-sename="@Model.SeName" method="post" id=@($"product-details-form-{variant.Id}") ref="form" v-on:submit.prevent="formSubmitParam($event, vm.$refs.ProductFormObserver)">
+                            @if (Model.AllowToSelectWarehouse && variant.AllowToSelectWarehouse)
+                            {
+                                <!-- Hidden field to synchronize warehouse selection between parent and associated product -->
+                                <input type="hidden" name="WarehouseId" class="associated-warehouse-input" value="@(Model.ProductWarehouses.FirstOrDefault(x => x.Selected)?.WarehouseId ?? "")" />
+                            }
+                            
                             <di class="card overflow-hidden associatedItem mb-3">
                                 <div class="row no-gutters">
-                                    <div class="col-lg-3 col-md-4">
-                                        <img class="img-fluid rounded-0" id="main-product-img-@variant.Id" alt="@variant.DefaultPictureModel.AlternateText" src="@variant.DefaultPictureModel.ImageUrl"/>
-                                    </div>
-                                    <div class="col-lg-9 col-md-8">
+                                    @if (variant.DefaultPictureModel != null && !string.IsNullOrEmpty(variant.DefaultPictureModel.ImageUrl) && !variant.DefaultPictureModel.ImageUrl.Contains("/no-image.png"))
+                                    {
+                                        <div class="col-lg-3 col-md-4">
+                                            <img class="img-fluid rounded-0" id="main-product-img-@variant.Id" alt="@variant.DefaultPictureModel.AlternateText" src="@variant.DefaultPictureModel.ImageUrl"/>
+                                        </div>
+                                    }
+                                    <div class="@(variant.DefaultPictureModel != null && !string.IsNullOrEmpty(variant.DefaultPictureModel.ImageUrl) && !variant.DefaultPictureModel.ImageUrl.Contains("/no-image.png") ? "col-lg-9 col-md-8" : "col-12")">
                                         <div class="card-body overview" title="@variant.Name">
+                                            <h5 class="card-title mb-2">@variant.Name</h5>
                                             <div>
                                                 @Html.Raw(variant.ShortDescription)
                                             </div>
                                             <!--availability-->
                                             <partial name="Partials/Availability" model="variant"/>
+                                            <!--warehouses for variant-->
+                                            @if (variant.AllowToSelectWarehouse && variant.ProductWarehouses.Any())
+                                            {
+                                                <!-- Individual warehouse selector for this variant -->
+                                                <div id="variant-warehouse-@variant.Id" class="variant-warehouse-selector mb-2">
+                                                    <label for="VariantWarehouseId-@variant.Id" class="col-form-label">@Loc["Products.Warehouse"]:</label>
+                                                    <select class="form-control custom-select w-100 variant-warehouse-select" 
+                                                            name="WarehouseId" id="VariantWarehouseId-@variant.Id"
+                                                            data-product-id="@variant.Id">
+                                                        @foreach (var warehouse in variant.ProductWarehouses)
+                                                        {
+                                                            <option selected="@(warehouse.Selected)" value="@warehouse.WarehouseId">@(warehouse.Name)</option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                            }
                                             <!--Code products - SKU, MAN, GTIN, Vendor info -->
                                             <partial name="Partials/Codes" model="variant"/>
                                             <!--delivery-->
@@ -227,4 +264,192 @@
         @await Component.InvokeAsync("ProductEmailAFriend", new { productId = Model.Id })
     }
     @await Component.InvokeAsync("Widget", new { widgetZone = "productdetails_bottom", additionalData = Model.Id })
+    
+    <!-- Sample feature is now integrated into ProductAttributes.cshtml -->
+    
+    <script asp-location="Footer" asp-order="300">
+        // Manage warehouses and stock for grouped products
+        document.addEventListener("DOMContentLoaded", function () {
+            // We're now showing individual warehouse selectors by default for each associated product 
+            // that has AllowToSelectWarehouse=true
+            var variantWarehouseSelectors = document.querySelectorAll('.variant-warehouse-selector');
+            
+            // Helper function to update stock info for a product
+            function updateProductStockInfo(productId, warehouseId, form) {
+                // Create FormData from this form
+                var formData = form ? new FormData(form) : new FormData();
+                
+                // Always ensure correct parameters are included
+                if (!form) {
+                    formData.append('productId', productId);
+                    formData.append('warehouseId', warehouseId);
+                } else {
+                    // Make sure the form data has the correct warehouseId
+                    var existingWarehouseInput = Array.from(formData.entries()).find(entry => entry[0] === 'warehouseId');
+                    if (!existingWarehouseInput) {
+                        formData.set('WarehouseId', warehouseId);
+                    }
+                    
+                    // Make sure ProductId is set correctly
+                    formData.set('ProductId', productId);
+                }
+                
+                // Use different endpoint based on whether product has attributes
+                var hasAttributes = form && form.querySelector('[id^="product_attribute_"]');
+                var endpoint = hasAttributes 
+                    ? '@Html.Raw(Url.Action("productdetails_attributechange", "product"))' 
+                    : '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))';
+                
+                var params = hasAttributes ? { productId: productId, loadPicture: true } : {};
+                
+                // Make the AJAX request
+                axios({
+                    url: endpoint,
+                    data: formData,
+                    method: 'post',
+                    params: params
+                }).then(function (response) {
+                    // Update stock availability display
+                    if (response.data.stockAvailability) {
+                        var stockElement = document.getElementById('stock-availability-value-' + productId);
+                        if (stockElement) {
+                            stockElement.innerText = response.data.stockAvailability;
+                        }
+                    }
+                });
+            }
+            
+            // 1. PARENT WAREHOUSE SELECTOR
+            var parentWarehouseSelect = document.getElementById('WarehouseId');
+            if (parentWarehouseSelect) {
+                // When parent warehouse changes, update all associated products
+                parentWarehouseSelect.addEventListener('change', function() {
+                    var selectedWarehouseId = parentWarehouseSelect.value;
+                    
+                    // Update all hidden inputs
+                    var hiddenWarehouseInputs = document.querySelectorAll('.associated-warehouse-input');
+                    hiddenWarehouseInputs.forEach(function(input) {
+                        input.value = selectedWarehouseId;
+                    });
+                    
+                    // Update stock info for all associated products
+                    var associatedForms = document.querySelectorAll('form[id^="product-details-form-"]');
+                    associatedForms.forEach(function(form) {
+                        var productId = form.id.replace('product-details-form-', '');
+                        updateProductStockInfo(productId, selectedWarehouseId, form);
+                    });
+                });
+                
+                // Initial parent warehouse change to update all products
+                setTimeout(function() {
+                    var event = new Event('change');
+                    parentWarehouseSelect.dispatchEvent(event);
+                }, 100);
+            }
+            
+            // 2. VARIANT-SPECIFIC WAREHOUSE SELECTORS
+            // Handle individual variant warehouse selectors
+            var variantWarehouseSelects = document.querySelectorAll('.variant-warehouse-select');
+            variantWarehouseSelects.forEach(function(select) {
+                var productId = select.getAttribute('data-product-id');
+                var form = document.getElementById('product-details-form-' + productId);
+                
+                // When this variant's warehouse selection changes
+                select.addEventListener('change', function() {
+                    // Update the form's hidden input
+                    var hiddenInput = form.querySelector('.associated-warehouse-input');
+                    if (hiddenInput) {
+                        hiddenInput.value = select.value;
+                    }
+                    
+                    // Update stock info with correct values
+                    updateProductStockInfo(productId, select.value, form);
+                    
+                    // Create a standalone FormData specifically for warehouse change
+                    var warehouseData = new FormData();
+                    warehouseData.append('productId', productId);
+                    warehouseData.append('warehouseId', select.value);
+                    
+                    // Always use the direct warehouse change endpoint for immediate stock update
+                    axios({
+                        url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
+                        data: warehouseData,
+                        method: 'post',
+                    }).then(function (response) {
+                        // Update stock availability display
+                        if (response.data.stockAvailability) {
+                            var stockElement = document.getElementById('stock-availability-value-' + productId);
+                            if (stockElement) {
+                                stockElement.innerText = response.data.stockAvailability;
+                            }
+                        }
+                    });
+                });
+            });
+            
+            // Each associated product now directly shows its own warehouse selector when enabled
+            
+            // Initial update for all products
+            var associatedForms = document.querySelectorAll('form[id^="product-details-form-"]');
+            associatedForms.forEach(function(form) {
+                var productId = form.id.replace('product-details-form-', '');
+                
+                // First check if this product has its own warehouse selector
+                var variantWarehouseSelect = form.querySelector('.variant-warehouse-select');
+                if (variantWarehouseSelect) {
+                    // Use the selected warehouse from the variant's own selector
+                    var selectedOption = variantWarehouseSelect.options[variantWarehouseSelect.selectedIndex];
+                    var warehouseId = variantWarehouseSelect.value;
+                    
+                    // Make sure hidden input is synced
+                    var hiddenInput = form.querySelector('.associated-warehouse-input');
+                    if (hiddenInput) {
+                        hiddenInput.value = warehouseId;
+                    }
+                    
+                    // Direct API call for accurate stock info
+                    var warehouseData = new FormData();
+                    warehouseData.append('productId', productId);
+                    warehouseData.append('warehouseId', warehouseId);
+                    
+                    axios({
+                        url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
+                        data: warehouseData,
+                        method: 'post',
+                    }).then(function (response) {
+                        if (response.data.stockAvailability) {
+                            var stockElement = document.getElementById('stock-availability-value-' + productId);
+                            if (stockElement) {
+                                stockElement.innerText = response.data.stockAvailability;
+                            }
+                        }
+                    });
+                } else {
+                    // Use parent product's warehouse selection
+                    var hiddenInput = form.querySelector('.associated-warehouse-input');
+                    var warehouseId = hiddenInput ? hiddenInput.value : '';
+                    
+                    if (warehouseId) {
+                        // Direct API call for accurate stock info
+                        var warehouseData = new FormData();
+                        warehouseData.append('productId', productId);
+                        warehouseData.append('warehouseId', warehouseId);
+                        
+                        axios({
+                            url: '@Html.Raw(Url.Action("productdetails_warehousechange", "product"))',
+                            data: warehouseData,
+                            method: 'post',
+                        }).then(function (response) {
+                            if (response.data.stockAvailability) {
+                                var stockElement = document.getElementById('stock-availability-value-' + productId);
+                                if (stockElement) {
+                                    stockElement.innerText = response.data.stockAvailability;
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    </script>
 </div>

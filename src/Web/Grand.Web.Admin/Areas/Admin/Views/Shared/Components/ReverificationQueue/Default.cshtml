@@ -1,0 +1,484 @@
+@inject AdminAreaSettings adminAreaSettings
+
+<div id="reverification-queue-grid"></div>
+
+<style>
+    .reverification-queue-grid .k-grid-header .k-header {
+        background-color: #dc3545; /* Red theme for reverification orders */
+        color: white !important;
+    }
+    .reverification-queue-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .reverification-order-details-grid .k-grid-header .k-header {
+        background-color: #dc3545; /* Red theme for reverification orders detail */
+        color: white !important;
+    }
+    .reverification-order-details-grid .k-grid-header .k-header a.k-link {
+        color: white !important;
+    }
+    .reverify-order-btn {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .reverify-order-btn:hover {
+        background-color: #45a049;
+    }
+    .reverify-order-btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+    .highlight-success {
+        background-color: #d4edda !important;
+        border: 2px solid #28a745 !important;
+        transition: all 0.3s ease;
+    }
+    .highlight-error {
+        background-color: #f8d7da !important;
+        border: 2px solid #dc3545 !important;
+        transition: all 0.3s ease;
+    }
+    .reverification-order-control-panel {
+        /* background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 10px; */
+    }
+    .reverification-order-control-panel .form-control {
+        border-color: #dc3545;
+    }
+    .reverification-order-control-panel .form-control:focus {
+        border-color: #b02a37;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    .reverification-order-details-grid .form-control-sm {
+        padding: 2px 6px;
+        font-size: 0.875rem;
+        border-radius: 3px;
+        border: 1px solid #ddd;
+    }
+    .reverification-order-details-grid .form-control-sm:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.25);
+    }
+    .reverification-order-details-grid .quantity-input,
+    .reverification-order-details-grid .price-input {
+        text-align: center;
+    }
+    .reverification-order-details-grid .delete-order-item {
+        padding: 2px 6px;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+    .reverification-order-details-grid .delete-order-item:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    /* ProductSearchAdd component styling - copied from OrderDetails.Info.cshtml for consistency */
+    .reverification-order-products-container .add-products-section {
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .reverification-order-products-container .add-products-section .x_panel {
+        margin-bottom: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+    .reverification-order-products-container .add-products-section .x_title {
+        background: transparent;
+        padding: 10px 15px;
+        margin-bottom: 0;
+    }
+    .reverification-order-products-container .add-products-section .x_title .caption {
+        color: white;
+        font-weight: 600;
+        font-size: 1em;
+    }
+    .reverification-order-products-container .add-products-section .x_content {
+        padding: 10px;
+        background: transparent;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    /* Ensure Bootstrap grid stays within bounds */
+    .reverification-order-products-container .add-products-section .row {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+    }
+    .reverification-order-products-container .add-products-section [class*="col-"] {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    /* Ensure form controls don't overflow */
+    .reverification-order-products-container .add-products-section .form-control,
+    .reverification-order-products-container .add-products-section .form-group {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    /* Unit/Case quantity selector styling */
+    .reverification-order-products-container .quantity-unit-case-wrapper {
+        display: inline-block;
+    }
+    .reverification-order-products-container .quantity-unit-case-wrapper .d-flex {
+        gap: 4px;
+    }
+    .reverification-order-products-container .quantity-unit-case-wrapper .quantity-display-input {
+        text-align: center;
+    }
+</style>
+
+<script>
+    $(document).ready(function () {
+        $("#reverification-queue-grid").kendoGrid({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: "@Html.Raw(Url.Action("ReverificationOrdersList", "Order", new { area = Constants.AreaAdmin }))",
+                            type: "POST",
+                            dataType: "json",
+                            data: additionalData
+                        }
+                    },
+                    schema: {
+                        data: "Data",
+                        total: "Total",
+                        errors: "Errors"
+                    },
+                    error: function(e) {
+                        display_kendoui_grid_error(e);
+                        // Cancel the changes
+                        this.cancelChanges();
+                    },
+                    pageSize: 10,
+                    serverPaging: false,
+                    serverFiltering: false,
+                    serverSorting: false
+                },
+                pageable: {
+                    refresh: true,
+                    pageSizes: [10,20,50]
+                },
+                scrollable: false,
+                detailInit: reverificationOrderItemDetailInit,
+                columns: [
+                    {
+                        field: "OrderNumber",
+                        title: "@Loc["Admin.Orders.Fields.Id"]",
+                        width: 100,
+                        template: '<a class="k-link" href="Admin/Order/Edit/#=Id#">#=OrderNumber#</a>',
+                    },
+                    {
+                        field: "CustomerEmail",
+                        title: "@Loc["Admin.Orders.Fields.Customer"]",
+                        width: 200,
+                        template: function(dataItem) {
+                            var customerDisplay = dataItem.CustomerFullName;
+                            if (dataItem.CustomerCompany) {
+                                customerDisplay += '<br/><small>' + dataItem.CustomerCompany + '</small>';
+                            }
+                            return '<a class="k-link" href="@Url.Action("Edit", "Customer", new { area = Constants.AreaAdmin })/' + dataItem.CustomerId + '">' + customerDisplay + '</a>';
+                        }                        
+                    },
+                    {
+                        field: "CustomerGroups",
+                        title: "@Loc["Admin.Orders.Fields.CustomerGroups"]",
+                        width: 150
+                    },
+                    {
+                        field: "Warehouses",
+                        title: "@Loc["Admin.Orders.Fields.Warehouses"]",
+                        width: 150
+                    },
+                    {
+                        field: "OrderTotal",
+                        title: "@Loc["Admin.Orders.Fields.OrderTotal"]",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        field: "CreatedOn",
+                        title: "@Loc["Admin.Orders.Fields.CreatedOn"]",
+                        width: 120,
+                        type: "date",
+                        format: "{0:G}",
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                    },
+                    {
+                        title: "Actions",
+                        width: 120,
+                        headerAttributes: { style: "text-align:center" },
+                        attributes: { style: "text-align:center" },
+                        template: function(dataItem) {
+                            return '<button class="reverify-order-btn" id="reverify-btn-' + dataItem.Id + '" onclick="reverifyOrder(\'' + dataItem.Id + '\')">Re-verify Order</button>';
+                        }
+                    }
+                ]
+            });
+
+        function additionalData() {
+            var data = {
+                // Filter for orders needing reverification
+            };
+            addAntiForgeryToken(data);
+            return data;
+        }
+    });
+
+    function reverifyOrder(orderId) {
+        if (confirm('Are you sure you want to re-verify this order? Once re-verified, it will be moved to the Fulfillment Queue.')) {
+            // Disable the button and show loading state
+            var button = $('#reverify-btn-' + orderId);
+            button.prop('disabled', true).text('Re-verifying...');
+            
+            $.ajax({
+                url: '@Html.Raw(Url.Action("ReverifyOrder", "Order", new { area = Constants.AreaAdmin }))',
+                type: 'POST',
+                data: {
+                    orderId: orderId,
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(result) {
+                    if (result.success) {
+                        // Add visual success feedback to the row
+                        var button = $('#reverify-btn-' + orderId);
+                        var row = button.closest('tr');
+                        row.addClass('highlight-success');
+                        
+                        // Refresh the reverification queue grid to remove the re-verified order
+                        var reverificationGrid = $('#reverification-queue-grid').data('kendoGrid');
+                        if (reverificationGrid) {
+                            reverificationGrid.dataSource.read();
+                        }
+                        
+                        // Force refresh the fulfillment queue grid with a slight delay to ensure order is processed
+                        setTimeout(function() {
+                            var fulfillmentGrid = $('#fulfillment-queue-grid').data('kendoGrid');
+                            if (fulfillmentGrid) {
+                                fulfillmentGrid.dataSource.read();
+                                console.log('Fulfillment Queue grid refreshed after order reverification');
+                            } else {
+                                // Try alternative selector if the first one doesn't work
+                                var altGrid = $('[id*="fulfillment"]').data('kendoGrid');
+                                if (altGrid) {
+                                    altGrid.dataSource.read();
+                                    console.log('Fulfillment Queue grid refreshed using alternative selector');
+                                }
+                            }
+                        }, 500); // 500ms delay to ensure server processing is complete
+                        
+                        // Also try to refresh any other order-related grids on the page
+                        $('[id*="order"][id*="grid"]').each(function() {
+                            var grid = $(this).data('kendoGrid');
+                            if (grid && this.id !== 'reverification-queue-grid') {
+                                grid.dataSource.read();
+                            }
+                        });
+                        
+                    } else {
+                        // Add visual error feedback
+                        var button = $('#reverify-btn-' + orderId);
+                        var row = button.closest('tr');
+                        row.addClass('highlight-error');
+                        setTimeout(function() {
+                            row.removeClass('highlight-error');
+                        }, 3000);
+                        
+                        // Re-enable the button on failure
+                        button.prop('disabled', false).text('Re-verify Order');
+                        
+                        alert(result.message || 'Failed to re-verify order');
+                    }
+                },
+                error: function() {
+                    // Add visual error feedback
+                    var button = $('#reverify-btn-' + orderId);
+                    var row = button.closest('tr');
+                    row.addClass('highlight-error');
+                    setTimeout(function() {
+                        row.removeClass('highlight-error');
+                    }, 3000);
+                    
+                    alert('Error occurred while re-verifying order');
+                    // Re-enable the button on error
+                    button.prop('disabled', false).text('Re-verify Order');
+                },
+                complete: function() {
+                    // This runs whether success or error
+                    console.log('Order reverification request completed for order: ' + orderId);
+                }
+            });
+        }
+    }
+
+    // Function to initialize the detail row with order products table component
+    function reverificationOrderItemDetailInit(e) {
+        var orderId = e.data.Id;
+
+        // Create a container for the order products table component
+        var componentContainer = $("<div class='reverification-order-products-container'/>").appendTo(e.detailCell);
+
+        // Load the OrderProductsTable component via AJAX
+        $.ajax({
+            url: '@Html.Raw(Url.Action("GetOrderProductsTableComponent", "Order", new { area = Constants.AreaAdmin }))',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                contextId: 'reverification-' + orderId,
+                showAddProducts: true, // Show ProductSearchAdd component to match order edit page
+                showSummary: true, // Show order summary (subtotal, shipping, tax, total)
+                collapsible: false,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(componentHtml) {
+                // Insert the component HTML
+                componentContainer.html(componentHtml);
+
+                // After component is loaded, add the shipment date control panel
+                var datePanel = $('<div class="reverification-order-control-panel" data-order-id="' + orderId + '"></div>');
+
+                // Add requested shipment date row
+                var dateRow = $('<div class="row mt-3 mb-3"></div>');
+                var dateSection = $('<div class="col-md-6 form-group row"></div>');
+                dateSection.append('<label class="col-sm-4 col-form-label">@Loc["Admin.Orders.Fulfillment.RequestedShipmentDate"]:</label>');
+                dateSection.append('<div class="col-sm-8"><input type="date" id="requestedShipmentDate_' + orderId + '" class="form-control requested-shipment-date-input" data-date-format="yyyy-mm-dd" data-order-id="' + orderId + '"/></div>');
+                dateRow.append(dateSection);
+
+                // Create empty action buttons section for future use
+                var buttonSection = $('<div class="col-md-6 text-right"></div>');
+                dateRow.append(buttonSection);
+                datePanel.append(dateRow);
+
+                // Add the date panel after the component
+                componentContainer.after(datePanel);
+
+                // Set up context-specific refresh function for this order's products (no global collision)
+                window['refreshCurrentProductsGrid_reverification_' + orderId] = function() {
+                    // Reload the entire component to refresh the products table
+                    $.ajax({
+                        url: '@Html.Raw(Url.Action("GetOrderProductsTableComponent", "Order", new { area = Constants.AreaAdmin }))',
+                        type: 'POST',
+                        data: {
+                            orderId: orderId,
+                            contextId: 'reverification-' + orderId,
+                            showAddProducts: true, // Show ProductSearchAdd component in refresh function too
+                            showSummary: true, // Show order summary in refresh function too
+                            collapsible: false,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(html) {
+                            componentContainer.html(html);
+                            // Re-assign the refresh function after component reload
+                            window['refreshCurrentProductsGrid_reverification_' + orderId] = arguments.callee;
+                        }
+                    });
+                };
+
+                // Set up instance-specific refresh callback for ProductSearchAdd component
+                // Match the componentId pattern used in ProductSearchAdd: 'product-search-' + contextId with special chars replaced
+                var contextId = 'reverification-' + orderId;
+                var componentId = 'product-search-' + contextId.replace(/[^a-zA-Z0-9]/g, '_');
+                var callbackName = 'refreshCallback_' + componentId.replace(/-/g, '_');
+                window[callbackName] = function() {
+                    console.log('ReverificationQueue: Refreshing products for order', orderId);
+                    window['refreshCurrentProductsGrid_reverification_' + orderId]();
+                };
+
+                // Load existing requested shipment date
+                $.ajax({
+                    url: "@Url.Action("GetRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin })",
+                    type: "GET",
+                    data: { orderId: orderId },
+                    success: function(response) {
+                        if (response && response.success && response.value) {
+                            $("#requestedShipmentDate_" + orderId).val(response.value);
+                        }
+                    }
+                });
+
+                // Wire up the date picker to save changes
+                $("#requestedShipmentDate_" + orderId).off("change").on("change", function() {
+                    var newDate = $(this).val();
+                    var data = {
+                        orderId: orderId,
+                        date: newDate
+                    };
+                    addAntiForgeryToken(data);
+
+                    $.ajax({
+                        url: "@Html.Raw(Url.Action("SaveRequestedShipmentDate", "Order", new { area = Constants.AreaAdmin }))",
+                        type: "POST",
+                        data: data,
+                        success: function(response) {
+                            if (response && response.success) {
+                                // Reload main grid to reflect changes
+                                setTimeout(function() {
+                                    $("#reverification-queue-grid").data("kendoGrid").dataSource.read();
+                                }, 500);
+                            } else {
+                                alert("Failed to save delivery date");
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Save date error:", error);
+                            alert("Error saving date: " + error);
+                        }
+                    });
+                });
+            },
+            error: function(xhr, status, error) {
+                componentContainer.html('<div class="alert alert-danger">Error loading order products: ' + error + '</div>');
+            }
+        });
+    }
+
+    /*
+    // COMMENTED OUT: Previous custom Kendo grid implementation
+    // This was replaced with the reusable OrderProductsTable component above
+    function reverificationOrderItemDetailInit_OLD(e) {
+        var orderId = e.data.Id;
+
+        // Create a detail grid with order items (informational only)
+        $("<div class='reverification-order-details-grid'/>").appendTo(e.detailCell).kendoGrid({
+            // ... previous custom grid implementation ...
+            dataBound: function() {
+                // ... old custom grid dataBound implementation was here ...
+            }
+        });
+    }
+    */
+
+    /*
+    // COMMENTED OUT: Old inline editing functions for custom Kendo grid
+    // These are no longer needed as the OrderProductsTable component handles all editing
+    function updateReverificationOrderItemQuantity(orderItemId, newQuantity, originalQuantity) {
+        // ... old implementation commented out ...
+    }
+
+    function updateReverificationOrderItemPrice(orderItemId, newPrice, originalPrice) {
+        // ... old implementation commented out ...
+    }
+
+    function updateReverificationOrderItemField(orderItemId, fieldType, value) {
+        // ... old implementation commented out ...
+    }
+
+    function refreshReverificationOrderDetailGrid(orderItemId) {
+        // ... old implementation commented out ...
+    }
+
+    function deleteReverificationOrderItem(orderItemId) {
+        // ... old implementation commented out ...
+    }
+    */
+</script>

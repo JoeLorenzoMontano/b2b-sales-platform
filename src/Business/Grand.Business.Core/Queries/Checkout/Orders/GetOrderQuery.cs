@@ -17,6 +17,7 @@ public class GetOrderQuery : IRequest<IQueryable<Order>>
     public string BillingCountryId { get; set; } = "";
     public string OwnerId { get; set; } = "";
     public string SalesEmployeeId { get; set; } = "";
+    public string ImpersonatedByEmployeeId { get; set; } = "";
     public string PaymentMethodSystemName { get; set; } = null;
     public DateTime? CreatedFromUtc { get; set; } = null;
     public DateTime? CreatedToUtc { get; set; } = null;

@@ -25,6 +25,9 @@ using Grand.Domain.Payments;
 using Grand.Domain.Shipping;
 using Grand.Domain.Tax;
 using Grand.Infrastructure;
+using Grand.Web.Common.DataSource;
+using Grand.Domain.Customers;
+using Grand.Domain;
 using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Orders;
@@ -32,6 +35,7 @@ using Grand.Web.Common.Localization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Net;
+using System.Text;
 using ProductExtensions = Grand.Domain.Catalog.ProductExtensions;
 
 namespace Grand.Web.Admin.Services;
@@ -242,6 +246,30 @@ public class OrderViewModelService : IOrderViewModelService
 
         model.AvailableCountries.Insert(0,
             new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
+            
+        //employees (sales)
+        model.AvailableEmployees.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
+        foreach (var salesEmployee in await _salesEmployeeService.GetAll())
+            model.AvailableEmployees.Add(new SelectListItem { Text = salesEmployee.Name, Value = salesEmployee.Id });
+
+        //customers - get customers for multiselect (limited for performance, exclude blank names)
+        model.AvailableCustomers.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
+        var customers = await _customerService.GetAllCustomers(pageSize: 1000);
+        foreach (var customer in customers)
+        {
+            // Skip system accounts and customers without meaningful names
+            if (customer.IsSystemAccount() || string.IsNullOrEmpty(customer.Email))
+                continue;
+                
+            var fullName = customer.GetFullName();
+            var customerName = !string.IsNullOrWhiteSpace(fullName) ? fullName : customer.Email;
+            
+            // Only add customers with non-empty display names
+            if (!string.IsNullOrWhiteSpace(customerName))
+            {
+                model.AvailableCustomers.Add(new SelectListItem { Text = customerName, Value = customer.Id });
+            }
+        }
 
         if (startDate.HasValue)
             model.StartDate = startDate.Value;
@@ -276,14 +304,26 @@ public class OrderViewModelService : IOrderViewModelService
 
         var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
 
+        //handle customer filtering - if SearchCustomerIds is specified, we need to filter by those
+        string customerIdFilter = "";
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Any() && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            // For multiple customer IDs, we'll need to search without customer filter and then post-filter
+            // For now, if only one customer is selected, use it directly
+            if (model.SearchCustomerIds.Count == 1)
+                customerIdFilter = model.SearchCustomerIds.First();
+        }
+
         //load orders
         var orders = await _orderService.SearchOrders(
             model.StoreId,
             model.VendorId,
-            model.CustomerId,
+            customerIdFilter,
             filterByProductId,
             warehouseId: model.WarehouseId,
             salesEmployeeId: salesEmployeeId,
+            impersonatedByEmployeeId: model.ImpersonatedByEmployeeId,
             paymentMethodSystemName: model.PaymentMethodSystemName,
             createdFromUtc: startDateValue,
             createdToUtc: endDateValue,
@@ -299,6 +339,14 @@ public class OrderViewModelService : IOrderViewModelService
             pageSize: pageSize,
             orderTagId: model.OrderTag);
 
+        // Post-filter for multiple customer IDs if needed
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Count > 1 && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            var filteredOrders = orders.Where(o => model.SearchCustomerIds.Contains(o.CustomerId)).ToList();
+            orders = new PagedList<Order>(filteredOrders, orders.PageIndex, orders.PageSize, filteredOrders.Count);
+        }
+
 
         var primaryStoreCurrency = await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId);
         if (primaryStoreCurrency == null)
@@ -311,6 +359,28 @@ public class OrderViewModelService : IOrderViewModelService
             var store = await _storeService.GetStoreById(x.StoreId);
             var orderTotal = _priceFormatter.FormatPrice(x.OrderTotal,
                 await _currencyService.GetCurrencyByCode(x.CustomerCurrencyCode));
+            // Get distinct warehouses from order items
+            var warehouseIds = x.OrderItems
+                .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                .Select(item => item.WarehouseId)
+                .Distinct()
+                .ToList();
+                
+            var warehousesString = "";
+            if (warehouseIds.Any())
+            {
+                var warehouses = new List<string>();
+                foreach (var warehouseId in warehouseIds)
+                {
+                    var warehouse = await _warehouseService.GetWarehouseById(warehouseId);
+                    if (warehouse != null)
+                    {
+                        warehouses.Add(warehouse.Name);
+                    }
+                }
+                warehousesString = string.Join(", ", warehouses);
+            }
+
             items.Add(new OrderModel {
                 Id = x.Id,
                 OrderNumber = x.OrderNumber,
@@ -325,6 +395,8 @@ public class OrderViewModelService : IOrderViewModelService
                 CustomerEmail = x.BillingAddress?.Email,
                 CustomerId = x.CustomerId,
                 CustomerFullName = $"{x.BillingAddress?.FirstName} {x.BillingAddress?.LastName}",
+                CustomerCompany = x.BillingAddress?.Company,
+                Warehouses = warehousesString,
                 CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc)
             });
         }
@@ -332,6 +404,133 @@ public class OrderViewModelService : IOrderViewModelService
         return (items, orders.TotalCount);
     }
 
+    public virtual async Task<(IEnumerable<OrderModel> orderModels, int totalCount)> PrepareUnpaidOrderModel(
+        OrderListModel model, int pageIndex, int pageSize)
+    {
+        DateTime? startDateValue = model.StartDate == null
+            ? null
+            : _dateTimeService.ConvertToUtcTime(model.StartDate.Value, _dateTimeService.CurrentTimeZone);
+
+        DateTime? endDateValue = model.EndDate == null
+            ? null
+            : _dateTimeService.ConvertToUtcTime(model.EndDate.Value, _dateTimeService.CurrentTimeZone).AddDays(1);
+
+        int? orderStatus = model.OrderStatusId > 0 ? model.OrderStatusId : null;
+        var shippingStatus = model.ShippingStatusId.HasValue ? (ShippingStatus?)model.ShippingStatusId : null;
+
+        var filterByProductId = "";
+        var product = await _productService.GetProductById(model.ProductId);
+        if (product != null)
+            filterByProductId = model.ProductId;
+
+        var salesEmployeeId = _contextAccessor.WorkContext.CurrentCustomer.SeId;
+
+        //handle customer filtering - if SearchCustomerIds is specified, we need to filter by those
+        string customerIdFilter = "";
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Any() && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            // For multiple customer IDs, we'll need to search without customer filter and then post-filter
+            // For now, if only one customer is selected, use it directly
+            if (model.SearchCustomerIds.Count == 1)
+                customerIdFilter = model.SearchCustomerIds.First();
+        }
+
+        // Load orders with Pending payment status specifically
+        var orders = await _orderService.SearchOrders(
+            model.StoreId,
+            model.VendorId,
+            customerIdFilter,
+            filterByProductId,
+            warehouseId: model.WarehouseId,
+            salesEmployeeId: salesEmployeeId,
+            impersonatedByEmployeeId: model.ImpersonatedByEmployeeId,
+            paymentMethodSystemName: model.PaymentMethodSystemName,
+            createdFromUtc: startDateValue,
+            createdToUtc: endDateValue,
+            os: orderStatus,
+            ps: PaymentStatus.Pending, // Filter specifically for Pending payment status
+            ss: shippingStatus,
+            billingEmail: model.BillingEmail,
+            billingLastName: model.BillingLastName,
+            billingCountryId: model.BillingCountryId,
+            orderGuid: model.OrderGuid,
+            orderCode: model.GoDirectlyToNumber,
+            pageIndex: pageIndex - 1,
+            pageSize: pageSize,
+            orderTagId: model.OrderTag);
+
+        // Post-filter for multiple customer IDs if needed
+        if (model.SearchCustomerIds != null && model.SearchCustomerIds.Count > 1 && 
+            !model.SearchCustomerIds.Contains(" ")) // Exclude "All" option
+        {
+            var filteredOrders = orders.Where(o => model.SearchCustomerIds.Contains(o.CustomerId)).ToList();
+            orders = new PagedList<Order>(filteredOrders, orders.PageIndex, orders.PageSize, filteredOrders.Count);
+        }
+
+        // Debug logging
+        System.Console.WriteLine($"[DEBUG] Pending orders found: {orders.TotalCount}");
+
+        var pagedUnpaidOrders = orders;
+
+        var primaryStoreCurrency = await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId);
+        if (primaryStoreCurrency == null)
+            throw new Exception("Cannot load primary store currency");
+
+        var status = await _orderStatusService.GetAll();
+        var items = new List<OrderModel>();
+        foreach (var x in pagedUnpaidOrders)
+        {
+            var store = await _storeService.GetStoreById(x.StoreId);
+            var orderTotal = _priceFormatter.FormatPrice(x.OrderTotal,
+                await _currencyService.GetCurrencyByCode(x.CustomerCurrencyCode));
+            
+            // Get distinct warehouses from order items
+            var warehouseIds = x.OrderItems
+                .Where(item => !string.IsNullOrEmpty(item.WarehouseId))
+                .Select(item => item.WarehouseId)
+                .Distinct()
+                .ToList();
+                
+            var warehousesString = "";
+            if (warehouseIds.Any())
+            {
+                var warehouses = new List<string>();
+                foreach (var warehouseId in warehouseIds)
+                {
+                    var warehouse = await _warehouseService.GetWarehouseById(warehouseId);
+                    if (warehouse != null)
+                    {
+                        warehouses.Add(warehouse.Name);
+                    }
+                }
+                warehousesString = string.Join(", ", warehouses);
+            }
+
+            items.Add(new OrderModel {
+                Id = x.Id,
+                OrderNumber = x.OrderNumber,
+                Code = x.Code,
+                StoreName = store != null ? store.Shortcut : "Unknown",
+                OrderTotal = orderTotal,
+                OrderTotalValue = x.OrderTotal,
+                CurrencyCode = x.CustomerCurrencyCode,
+                OrderStatus = status.FirstOrDefault(y => y.StatusId == x.OrderStatusId)?.Name,
+                OrderStatusId = x.OrderStatusId,
+                PaymentStatus = _enumTranslationService.GetTranslationEnum(x.PaymentStatusId),
+                PaymentMethod = x.PaymentMethodSystemName,
+                ShippingStatus = _enumTranslationService.GetTranslationEnum(x.ShippingStatusId),
+                CustomerEmail = x.BillingAddress?.Email,
+                CustomerId = x.CustomerId,
+                CustomerFullName = $"{x.BillingAddress?.FirstName} {x.BillingAddress?.LastName}",
+                CustomerCompany = x.BillingAddress?.Company,
+                Warehouses = warehousesString,
+                CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc)
+            });
+        }
+
+        return (items, orders.TotalCount);
+    }
 
     public virtual async Task PrepareOrderDetailsModel(OrderModel model, Order order)
     {
@@ -382,6 +581,17 @@ public class OrderViewModelService : IOrderViewModelService
             {
                 model.SalesEmployeeId = salesEmployee.Id;
                 model.SalesEmployeeName = salesEmployee.Name;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(order.ImpersonatedByEmployeeId))
+        {
+            // The impersonating user is a Customer entity, not a SalesEmployee
+            var impersonatingCustomer = await _customerService.GetCustomerById(order.ImpersonatedByEmployeeId);
+            if (impersonatingCustomer != null)
+            {
+                model.ImpersonatedByEmployeeId = impersonatingCustomer.Id;
+                model.ImpersonatedByEmployeeName = impersonatingCustomer.Email; // Using email as it's always available
             }
         }
 
@@ -522,6 +732,8 @@ public class OrderViewModelService : IOrderViewModelService
             model.Profit = _priceFormatter.FormatPrice(profit, primaryStoreCurrency);
         }
 
+        // Currency conversion display disabled - site uses USD only
+        /*
         if (order.PrimaryCurrencyCode != order.CustomerCurrencyCode)
         {
             model.OrderTotal +=
@@ -562,6 +774,7 @@ public class OrderViewModelService : IOrderViewModelService
                 model.RefundedAmount +=
                     $" ({_priceFormatter.FormatPrice(order.RefundedAmount / order.CurrencyRate, primaryStoreCurrency)})";
         }
+        */
 
         #endregion
 
@@ -671,6 +884,8 @@ public class OrderViewModelService : IOrderViewModelService
             }
 
             model.ShippingMethod = order.ShippingMethod;
+            model.TargetDeliveryDate = order.TargetDeliveryDate;
+            model.RequestedShipmentDate = order.RequestedShipmentDate;
             model.ShippingAdditionDescription = order.ShippingOptionAttributeDescription;
             model.CanAddNewShipments = false;
 
@@ -733,6 +948,18 @@ public class OrderViewModelService : IOrderViewModelService
             var vendor = await _vendorService.GetVendorById(orderItem.VendorId);
             orderItemModel.VendorName = vendor != null ? vendor.Name : "";
 
+            //warehouse
+            if (!string.IsNullOrEmpty(orderItem.WarehouseId))
+            {
+                var warehouse = await _warehouseService.GetWarehouseById(orderItem.WarehouseId);
+                orderItemModel.WarehouseId = orderItem.WarehouseId;
+                orderItemModel.WarehouseName = warehouse?.Name ?? "";
+            }
+            else
+            {
+                orderItemModel.WarehouseName = "N/A";
+            }
+
             //unit price
             orderItemModel.UnitPriceInclTaxValue = orderItem.UnitPriceInclTax;
             orderItemModel.UnitPriceExclTaxValue = orderItem.UnitPriceExclTax;
@@ -753,6 +980,8 @@ public class OrderViewModelService : IOrderViewModelService
             orderItemModel.SubTotalInclTax = _priceFormatter.FormatPrice(orderItem.PriceInclTax, orderCurrency);
             orderItemModel.SubTotalExclTax = _priceFormatter.FormatPrice(orderItem.PriceExclTax, orderCurrency);
 
+            // Currency conversion display disabled - site uses USD only
+            /*
             if (order.PrimaryCurrencyCode != order.CustomerCurrencyCode)
             {
                 orderItemModel.UnitPriceInclTax +=
@@ -768,10 +997,135 @@ public class OrderViewModelService : IOrderViewModelService
                 orderItemModel.SubTotalExclTax +=
                     $" ({_priceFormatter.FormatPrice(orderItem.PriceExclTax / order.CurrencyRate, primaryStoreCurrency)})";
             }
+            */
 
             // commission
             orderItemModel.CommissionValue = orderItem.Commission;
             orderItemModel.Commission = _priceFormatter.FormatPrice(orderItem.Commission, orderCurrency);
+
+            // case size from attribute combination
+            var combination = product.FindProductAttributeCombination(orderItem.Attributes);
+            if (combination != null)
+            {
+                orderItemModel.CaseSize = combination.CaseSize;
+            }
+
+            // Check for weight-based attributes
+            if (product.ProductAttributeMappings?.Any() == true)
+            {
+                bool hasWeightBasedAttributes = product.ProductAttributeMappings
+                    .SelectMany(m => m.ProductAttributeValues ?? new List<ProductAttributeValue>())
+                    .Any(v => v.AttributeValueTypeId == AttributeValueType.WeightBasedConversion);
+
+                if (hasWeightBasedAttributes && product.ProductAttributeCombinations?.Any() == true)
+                {
+                    orderItemModel.HasWeightBasedAttributes = true;
+
+                    // Populate weight options
+                    foreach (var comb in product.ProductAttributeCombinations)
+                    {
+                        var attributeNames = new List<string>();
+                        foreach (var attr in comb.Attributes)
+                        {
+                            var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                            if (mapping != null)
+                            {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                foreach (var valueId in valueIds)
+                                {
+                                    var trimmedValueId = valueId.Trim();
+                                    if (!string.IsNullOrEmpty(trimmedValueId))
+                                    {
+                                        var attributeValue = mapping.ProductAttributeValues?.FirstOrDefault(v => v.Id == trimmedValueId);
+                                        if (attributeValue != null)
+                                        {
+                                            attributeNames.Add(attributeValue.Name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        var combinationPrice = (comb.OverriddenPrice.HasValue && comb.OverriddenPrice.Value > 0) ? comb.OverriddenPrice.Value : product.Price;
+                        var optionName = attributeNames.Any() ? string.Join(", ", attributeNames) : "Default";
+
+                        orderItemModel.WeightOptions.Add(new OrderModel.WeightAttributeOption
+                        {
+                            CombinationId = comb.Id,
+                            Name = optionName,
+                            Price = combinationPrice,
+                            Sku = !string.IsNullOrEmpty(comb.Sku) ? comb.Sku : product.Sku
+                        });
+                    }
+
+                    // Set selected weight combination (from current order item)
+                    if (combination != null)
+                    {
+                        orderItemModel.SelectedWeightCombinationId = combination.Id;
+                    }
+                }
+                else if (hasWeightBasedAttributes && product.ProductAttributeCombinations?.Any() != true)
+                {
+                    // Weight-based attributes WITHOUT combinations (like Flower products)
+                    orderItemModel.HasWeightBasedAttributes = true;
+
+                    // Build options from attribute values directly (no combinations)
+                    foreach (var mapping in product.ProductAttributeMappings)
+                    {
+                        if (mapping.ProductAttributeValues != null)
+                        {
+                            foreach (var attrValue in mapping.ProductAttributeValues)
+                            {
+                                if (attrValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                                {
+                                    var optionPrice = (attrValue.OverriddenPrice.HasValue && attrValue.OverriddenPrice.Value > 0)
+                                        ? attrValue.OverriddenPrice.Value
+                                        : product.Price;
+
+                                    orderItemModel.WeightOptions.Add(new OrderModel.WeightAttributeOption
+                                    {
+                                        CombinationId = attrValue.Id, // Use attributeValueId as the identifier
+                                        Name = attrValue.Name,
+                                        Price = optionPrice,
+                                        Sku = product.Sku,
+                                        ConversionRatio = attrValue.Quantity
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    // Try to find the selected weight option from order item's attributes
+                    // For non-combination products, we need to match against the attribute values
+                    if (orderItem.Attributes != null && orderItem.Attributes.Any())
+                    {
+                        foreach (var attr in orderItem.Attributes)
+                        {
+                            var mapping = product.ProductAttributeMappings?.FirstOrDefault(m => m.Id == attr.Key);
+                            if (mapping != null && mapping.ProductAttributeValues != null)
+                            {
+                                var valueIds = attr.Value?.Split(',') ?? new string[0];
+                                foreach (var valueId in valueIds)
+                                {
+                                    var trimmedValueId = valueId.Trim();
+                                    var attributeValue = mapping.ProductAttributeValues.FirstOrDefault(v => v.Id == trimmedValueId);
+                                    if (attributeValue != null && attributeValue.AttributeValueTypeId == AttributeValueType.WeightBasedConversion)
+                                    {
+                                        orderItemModel.SelectedWeightCombinationId = attributeValue.Id;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // If no selection found, default to first option
+                    if (string.IsNullOrEmpty(orderItemModel.SelectedWeightCombinationId) && orderItemModel.WeightOptions.Any())
+                    {
+                        orderItemModel.SelectedWeightCombinationId = orderItemModel.WeightOptions[0].CombinationId;
+                    }
+                }
+            }
 
             orderItemModel.AttributeInfo = orderItem.AttributeDescription;
             if (product.IsRecurring)
@@ -794,6 +1148,7 @@ public class OrderViewModelService : IOrderViewModelService
         }
 
         model.HasDownloadableProducts = hasDownloadableItems;
+        model.IsVerifiedOrder = order.IsVerifiedOrder;
 
         #endregion
     }
@@ -951,6 +1306,7 @@ public class OrderViewModelService : IOrderViewModelService
                 DownloadId = string.IsNullOrEmpty(orderNote.DownloadId) ? "" : orderNote.DownloadId,
                 DownloadGuid = download?.DownloadGuid ?? Guid.Empty,
                 DisplayToCustomer = orderNote.DisplayToCustomer,
+                IncludeOnInvoice = orderNote.IncludeOnInvoice,
                 Note = orderNote.Note,
                 CreatedOn = _dateTimeService.ConvertToUserTime(orderNote.CreatedOnUtc, DateTimeKind.Utc),
                 CreatedByCustomer = orderNote.CreatedByCustomer
@@ -961,10 +1317,11 @@ public class OrderViewModelService : IOrderViewModelService
     }
 
     public virtual async Task InsertOrderNote(Order order, string downloadId, bool displayToCustomer,
-        string message)
+        bool includeOnInvoice, string message)
     {
         var orderNote = new OrderNote {
             DisplayToCustomer = displayToCustomer,
+            IncludeOnInvoice = includeOnInvoice,
             Note = message,
             DownloadId = downloadId,
             OrderId = order.Id
@@ -995,6 +1352,21 @@ public class OrderViewModelService : IOrderViewModelService
         }
     }
 
+    public virtual async Task UpdateOrderNote(Order order, string id, bool? displayToCustomer, bool? includeOnInvoice)
+    {
+        var orderNote = (await _orderService.GetOrderNotes(order.Id)).FirstOrDefault(on => on.Id == id);
+        if (orderNote == null)
+            throw new ArgumentException("No order note found with the specified id");
+
+        if (displayToCustomer.HasValue)
+            orderNote.DisplayToCustomer = displayToCustomer.Value;
+        
+        if (includeOnInvoice.HasValue)
+            orderNote.IncludeOnInvoice = includeOnInvoice.Value;
+
+        await _orderService.UpdateOrderNote(orderNote);
+    }
+
     public virtual async Task<Address> UpdateOrderAddress(Order order, Address address, OrderAddressModel model,
         List<CustomAttribute> customAttributes)
     {
@@ -1014,7 +1386,7 @@ public class OrderViewModelService : IOrderViewModelService
     public virtual async Task<IList<string>> AddProductToOrderDetails(AddProductToOrderModel model)
     {
         var order = await _orderService.GetOrderById(model.OrderId);
-        var product = await _productService.GetProductById(model.ProductId);
+        var product = await _productService.GetProductById(model.ProductId, fromDb: true);
         var customer = await _customerService.GetCustomerById(order.CustomerId);
 
         var warnings = new List<string>();
@@ -1099,10 +1471,11 @@ public class OrderViewModelService : IOrderViewModelService
         #endregion
 
         //warnings
+        var warehouseId = !string.IsNullOrEmpty(model.WarehouseId) ? model.WarehouseId : product.WarehouseId;
         var shoppingCartItem = new ShoppingCartItem {
             ShoppingCartTypeId = ShoppingCartType.ShoppingCart,
             Quantity = model.Quantity,
-            WarehouseId = product.WarehouseId,
+            WarehouseId = warehouseId,
             Attributes = customattributes
         };
 
@@ -1121,7 +1494,7 @@ public class OrderViewModelService : IOrderViewModelService
                 OrderItemGuid = Guid.NewGuid(),
                 ProductId = product.Id,
                 VendorId = product.VendorId,
-                WarehouseId = product.WarehouseId,
+                WarehouseId = warehouseId,
                 Sku = product.FormatSku(customattributes),
                 SeId = order.SeId,
                 UnitPriceInclTax = model.UnitPriceExclTax,
@@ -1148,6 +1521,379 @@ public class OrderViewModelService : IOrderViewModelService
 
         return warnings;
     }
+
+    #region Bulk Product Addition
+
+    public virtual Task<BulkAddProductsToOrderModel> PrepareBulkAddProductsToOrderModel(Order order)
+    {
+        var model = new BulkAddProductsToOrderModel
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber.ToString()
+        };
+
+        // Prepare basic dropdowns - simplified to avoid missing services
+        model.AvailableCategories.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
+
+        model.AvailableBrands.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
+
+        model.AvailableCollections.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
+
+        // Prepare product types
+        model.AvailableProductTypes.Add(new SelectListItem
+            { Text = _translationService.GetResource("Admin.Common.All"), Value = "0" });
+        foreach (ProductType pt in Enum.GetValues(typeof(ProductType)))
+            model.AvailableProductTypes.Add(new SelectListItem
+                { Text = pt.GetTranslationEnum(_translationService, _contextAccessor), Value = ((int)pt).ToString() });
+
+        return Task.FromResult(model);
+    }
+
+    public virtual async Task<string> GetProductConfigurationRowsHtml(string[] productIds, string orderId)
+    {
+        var order = await _orderService.GetOrderById(orderId);
+        if (order == null)
+            return "";
+
+        var htmlBuilder = new StringBuilder();
+        
+        foreach (var productId in productIds)
+        {
+            var product = await _productService.GetProductById(productId);
+            if (product == null)
+                continue;
+
+            var rowModel = new BulkProductConfigModel
+            {
+                ProductId = productId,
+                ProductName = product.Name,
+                Sku = product.Sku,
+                Quantity = 1,
+                NeedsWarehouse = product.ManageInventoryMethodId == ManageInventoryMethod.ManageStock || 
+                                (product.ProductAttributeCombinations.Any() && 
+                                 product.ProductAttributeCombinations.Any(c => c.WarehouseInventory.Any())),
+                HasAttributes = product.ProductAttributeMappings.Any()
+            };
+
+            // Get unit price using existing pricing service with full discount context
+            var customer = await _customerService.GetCustomerById(order.CustomerId);
+            var store = await _storeService.GetStoreById(order.StoreId);
+            var currency = await _currencyService.GetCurrencyById(order.CustomerCurrencyCode);
+            
+            try 
+            {
+                var unitPrice = await _pricingService.GetUnitPrice(product, customer, store, currency, ShoppingCartType.ShoppingCart, 1, new List<CustomAttribute>(), 0, null, null, true);
+                rowModel.UnitPrice = (decimal)unitPrice.unitprice;
+                
+                // Fallback to product price if pricing service returns 0
+                if (rowModel.UnitPrice == 0)
+                {
+                    rowModel.UnitPrice = (decimal)product.Price;
+                }
+            }
+            catch
+            {
+                // Fallback to product base price if pricing service fails
+                rowModel.UnitPrice = (decimal)product.Price;
+            }
+
+            // Prepare warehouses if needed
+            if (rowModel.NeedsWarehouse)
+            {
+                foreach (var warehouse in await _warehouseService.GetAllWarehouses())
+                {
+                    // Use simple warehouse display without stock quantity for now
+                    rowModel.AvailableWarehouses.Add(new SelectListItem
+                    {
+                        Value = warehouse.Id,
+                        Text = warehouse.Name
+                    });
+                }
+                
+                // Set default warehouse to first available warehouse
+                if (rowModel.AvailableWarehouses.Any())
+                {
+                    rowModel.WarehouseId = rowModel.AvailableWarehouses.First().Value;
+                }
+            }
+
+            // Prepare attribute combinations if needed
+            if (rowModel.HasAttributes)
+            {
+                var orderCustomer = await _customerService.GetCustomerById(order.CustomerId);
+                foreach (var combination in product.ProductAttributeCombinations)
+                {
+                    var attributesInfo = await _productAttributeFormatter.FormatAttributes(product, combination.Attributes, orderCustomer);
+                    var displayText = string.IsNullOrEmpty(attributesInfo) ? "Default" : attributesInfo;
+                    
+                    // Add SKU and stock info if available
+                    if (!string.IsNullOrEmpty(combination.Sku))
+                        displayText += $" - {combination.Sku}";
+                    
+                    if (combination.StockQuantity > 0)
+                        displayText += $" (Stock: {combination.StockQuantity})";
+                    
+                    if (combination.OverriddenPrice.HasValue)
+                        displayText += $" - ${combination.OverriddenPrice.Value:F2}";
+
+                    rowModel.AttributeCombinations.Add(new AttributeCombinationModel
+                    {
+                        Id = combination.Id,
+                        AttributesInfo = displayText,
+                        Sku = combination.Sku,
+                        StockQuantity = (decimal)combination.StockQuantity,
+                        OverriddenPrice = (decimal?)combination.OverriddenPrice
+                    });
+                }
+                
+                // If no combinations exist but product has attributes, add a default option
+                if (!rowModel.AttributeCombinations.Any())
+                {
+                    rowModel.AttributeCombinations.Add(new AttributeCombinationModel
+                    {
+                        Id = "",
+                        AttributesInfo = "Default (no specific combination)",
+                        Sku = product.Sku,
+                        StockQuantity = (decimal)product.StockQuantity,
+                        OverriddenPrice = null
+                    });
+                }
+                
+                // Set default attribute combination to first available combination
+                if (rowModel.AttributeCombinations.Any())
+                {
+                    rowModel.SelectedCombinationId = rowModel.AttributeCombinations.First().Id;
+                }
+            }
+
+            // Generate HTML row
+            htmlBuilder.AppendLine($@"
+                <tr id='product-row-{productId}'>
+                    <td>
+                        {product.Name}
+                        <input type='hidden' name='Products[{Array.IndexOf(productIds, productId)}].ProductId' value='{productId}' />
+                    </td>
+                    <td>
+                        <input type='number' name='Products[{Array.IndexOf(productIds, productId)}].Quantity' value='1' min='1' class='form-control' style='width:80px;' />
+                    </td>");
+
+            if (rowModel.NeedsWarehouse)
+            {
+                htmlBuilder.AppendLine($@"
+                    <td class='warehouse-cell'>
+                        <select id='warehouse-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].WarehouseId' class='form-control'>");
+                
+                foreach (var warehouse in rowModel.AvailableWarehouses)
+                {
+                    var selected = warehouse == rowModel.AvailableWarehouses.First() ? "selected" : "";
+                    htmlBuilder.AppendLine($"<option value='{warehouse.Value}' {selected}>{warehouse.Text}</option>");
+                }
+                
+                htmlBuilder.AppendLine(@"
+                        </select>
+                    </td>");
+            }
+            else
+            {
+                htmlBuilder.AppendLine("<td class='no-warehouse'>N/A</td>");
+            }
+
+            if (rowModel.HasAttributes)
+            {
+                htmlBuilder.AppendLine($@"
+                    <td class='attributes-cell'>
+                        <select id='combination-{productId}' name='Products[{Array.IndexOf(productIds, productId)}].SelectedCombinationId' class='form-control' onchange='onAttributeCombinationChange(""{productId}"", this.value)'>");
+
+                foreach (var combo in rowModel.AttributeCombinations)
+                {
+                    var selected = combo == rowModel.AttributeCombinations.First() ? "selected" : "";
+                    htmlBuilder.AppendLine($"<option value='{combo.Id}' {selected}>{combo.AttributesInfo}</option>");
+                }
+
+                htmlBuilder.AppendLine(@"
+                        </select>
+                    </td>");
+            }
+            else
+            {
+                htmlBuilder.AppendLine("<td class='no-attributes'>N/A</td>");
+            }
+
+            htmlBuilder.AppendLine($@"
+                    <td>
+                        <input type='number' name='Products[{Array.IndexOf(productIds, productId)}].UnitPrice' value='{rowModel.UnitPrice:F2}' step='0.01' class='form-control' style='width:100px;' />
+                    </td>
+                    <td>
+                        <button type='button' class='btn btn-sm btn-danger' onclick='removeSelectedProduct(""{productId}"")'>
+                            <i class='fa fa-trash'></i>
+                        </button>
+                    </td>
+                </tr>");
+        }
+
+        return htmlBuilder.ToString();
+    }
+
+    public virtual async Task<IList<string>> ProcessBulkProductAddition(BulkAddProductsToOrderModel model)
+    {
+        var warnings = new List<string>();
+        var order = await _orderService.GetOrderById(model.OrderId);
+        var customer = await _customerService.GetCustomerById(order.CustomerId);
+
+        foreach (var productConfig in model.Products)
+        {
+            try
+            {
+                var product = await _productService.GetProductById(productConfig.ProductId);
+                if (product == null)
+                {
+                    warnings.Add($"Product not found: {productConfig.ProductId}");
+                    continue;
+                }
+
+                // Validate quantity
+                if (productConfig.Quantity <= 0)
+                {
+                    warnings.Add($"Invalid quantity for product: {product.Name}");
+                    continue;
+                }
+
+                // Build custom attributes if combination is selected
+                var customAttributes = new List<CustomAttribute>();
+                var attributeDescription = "";
+                
+                if (!string.IsNullOrEmpty(productConfig.SelectedCombinationId))
+                {
+                    var selectedCombination = product.ProductAttributeCombinations
+                        .FirstOrDefault(c => c.Id == productConfig.SelectedCombinationId);
+                    
+                    if (selectedCombination != null)
+                    {
+                        customAttributes.AddRange(selectedCombination.Attributes);
+                        attributeDescription = await _productAttributeFormatter.FormatAttributes(product, selectedCombination.Attributes, customer);
+                    }
+                }
+                
+                // Create order item using existing pattern from AddProductToOrderDetails
+                var orderItem = new OrderItem
+                {
+                    OrderItemGuid = Guid.NewGuid(),
+                    ProductId = productConfig.ProductId,
+                    UnitPriceInclTax = (double)productConfig.UnitPrice,
+                    UnitPriceExclTax = (double)productConfig.UnitPrice, // Simplified - should calculate tax
+                    PriceInclTax = (double)(productConfig.UnitPrice * productConfig.Quantity),
+                    PriceExclTax = (double)(productConfig.UnitPrice * productConfig.Quantity),
+                    OriginalProductCost = 0, // Simplified for now
+                    Quantity = (int)productConfig.Quantity,
+                    OpenQty = (int)productConfig.Quantity, // Initialize OpenQty to match Quantity for new items
+                    Status = OrderItemStatus.Open, // Explicitly set status for new items
+                    WarehouseId = productConfig.WarehouseId,
+                    Attributes = customAttributes,
+                    AttributeDescription = attributeDescription
+                };
+
+                // Use existing mediator pattern like in AddProductToOrderDetails
+                await _mediator.Send(new InsertOrderItemCommand { Order = order, OrderItem = orderItem, Product = product });
+            }
+            catch (Exception ex)
+            {
+                warnings.Add($"Error adding product {productConfig.ProductName}: {ex.Message}");
+            }
+        }
+
+        if (!warnings.Any())
+        {
+            // Update order totals - simplified calculation
+            var subTotalInclTax = order.OrderItems.Sum(x => x.PriceInclTax);
+            var subTotalExclTax = order.OrderItems.Sum(x => x.PriceExclTax);
+            
+            order.OrderSubtotalInclTax = (double)subTotalInclTax;
+            order.OrderSubtotalExclTax = (double)subTotalExclTax;
+            order.OrderTotal = (double)subTotalInclTax + order.OrderShippingInclTax + order.PaymentMethodAdditionalFeeInclTax + order.OrderTax - order.OrderDiscount;
+
+            await _orderService.UpdateOrder(order);
+        }
+
+        return warnings;
+    }
+
+    public virtual async Task<IList<SelectListItem>> GetCombinationWarehouseInventory(string combinationId, string productId)
+    {
+        var warehouses = new List<SelectListItem>();
+        
+        try
+        {
+            // Get the product
+            var product = await _productService.GetProductById(productId);
+            if (product == null)
+                return warehouses;
+
+            var combination = product.ProductAttributeCombinations.FirstOrDefault(x => x.Id == combinationId);
+            if (combination == null)
+                return warehouses;
+
+            // Get warehouses that have inventory for this combination
+            foreach (var warehouseInventory in combination.WarehouseInventory)
+            {
+                var warehouse = await _warehouseService.GetWarehouseById(warehouseInventory.WarehouseId);
+                if (warehouse != null)
+                {
+                    var displayText = $"{warehouse.Name} (Stock: {warehouseInventory.StockQuantity})";
+                    warehouses.Add(new SelectListItem
+                    {
+                        Value = warehouse.Id,
+                        Text = displayText
+                    });
+                }
+            }
+
+            // If no specific warehouse inventory, fall back to general warehouses
+            if (!warehouses.Any())
+            {
+                var allWarehouses = await _warehouseService.GetAllWarehouses();
+                foreach (var warehouse in allWarehouses)
+                {
+                    warehouses.Add(new SelectListItem
+                    {
+                        Value = warehouse.Id,
+                        Text = warehouse.Name
+                    });
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Return empty list on error
+        }
+
+        return warehouses;
+    }
+
+    public virtual async Task<(decimal? OverriddenPrice, string Sku)> GetCombinationDetails(string combinationId, string productId)
+    {
+        try
+        {
+            // Get the product
+            var product = await _productService.GetProductById(productId);
+            if (product == null)
+                return (null, null);
+
+            var combination = product.ProductAttributeCombinations.FirstOrDefault(x => x.Id == combinationId);
+            if (combination == null)
+                return (null, null);
+
+            return ((decimal?)combination.OverriddenPrice, combination.Sku);
+        }
+        catch (Exception)
+        {
+            return (null, null);
+        }
+    }
+
+    #endregion
 
     public virtual async Task<IList<Order>> PrepareOrders(OrderListModel model)
     {

@@ -1,7 +1,7 @@
 ﻿@model IList<BrandModel>
 @inject DisplayOrderHomePage order
 <div class="categoryGrid  order-@order.HomePageBrands">
-    <div cols="12" class="col-12 px-0">
+    <div cols="16" class="col-12 px-0">
         <div class="form-row">
             @foreach (var item in Model)
             {
@@ -10,14 +10,42 @@
                         <a href="@Url.RouteUrl("Brand", new { item.SeName })" title="@item.PictureModel.Title">
                             <b-card-img-lazy src="@item.PictureModel.ImageUrl" alt="@item.PictureModel.AlternateText"></b-card-img-lazy>
                         </a>
-                        <h4 class="title">
-                            <a href="@Url.RouteUrl("Brand", new { item.SeName })" title="@item.PictureModel.Title">
-                                @item.Name
-                            </a>
-                        </h4>
+                        <div class="card-body p-3">
+                            <h4 class="title">
+                                <a href="@Url.RouteUrl("Brand", new { item.SeName })" title="@item.PictureModel.Title">
+                                    @item.Name
+                                </a>
+                            </h4>
+                            @if (!string.IsNullOrEmpty(item.Description))
+                            {
+                                <div class="brand-description">
+                                    @Html.Raw(item.Description)
+                                </div>
+                            }
+                            <div class="mt-2 mb-1">
+                                <a href="@Url.RouteUrl("Brand", new { item.SeName })" class="btn btn-light">VIEW PRODUCTS</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             }
         </div>
     </div>
 </div>
+
+<style>
+    .brand-description {
+        font-size: 14px;
+        color: #666;
+        margin-top: 10px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-align: left;
+    }
+    
+    [dark-theme="true"] .brand-description {
+        color: #ccc;
+    }
+</style>

@@ -24,9 +24,9 @@ public class ProductAttributeValueModelValidator : BaseStoreAccessValidator<Prod
                     "Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Name.Required"));
 
         RuleFor(x => x.Quantity)
-            .GreaterThanOrEqualTo(1)
+            .GreaterThanOrEqualTo(0.01)
             .WithMessage(translationService.GetResource(
-                "Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity.GreaterThanOrEqualTo1"))
+                "Admin.Catalog.Products.ProductAttributes.Attributes.Values.Fields.Quantity.GreaterThanZero"))
             .When(x => x.AttributeValueTypeId == AttributeValueType.AssociatedToProduct);
 
         RuleFor(x => x).CustomAsync(async (x, context, _) =>

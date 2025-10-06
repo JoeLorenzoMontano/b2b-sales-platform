@@ -10,19 +10,22 @@ public class DiscountProvider : IDiscountProvider
     private readonly HasAllProductsDiscountRule _hasAllProductsDiscountRequirementRule;
     private readonly HasOneProductDiscountRule _hasOneProductDiscountRequirementRule;
     private readonly ShoppingCartDiscountRule _shoppingCartDiscountRequirementRule;
+    private readonly SpecificCustomerDiscountRule _specificCustomerDiscountRule;
 
     public DiscountProvider(
         CustomerGroupDiscountRule customerGroupDiscountRequirementRule,
         HadSpentAmountDiscountRule hadSpentAmountDiscountRequirementRule,
         HasAllProductsDiscountRule hasAllProductsDiscountRequirementRule,
         HasOneProductDiscountRule hasOneProductDiscountRequirementRule,
-        ShoppingCartDiscountRule shoppingCartDiscountRequirementRule)
+        ShoppingCartDiscountRule shoppingCartDiscountRequirementRule,
+        SpecificCustomerDiscountRule specificCustomerDiscountRule)
     {
         _customerGroupDiscountRequirementRule = customerGroupDiscountRequirementRule;
         _hadSpentAmountDiscountRequirementRule = hadSpentAmountDiscountRequirementRule;
         _hasAllProductsDiscountRequirementRule = hasAllProductsDiscountRequirementRule;
         _hasOneProductDiscountRequirementRule = hasOneProductDiscountRequirementRule;
         _shoppingCartDiscountRequirementRule = shoppingCartDiscountRequirementRule;
+        _specificCustomerDiscountRule = specificCustomerDiscountRule;
     }
 
 
@@ -45,7 +48,8 @@ public class DiscountProvider : IDiscountProvider
             _hadSpentAmountDiscountRequirementRule,
             _hasAllProductsDiscountRequirementRule,
             _hasOneProductDiscountRequirementRule,
-            _shoppingCartDiscountRequirementRule
+            _shoppingCartDiscountRequirementRule,
+            _specificCustomerDiscountRule
         };
         return rules;
     }

@@ -82,6 +82,9 @@ public class CategoryModel : BaseEntityModel, ILocalizedModel<CategoryLocalizedM
     [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.DisplayOrder")]
     public int DisplayOrder { get; set; }
 
+    [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.ProductCount")]
+    public int ProductCount { get; set; }
+
     [GrandResourceDisplayName("Admin.Catalog.Categories.Fields.ExternalId")]
     public string ExternalId { get; set; }
 

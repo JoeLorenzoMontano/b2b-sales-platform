@@ -106,6 +106,12 @@
 
 @if (ShouldDisplayMenu())
 {
+    <li>
+        <a href="@Url.RouteUrl("AllProducts")">
+            <span class="title">@Loc["Catalog.AllProducts"]</span>
+        </a>
+    </li>
+    
     @if (Model.NewProductsEnabled && Model.DisplayNewProductsMenu)
     {
         <li>

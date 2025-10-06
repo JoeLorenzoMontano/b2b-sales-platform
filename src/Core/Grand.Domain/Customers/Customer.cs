@@ -97,6 +97,11 @@ public class Customer : BaseEntity
     ///     Gets or sets the sales employee identifier
     /// </summary>
     public string SeId { get; set; }
+    
+    /// <summary>
+    ///     Gets or sets the default employee identifier that should be recorded as the impersonator when orders are created
+    /// </summary>
+    public string DefaultImpersonatedByEmployeeId { get; set; }
 
     /// <summary>
     ///     Gets or sets the custom attributes (see "CustomerAttribute" entity for more info)

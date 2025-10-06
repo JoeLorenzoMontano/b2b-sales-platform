@@ -189,7 +189,7 @@ public class ShoppingCartService : IShoppingCartService
         string warehouseId = null, IList<CustomAttribute> attributes = null,
         double? customerEnteredPrice = null,
         DateTime? rentalStartDate = null, DateTime? rentalEndDate = null,
-        int quantity = 1, bool automaticallyAddRequiredProductsIfEnabled = true,
+        double quantity = 1, bool automaticallyAddRequiredProductsIfEnabled = true,
         string reservationId = "", string parameter = "", string duration = "",
         ShoppingCartValidatorOptions validator = null)
     {
@@ -315,7 +315,7 @@ public class ShoppingCartService : IShoppingCartService
         string shoppingCartItemId, string warehouseId, IList<CustomAttribute> attributes,
         double? customerEnteredPrice = null,
         DateTime? rentalStartDate = null, DateTime? rentalEndDate = null,
-        int quantity = 1, bool resetCheckoutData = true, string reservationId = "", string sciId = "")
+        double quantity = 1, bool resetCheckoutData = true, string reservationId = "", string sciId = "")
     {
         ArgumentNullException.ThrowIfNull(customer);
 

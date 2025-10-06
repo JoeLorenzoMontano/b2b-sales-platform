@@ -166,7 +166,7 @@ public class OrderService : IOrderService
         string vendorId = "", string customerId = "",
         string productId = "", string affiliateId = "", string warehouseId = "",
         string billingCountryId = "", string ownerId = "", string salesEmployeeId = "",
-        string paymentMethodSystemName = null,
+        string impersonatedByEmployeeId = "", string paymentMethodSystemName = null,
         DateTime? createdFromUtc = null, DateTime? createdToUtc = null,
         int? os = null, PaymentStatus? ps = null, ShippingStatus? ss = null,
         string billingEmail = null, string billingLastName = "", string orderGuid = null,
@@ -194,7 +194,8 @@ public class OrderService : IOrderService
             WarehouseId = warehouseId,
             OrderTagId = orderTagId,
             OwnerId = ownerId,
-            SalesEmployeeId = salesEmployeeId
+            SalesEmployeeId = salesEmployeeId,
+            ImpersonatedByEmployeeId = impersonatedByEmployeeId
         };
         var query = await _mediator.Send(queryModel);
         return await PagedList<Order>.Create(query, pageIndex, pageSize);
@@ -290,17 +291,37 @@ public class OrderService : IOrderService
     }
 
     /// <summary>
-    ///     Deletes an order note
+    ///     Inserts an order note
     /// </summary>
     /// <param name="orderNote">The order note</param>
     public virtual async Task InsertOrderNote(OrderNote orderNote)
     {
         ArgumentNullException.ThrowIfNull(orderNote);
 
+        // Make sure CreatedOnUtc is set
+        if (orderNote.CreatedOnUtc == default)
+        {
+            orderNote.CreatedOnUtc = DateTime.UtcNow;
+        }
+
         await _orderNoteRepository.InsertAsync(orderNote);
 
         //event notification
         await _mediator.EntityInserted(orderNote);
+    }
+
+    /// <summary>
+    ///     Updates an order note
+    /// </summary>
+    /// <param name="orderNote">The order note</param>
+    public virtual async Task UpdateOrderNote(OrderNote orderNote)
+    {
+        ArgumentNullException.ThrowIfNull(orderNote);
+
+        await _orderNoteRepository.UpdateAsync(orderNote);
+
+        //event notification
+        await _mediator.EntityUpdated(orderNote);
     }
 
     public virtual async Task<IList<OrderNote>> GetOrderNotes(string orderId)
